@@ -333,8 +333,8 @@ async function skip() {
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(60px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(60px + var(--top-inset));
   background: var(--s0);
 }
 .steps { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
@@ -630,7 +630,7 @@ async function skip() {
 }
 /* 모바일 — 4단계 스텝바와 3분할 격자가 390px 에 들어갈 리 없다. 둘 다 푼다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
+  .topbar { height: auto; flex-wrap: wrap; gap: 10px; padding: calc(10px + var(--top-inset)) 14px 10px; }
   /* 스텝바: 지금 단계 라벨만 남기고 나머지는 동그라미만. 완료 단계 라벨까지
      남기면(.on 은 완료도 포함한다) 390px 에서 4번째 동그라미가 화면 밖으로 밀린다 */
   .step-label:not(.now) { display: none; }

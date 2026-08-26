@@ -152,8 +152,8 @@ function reasonOf(e: unknown) {
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(60px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(60px + var(--top-inset));
   background: var(--s0);
 }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -331,7 +331,7 @@ function reasonOf(e: unknown) {
 .empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
 
 @media (max-width: 900px) {
-  .topbar { height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; gap: 10px; }
+  .topbar { height: calc(54px + var(--top-inset)); padding: var(--top-inset) 16px 0; gap: 10px; }
   /* 모바일 헤더 = [뒤로] [화면 이름] [주 액션]. 워드마크·마크는 접는다 —
      어느 화면인지가 브랜드보다 중요하다. 홈은 뒤로가기가 가리킨다. */
   .wordmark, .mark, .markbtn { display: none; }

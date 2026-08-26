@@ -267,8 +267,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(60px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(60px + var(--top-inset));
   background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
 }
 .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
@@ -503,7 +503,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 /* 모바일 — new.vue 와 같은 처방. 3분할 격자·60px 상단바·452px 패널이 전부 안 들어간다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
+  .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: calc(10px + var(--top-inset)) 14px 10px; }
   .left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }
   .wide-only, .badge, .skipped { display: none; }
   .hd-name {

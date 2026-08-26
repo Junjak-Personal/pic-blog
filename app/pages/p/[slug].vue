@@ -242,8 +242,8 @@ useHead(() => ({
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(56px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(56px + var(--top-inset));
   background: var(--s0);
 }
 .left { display: flex; align-items: center; gap: 18px; min-width: 0; }
@@ -316,7 +316,7 @@ useHead(() => ({
   /* 상단바는 타이틀 몫이다. 통계 4칸을 같이 두면 타이틀이 「2026.0…」 로 잘린다 —
      ⓘ 로 접어두고, 열면 상단바 아래에 한 줄로 펼친다. */
   /* 펼치면 한 줄이 늘어나므로 높이를 고정하지 않는다 — 고정하면 지도 위로 넘친다 */
-  .topbar { height: auto; min-height: calc(50px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 14px 0; gap: 10px; flex-wrap: wrap; }
+  .topbar { height: auto; min-height: calc(50px + var(--top-inset)); padding: var(--top-inset) 14px 0; gap: 10px; flex-wrap: wrap; }
   .title { font-size: 15px; }
   .left { flex: 1; min-width: 0; gap: 12px; }
 

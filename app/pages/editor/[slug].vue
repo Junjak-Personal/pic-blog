@@ -528,8 +528,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(60px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(60px + var(--top-inset));
   background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
 }
 .top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
@@ -924,7 +924,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 헤더 갈래 전환 — 데스크탑 마크업은 통째로 빠지고 모바일 것이 들어온다 */
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
-  .topbar { height: calc(56px + env(safe-area-inset-top)); gap: 0; padding: env(safe-area-inset-top) 12px 0; }
+  .topbar { height: calc(56px + var(--top-inset)); gap: 0; padding: var(--top-inset) 12px 0; }
 
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }

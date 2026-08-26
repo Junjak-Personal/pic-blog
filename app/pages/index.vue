@@ -175,8 +175,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
    * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
-  padding-top: env(safe-area-inset-top);
-  height: calc(68px + env(safe-area-inset-top));
+  padding-top: var(--top-inset);
+  height: calc(68px + var(--top-inset));
   background: var(--s0);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
@@ -343,7 +343,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
-  .topbar { height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; gap: 10px; }
+  .topbar { height: calc(54px + var(--top-inset)); padding: var(--top-inset) 16px 0; gap: 10px; }
   /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
   .wordmark { display: none; }
   .kicker, .sorts { display: none; }
