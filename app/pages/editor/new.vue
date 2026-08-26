@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBack from '~/components/AppBack.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
@@ -71,6 +72,9 @@ async function skip() {
   <div class="page">
     <!-- 단계 표시 + 확정 버튼 -->
     <header class="topbar">
+      <!-- 모바일은 다른 화면과 같은 ← 아이콘. 데스크탑은 우측 「뒤로」 텍스트 버튼이 맡는다 -->
+      <AppBack fallback="/editor" label="기록 목록으로" />
+
       <ol class="steps">
         <li v-for="(s, i) in steps" :key="s.n" class="step">
           <span class="bullet" :class="{ on: currentStep === s.n, done: currentStep > s.n }">
@@ -83,7 +87,7 @@ async function skip() {
       </ol>
 
       <div class="top-actions">
-        <NuxtLink to="/editor" class="btn ghost mono">뒤로</NuxtLink>
+        <NuxtLink to="/editor" class="btn ghost mono wide-only">뒤로</NuxtLink>
         <button
           v-if="flow.stage.value === 'preview'"
           type="button"
@@ -632,8 +636,8 @@ async function skip() {
   .step-label:not(.now) { display: none; }
   .step-rule { width: 12px; margin: 0 6px; }
   .wide-only { display: none; }
-  .top-actions { gap: 8px; }
-  .top-actions .btn { min-height: 40px; }
+  /* 확정은 하단 CTA, 뒤로는 좌측 ← 로 갔다 — 우측 묶음은 모바일에서 빈다 */
+  .top-actions { display: none; }
   /* 하단 CTA 에 가리지 않게 목록 끝을 비운다 */
   .side { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
