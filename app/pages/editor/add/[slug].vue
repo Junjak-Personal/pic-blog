@@ -503,8 +503,12 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 /* 모바일 — new.vue 와 같은 처방. 3분할 격자·60px 상단바·452px 패널이 전부 안 들어간다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: calc(10px + var(--top-inset)) 14px 10px; }
-  .left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }
+  /* 헤더는 한 줄 — [←] [화면 이름] 뿐이다. wrap 을 켜고 .left 에 100% 를 주면
+     「취소」가 둘째 줄 «좌측»으로 떨어진다(103px 헤더). 실제로 그렇게 접혀 있었다. */
+  .topbar { height: calc(56px + var(--top-inset)); gap: 10px; padding: var(--top-inset) 14px 0; }
+  .left { gap: 8px; }
+  /* 확정은 하단 CTA, 뒤로는 좌측 ← 로 갔다 — new.vue 와 같은 처방으로 우측 묶음은 비운다 */
+  .right { display: none; }
   .wide-only, .badge, .skipped { display: none; }
   .hd-name {
     display: block;
@@ -516,8 +520,6 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     letter-spacing: -0.02em;
     color: var(--ink);
   }
-  .right { gap: 8px; }
-  .right .btn { min-height: 36px; }
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */

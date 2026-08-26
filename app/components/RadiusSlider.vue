@@ -10,6 +10,11 @@ const props = defineProps<{
   /** 1g '클러스터 반경' · 1f '포인트 배정 반경' */
   label: string
   compact?: boolean
+  /**
+   * 눈금 밑에 한 줄 더 붙이는 보조 라벨(예: 「12개」). RADII 와 같은 길이여야 한다.
+   * 배치를 부르는 쪽에 맡기면 정지점과 어긋난다 — 실제로 최대 27px 어긋나 있었다.
+   */
+  subLabels?: string[]
 }>()
 
 const stopIndex = computed(() => Math.max(0, RADII.indexOf(model.value as (typeof RADII)[number])))
@@ -68,8 +73,26 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
       <SliderThumb class="thumb" :aria-label="`${model}m`" />
     </SliderRoot>
 
-    <div class="labels mono">
-      <span v-for="r in RADII" :key="r" :class="{ on: r === model }">{{ r }}m</span>
+    <!-- 눈금 라벨은 정지점과 «같은 식»(left %, translateX(-50%))으로 놓는다.
+         space-between + 고정폭 span 은 양끝에서 22px 씩 어긋난다. -->
+    <div class="ticks">
+      <div class="labels mono">
+        <span
+          v-for="(r, i) in RADII"
+          :key="r"
+          :class="{ on: r === model }"
+          :style="{ left: `${(i / (RADII.length - 1)) * 100}%` }"
+        >{{ r }}m</span>
+      </div>
+
+      <div v-if="props.subLabels" class="labels sub mono">
+        <span
+          v-for="(txt, i) in props.subLabels"
+          :key="i"
+          :class="{ on: RADII[i] === model }"
+          :style="{ left: `${(i / (RADII.length - 1)) * 100}%` }"
+        >{{ txt }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -158,14 +181,22 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
 }
 .thumb:focus-visible { opacity: 1; box-shadow: 0 0 0 2px var(--acc); }
 
-.labels { display: flex; justify-content: space-between; }
+/* 두 줄을 한 묶음으로 둔다 — .radius 의 세로 gap 이 줄 사이에 끼면 너무 벌어진다 */
+.ticks { display: flex; flex-direction: column; gap: 2px; }
+/* 절대 배치라 자기 높이를 못 만든다 — 한 줄분을 직접 잡아준다 */
+.labels { position: relative; height: 13px; }
 .labels span {
-  width: 44px;
-  text-align: center;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
   font-size: 10px;
   color: var(--faint);
   transition: color 0.12s;
 }
 .labels span.on { color: var(--ink); }
+.labels.sub span { color: var(--faint); }
+.labels.sub span.on { color: var(--acc); }
+.compact .labels { height: 12px; }
 .compact .labels span { font-size: 9.5px; }
 </style>

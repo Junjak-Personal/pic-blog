@@ -62,7 +62,8 @@ export function formatExifLine(p: {
   iso: number | null
 }): string | null {
   const parts: string[] = []
-  if (p.f_number != null) parts.push(`f/${p.f_number}`)
+  // EXIF 의 조리개는 유리수(예 89/50)를 나눈 값이라 f/1.7799999713880652 처럼 나온다
+  if (p.f_number != null) parts.push(`f/${Number(p.f_number.toFixed(2))}`)
   if (p.exposure) parts.push(`${p.exposure}s`)
   if (p.iso != null) parts.push(`ISO ${p.iso}`)
   return parts.length ? parts.join(' · ') : null

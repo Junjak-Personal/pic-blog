@@ -191,8 +191,8 @@ watch(() => props.index, (i) => {
 .meta { font-size: 11px; color: var(--faint); }
 .close {
   margin-left: auto;
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   color: var(--mid);
@@ -271,7 +271,8 @@ watch(() => props.index, (i) => {
     padding: 12px 16px;
     border-top: 1px solid rgba(177, 199, 193, 0.1);
   }
-  .nav.sm { width: 34px; height: 34px; }
+  /* 헤더 밖 조작 요소는 44px — 하단 바의 이전/다음이 34px 이었다 */
+  .nav.sm { width: 44px; height: 44px; }
   .swipe { font-size: 10px; color: var(--faint); }
 }
 </style>

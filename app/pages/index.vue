@@ -206,14 +206,27 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .kicker { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--deep); }
 
 .right { display: flex; align-items: center; gap: 22px; }
-.sorts { display: flex; gap: 2px; }
+/*
+ * 세그먼티드 컨트롤 — 「텍스트만 있는 버튼 금지」는 묶음 단위로 지킨다.
+ * 낱개에 테두리를 두르면 세 개의 독립 버튼처럼 읽혀 「하나만 고른다」가 안 보인다.
+ * 대신 트랙이 테두리·배경을 갖고, 고른 칸만 안에서 채워진다.
+ */
+.sorts {
+  display: flex;
+  gap: 2px;
+  border-radius: var(--radius);
+  background: rgba(146, 178, 169, 0.06);
+  /* 테두리 대신 inset 그림자 — border 를 쓰면 트랙이 2px 자라 옆의 36px 컨트롤과 어긋난다 */
+  box-shadow: inset 0 0 0 1px rgba(177, 199, 193, 0.2);
+}
 .sort {
   font-size: 11px;
   color: var(--deep);
-  padding: 5px 10px;
+  padding: 0 10px;
   border-radius: 6px;
   cursor: pointer;
 }
+.sort:hover { color: var(--mid); }
 .sort.on { background: var(--mid); color: var(--s0); }
 .totals { font-size: 11px; color: var(--deep); }
 .editor-link {

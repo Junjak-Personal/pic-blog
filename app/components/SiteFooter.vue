@@ -65,6 +65,7 @@ const year = new Date().getFullYear()
 @media (max-width: 900px) {
   .sitefoot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
   .copy { font-size: 10px; }
-  .ico { width: 38px; height: 38px; }
+  /* 헤더 밖 조작 요소는 44px */
+  .ico { width: 44px; height: 44px; }
 }
 </style>

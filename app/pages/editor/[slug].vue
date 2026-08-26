@@ -456,7 +456,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
                     </button>
                   </span>
-                  <span v-if="activeDraft.tags.length < MAX_TAGS" class="chip-add">
+                  <!-- label 이라야 상자 여백을 눌러도 입력이 잡힌다 — span 이면 유효 타깃이 입력 높이(30.5px)뿐이다 -->
+                  <label v-if="activeDraft.tags.length < MAX_TAGS" class="chip-add">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
                     <input
                       v-model="tagInput"
@@ -467,7 +468,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                       @keydown.enter.prevent="addTag"
                       @blur="addTag"
                     >
-                  </span>
+                  </label>
                 </div>
               </div>
 
@@ -837,6 +838,19 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
 }
 .chip-x:hover { background: var(--danger); border-color: var(--danger); color: var(--s0); }
+/* 터치 타깃 44px — 칩 모양은 그대로 두고 보이지 않는 판만 넓힌다 */
+@media (max-width: 900px) {
+  .chip-x { position: relative; }
+  .chip-x::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
 .chip-add {
   display: flex;
   align-items: center;
@@ -859,6 +873,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .tag-input:focus-visible { outline: none; }
 .tag-input::placeholder { color: var(--faint); }
 
+/* 라벨 좌 · 카운터 우. 규칙이 없어서 두 인라인 span 이 「콘텐츠54 / 2000」으로 붙어 있었다. */
+.flabel-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .counter { font-size: 9px; color: var(--faint); }
 .counter.full { color: var(--danger); }
 .content {
@@ -930,7 +946,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .tags { gap: 8px; }
   .chip { min-height: 36px; font-size: 12px; padding: 4px 6px 4px 11px; }
   .chip-x { width: 24px; height: 24px; }
-  .chip-add { min-height: 40px; padding: 4px 12px; flex: 1; min-width: 140px; }
+  /* 입력은 보이지 않는 판을 못 넓힌다 — 상자 자체가 손가락이 닿는 곳이라 44px */
+  .chip-add { min-height: 44px; padding: 4px 12px; flex: 1; min-width: 140px; }
   .tag-input { flex: 1; width: auto; min-width: 0; }
   .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
   .field.grow { min-height: 0; }

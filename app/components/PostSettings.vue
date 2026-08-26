@@ -129,12 +129,13 @@ function confirmRecluster() {
       <!-- 업로드 화면(1g)과 같은 컨트롤을 쓴다 — 같은 값을 고르는 자리에서
            한쪽은 슬라이더, 한쪽은 버튼이면 같은 기능으로 안 읽힌다. -->
       <div class="rwrap" :class="{ locked: dirty || busy }">
-        <RadiusSlider :model-value="shown" label="포인트 범위" compact @update:model-value="pick" />
-        <ul class="rcounts mono">
-          <li v-for="row in table" :key="row.radius" :class="{ on: row.radius === shown }">
-            {{ row.count }}개
-          </li>
-        </ul>
+        <RadiusSlider
+          :model-value="shown"
+          label="포인트 범위"
+          compact
+          :sub-labels="table.map((row) => `${row.count}개`)"
+          @update:model-value="pick"
+        />
       </div>
 
       <p v-if="dirty" class="mono warn">
@@ -250,21 +251,6 @@ function confirmRecluster() {
 }
 /* 저장 안 된 변경이 있으면 반경을 못 바꾼다 — 눌리지 않는 이유는 아래 문구가 말한다 */
 .rwrap.locked { opacity: 0.45; pointer-events: none; }
-/* 슬라이더 눈금과 같은 자리에 결과 개수를 세운다 */
-.rcounts {
-  display: flex;
-  justify-content: space-between;
-  margin: 2px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 10px;
-  color: var(--faint);
-}
-.rcounts li { flex: 1; text-align: center; }
-.rcounts li:first-child { text-align: left; }
-.rcounts li:last-child { text-align: right; }
-.rcounts li.on { color: var(--acc); }
-
 .hint { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 .warn { font-size: 10.5px; line-height: 1.7; color: var(--danger); }
 

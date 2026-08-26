@@ -34,6 +34,12 @@ let startY = 0
 
 function onGripDown(e: PointerEvent) {
   if (!props.mobile || e.button !== 0) return
+  /*
+   * 🔴 setPointerCapture 를 걸면 그 뒤의 click 이 «캡처한 요소»로 재타깃된다.
+   *    헤더에서 캡처해 버리면 안에 있는 ⓘ·✕ 의 @click 이 영영 안 불린다 —
+   *    실제로 모바일에서 두 버튼이 죽어 있었다. 버튼 위에서 시작한 건 드래그가 아니다.
+   */
+  if ((e.target as HTMLElement).closest('button')) return
   dragging.value = true
   startY = e.clientY
   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -234,8 +240,8 @@ const deviceLine = computed(() => {
 .hact { margin-left: auto; display: flex; align-items: center; gap: 2px; flex: none; }
 
 .close {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   flex: none;
   display: grid;
   place-items: center;
@@ -249,8 +255,8 @@ const deviceLine = computed(() => {
 
 /* ⓘ 토글 — 데스크탑에는 없다 (v-if) */
 .info {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   flex: none;
   display: grid;
   place-items: center;
@@ -335,18 +341,16 @@ const deviceLine = computed(() => {
     border-radius: 999px;
     background: rgba(177, 199, 193, 0.3);
   }
-  /* wrap 헤더에서는 margin-left:auto 가 「그 줄의 끝」으로만 밀어서 ⓘ·✕ 가
-     아래 줄로 떨어진다. 우상단에 못 박는다. */
-  /* 헤더는 한 줄 고정 — [번호] [이름] ... [ⓘ] [✕]. 시각·좌표는 ⓘ 판으로 갔다. */
-  .head { flex-wrap: nowrap; gap: 12px; padding: 4px 14px 12px 18px; touch-action: none; }
+  /* 헤더는 한 줄 48px 고정 — [번호] [이름] ... [ⓘ] [✕]. 시각·좌표는 ⓘ 판으로 갔다.
+     안쪽 여백으로 높이가 정해지면 47·49 로 흔들린다 — box-sizing 이 border-box(전역)라
+     아래 border-bottom 1px 까지 포함한 값이다. */
+  .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 0 12px 0 18px; touch-action: none; }
   .wide-only { display: none; }
-  .name { font-size: 21px; width: auto; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { font-size: 26px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 본문은 스캐터만. 태그·본문·EXIF 는 전부 ⓘ 판에 모였다 — 흩어놓지 않는다. */
   .body { position: relative; grid-template-columns: 1fr; grid-template-rows: 1fr; }
   .side { display: none; }
-  .name { font-size: 26px; width: calc(100% - 80px); }
   .meta { padding-top: 0; }
-  .side { padding: 16px 18px; }
   .para { font-size: 15px; line-height: 1.8; }
 }
 </style>

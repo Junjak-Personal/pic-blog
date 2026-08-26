@@ -80,11 +80,12 @@ async function submit() {
 
         <p class="note mono">비밀번호는 서버 환경변수에 있습니다 — 재발급은 배포로만.</p>
 
+        <!-- 오른쪽 정렬 · 가장 오른쪽이 주 동작. 순서를 바꿔야 하는 자리라 마크업을 뒤집는다 -->
         <div class="actions">
+          <NuxtLink to="/" class="ghost mono">읽기로 돌아가기</NuxtLink>
           <button type="submit" class="primary mono" :disabled="busy">
             {{ busy ? '확인 중…' : '편집 시작' }}
           </button>
-          <NuxtLink to="/" class="ghost mono">읽기로 돌아가기</NuxtLink>
         </div>
       </div>
     </form>
@@ -160,7 +161,10 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
 
 .note { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 
-.actions { display: flex; align-items: center; gap: 9px; margin-top: 2px; }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 2px; }
+/* 두 버튼 높이를 맞춘다 — 테두리 유무 때문에 37.6 / 39.6 으로 어긋나 있었다.
+   헤더 밖 조작 요소라 44px. */
+.actions > * { min-height: 44px; box-sizing: border-box; }
 .primary {
   display: flex;
   align-items: center;

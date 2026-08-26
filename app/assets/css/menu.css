@@ -2,7 +2,8 @@
 .ovf-content {
   min-width: 190px;
   padding: 6px;
-  background: rgba(11, 14, 18, 0.98);
+  /* 불투명 — 0.98 이면 뒤의 탭·목록 헤더 글자가 그대로 비쳐 읽힌다 */
+  background: var(--s1);
   border: 1px solid rgba(146, 178, 169, 0.28);
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);

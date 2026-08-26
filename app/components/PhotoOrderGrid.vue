@@ -202,6 +202,27 @@ function move(from: number, to: number) {
   cursor: pointer;
 }
 .kill:hover { background: var(--danger); border-color: var(--danger); color: var(--s0); }
+/*
+ * 삭제 ✕ 의 터치 타깃 44px. 상자를 키우면 썸네일을 덮으므로 «보이지 않는 판»만 넓힌다
+ * (RadiusSlider 의 정지점과 같은 처방 — 9px 점에 44px 버튼).
+ * 칸(.tile)이 overflow: hidden 이라 아이콘 중심에 맞춰 넓히면 바깥쪽 절반이 잘려
+ * 37px 밖에 안 나온다. 그래서 칸 우상단 모서리에 붙여 44px 을 온전히 칸 안에 둔다.
+ *
+ * 🔴 핸들(⠿)에는 판을 두지 않는다. 칸이 84px 이라 44+44 가 서로 겹쳐 ✕ 의 아래 4px 을
+ *    먹었고(실측: 우상단 42,42 지점이 handle 로 잡혔다), 둘이 합쳐 칸 오른쪽 44px 을
+ *    통째로 차지해 끌 자리가 사라졌다. 애초에 핸들은 «키보드 전용»이다 —
+ *    터치 재정렬은 칸 자체를 끄는 것이고, 핸들은 ←/→ 키를 받는 포커스 타깃일 뿐이다.
+ */
+@media (max-width: 900px) {
+  .kill::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 44px;
+    height: 44px;
+  }
+}
 
 .cover {
   position: absolute;
