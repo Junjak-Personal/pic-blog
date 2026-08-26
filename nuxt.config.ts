@@ -37,13 +37,9 @@ export default defineNuxtConfig({
          * apple-mobile-web-app-capable 은 넣지 않는다 — 폐기된 메타이고
          * standalone 은 manifest 의 display 가 담당한다.
          *
-         * ⚠ 한때 이 메타를 「상단바가 뭉개져 보이는 원인」으로 지목했는데 틀렸다.
-         *   그 현상은 iOS 버전이 올라가면서 생긴 것이고 standalone PWA 전반에
-         *   나타난다 — 이 메타와 무관하다. 제거는 여전히 옳지만 그건 별개 이유다.
-         *   실제 대응은 tokens.css 의 --top-inset 이다.
-         *
-         * 다만 이 메타를 빼면 뷰포트가 상태바 밑까지 들어가지 않아
-         * env(safe-area-inset-top) 이 0 이 된다 — --top-inset 값 계산의 전제다.
+         * ⚠ 한때 이 메타를 「상단바가 흐려 보이는 원인」으로 지목했는데 틀렸다.
+         *   실제 원인은 iOS 의 투명도 설정이었다 (README 의 「iOS PWA 상단 흐림」).
+         *   제거는 여전히 옳지만 그건 별개 이유다.
          */
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
       ],

@@ -37,18 +37,13 @@
   --route-width: 2.75px;
 
   /*
-   * 상단바가 위로 비워야 하는 높이.
-   * 브라우저에서는 안전영역 그대로(보통 0), iOS 홈 화면 앱에서는 아래 미디어쿼리 값.
+   * 상단바가 위로 비워야 하는 높이. 안전영역 그대로다.
    *
-   * iOS 가 standalone 상단에 시스템 블러 띠를 그린다. iOS 버전이 올라가면서 생긴
-   * 동작이고 standalone PWA 전반에 나타난다 — 우리 CSS 가 만드는 게 아니고,
-   * 끌 수 있는 스위치도 없다(WebKit 이 상태바 처리를 바꿨고 Apple Feedback 에 접수됨).
-   * 그래서 없애는 게 아니라 콘텐츠를 띠 밖으로 내린다.
-   *
-   * 값은 기기에서 눈으로 맞췄다(76 → 19 → 8 → 12 → 15 → 18). 여기 적는 값이
-   * 통째로 덧붙는다 — apple-mobile-web-app-capable 을 쓰지 않으므로 뷰포트가
-   * 상태바 밑까지 들어가지 않고, 따라서 standalone 에서도 env(safe-area-inset-top)
-   * 이 0 이다. 한때 76px 을 넣었다가 크게 남아돈 게 그 전제를 착각해서였다.
+   * 한때 iOS 홈 화면 앱에서만 18px 을 더 줬다. standalone 상단이 흐려 보여서
+   * 「시스템 블러 띠를 피해 콘텐츠를 내린다」고 판단한 것인데 — 원인은 우리 쪽이
+   * 아니라 iOS 의 투명도 설정이었다. 자세한 내막은 README 의 「iOS PWA 상단 흐림」.
+   * 변수는 남겨둔다. 여섯 화면의 상단바가 이걸 보므로, 비슷한 일이 또 생기면
+   * 여기 한 줄만 고치면 된다.
    */
   --top-inset: env(safe-area-inset-top);
 
@@ -56,21 +51,3 @@
   --radius-lg: 10px;
 }
 
-/*
- * iOS 홈 화면 앱에서만 76px 로 올린다. 두 조건을 모두 걸어야 한다:
- *
- *   @supports (-webkit-touch-callout: none)  → iOS WebKit 에서만 참이다.
- *       안드로이드 Chrome · 데스크탑(macOS Safari 포함)은 이 속성을 지원하지 않는다.
- *   @media (display-mode: standalone)        → 홈 화면에 추가해 실행한 경우.
- *
- * 하나만 걸면 엉뚱한 데가 밀린다:
- *   standalone 만  → 안드로이드·데스크탑에 설치한 PWA 도 76px 을 먹는다(거긴 블러가 없다)
- *   iOS 만         → Safari 로 그냥 열었을 때도 밀린다(브라우저에는 블러가 없다)
- *
- * -webkit-touch-callout 판정은 휴리스틱이다. 언젠가 어긋나면 여기만 고치면 된다.
- */
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) {
-    :root { --top-inset: 18px; }
-  }
-}
