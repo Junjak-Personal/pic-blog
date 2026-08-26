@@ -17,6 +17,39 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: []; openPhoto: [index: number] }>()
 
+/*
+ * 모바일 시트 — 아래로 쓸어서 닫기 (아트боard 1b).
+ * ✕ 는 화면 위쪽 끝에 있어서 한 손으로 잡으면 엄지가 안 닿는다.
+ *
+ * 손잡이(.grip)와 헤더에서만 시작한다. 본문에서 잡으면 사진 산포·태그 스크롤과
+ * 싸우고, 스크롤을 내리려다 시트가 닫히는 일이 생긴다.
+ */
+const DISMISS_PX = 110
+const dragY = ref(0)
+const dragging = ref(false)
+let startY = 0
+
+function onGripDown(e: PointerEvent) {
+  if (!props.mobile || e.button !== 0) return
+  dragging.value = true
+  startY = e.clientY
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
+
+function onGripMove(e: PointerEvent) {
+  if (!dragging.value) return
+  // 위로는 안 끌린다 — 시트는 아래로만 사라진다
+  dragY.value = Math.max(0, e.clientY - startY)
+}
+
+function onGripUp() {
+  if (!dragging.value) return
+  const far = dragY.value >= DISMISS_PX
+  dragging.value = false
+  dragY.value = 0
+  if (far) emit('close')
+}
+
 const name = computed(() => props.point.title ?? `포인트 ${props.index + 1}`)
 
 /** 본문은 빈 줄 기준으로 문단을 나눈다 */
@@ -39,8 +72,29 @@ const deviceLine = computed(() => {
 </script>
 
 <template>
-  <section class="sheet" :class="{ mobile: props.mobile }">
-    <header class="head">
+  <section
+    class="sheet"
+    :class="{ mobile: props.mobile, dragging }"
+    :style="dragY ? { transform: `translateY(${dragY}px)` } : undefined"
+  >
+    <!-- 모바일 손잡이. 여기와 헤더에서만 쓸어 닫기가 시작된다 -->
+    <div
+      class="grip"
+      @pointerdown="onGripDown"
+      @pointermove="onGripMove"
+      @pointerup="onGripUp"
+      @pointercancel="onGripUp"
+    >
+      <span class="grip-bar" />
+    </div>
+
+    <header
+      class="head"
+      @pointerdown="onGripDown"
+      @pointermove="onGripMove"
+      @pointerup="onGripUp"
+      @pointercancel="onGripUp"
+    >
       <span class="mono badge">{{ String(props.index + 1).padStart(2, '0') }}</span>
       <h2 class="name">{{ name }}</h2>
       <span class="meta">
@@ -83,7 +137,11 @@ const deviceLine = computed(() => {
 </template>
 
 <style scoped>
+.sheet.dragging { transition: none; }
+
 .sheet {
+  /* 끄는 동안은 손가락을 그대로 따라가고, 놓으면 제자리로 돌아간다 */
+  transition: transform 0.22s ease;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -92,6 +150,9 @@ const deviceLine = computed(() => {
   border-top: 1px solid rgba(146, 178, 169, 0.3);
   border-radius: 12px 12px 0 0;
 }
+
+/* 손잡이 — 데스크탑에는 시트가 없다 */
+.grip { display: none; }
 
 .head {
   flex: none;
@@ -175,7 +236,23 @@ const deviceLine = computed(() => {
   .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); max-height: 44%; }
 }
 @media (max-width: 900px) {
-  .head { flex-wrap: wrap; gap: 9px 12px; padding: 14px 18px 12px; }
+  /* 손잡이 — 쓸어 닫을 수 있다는 유일한 시각 신호다 */
+  .grip {
+    display: grid;
+    place-items: center;
+    flex: none;
+    height: 22px;
+    /* 손잡이·헤더에서 세로 제스처를 우리가 가져간다 */
+    touch-action: none;
+    cursor: grab;
+  }
+  .grip-bar {
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(177, 199, 193, 0.3);
+  }
+  .head { flex-wrap: wrap; gap: 9px 12px; padding: 8px 18px 12px; touch-action: none; }
   .name { font-size: 26px; width: calc(100% - 80px); }
   .meta { padding-top: 0; }
   .side { padding: 16px 18px; }
