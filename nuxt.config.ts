@@ -31,18 +31,20 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#040408' },
         // viewport-fit=cover 가 없으면 env(safe-area-inset-*) 가 전부 0 이라
         // 하단 CTA 가 홈 인디케이터에 깔린다 (BottomCta.vue 참고)
-        // user-scalable=no 는 Safari 브라우저에서는 접근성 때문에 무시되고(정상),
-        // 홈 화면에 추가한 standalone 모드에서만 먹는다 — 앱처럼 쓸 때만 확대가 잠긴다.
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no' },
-        // iOS 는 아직 manifest 의 display 만으로는 부족한 버전이 있어 레거시 키를 같이 둔다
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
         { name: 'apple-mobile-web-app-title', content: 'pic·blog' },
-        // black-translucent: 콘텐츠가 상태바 영역까지 올라간다. .shell 의
-        // padding-top: env(safe-area-inset-top) 이 실제 콘텐츠를 그 밑으로 밀어주므로
-        // 상태바 뒤에는 셸 배경만 깔린다. black 일 때 상단바가 흐려 보이던 것을
-        // 이걸로 바꿔본다 (기기에서 확인 필요).
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'mobile-web-app-capable', content: 'yes' },
+        /*
+         * 🔴 apple-mobile-web-app-capable 을 일부러 넣지 않는다.
+         *
+         * 그건 레거시 iOS 웹앱 모드를 켜는 메타이고, 그 모드가 콘텐츠를 상태바 밑까지
+         * 밀어 넣은 뒤 시스템이 그 위에 합성한다 — 상단바 글자·로고가 뭉개져 보이던
+         * 원인이 이것이었다. 상태바 스타일을 black / black-translucent 로 바꿔도
+         * 증상이 남았던 것도 같은 이유다(모드가 계속 켜져 있었다).
+         *
+         * standalone 은 manifest 의 display 가 이미 담당하므로 이 메타가 필요 없다.
+         * 같은 기기에서 문제없이 도는 다른 PWA(nivoca)도 이 메타 없이 default 를 쓴다.
+         */
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
       ],
     },
   },
