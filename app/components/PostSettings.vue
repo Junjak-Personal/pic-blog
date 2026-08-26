@@ -304,7 +304,7 @@ function confirmRecluster() {
 .btn.danger { background: var(--danger); color: var(--s0); font-weight: 600; }
 
 @media (max-width: 900px) {
-  .settings { padding: 16px 16px calc(74px + env(safe-area-inset-bottom)); gap: 20px; }
+  .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
   .input.title { font-size: 18px; }
   .lock-note { margin-left: 0; }
   .dlg-actions .btn { flex: 1; min-height: 46px; }

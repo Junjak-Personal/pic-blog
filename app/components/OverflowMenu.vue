@@ -36,7 +36,8 @@ withDefaults(defineProps<{ label?: string; align?: 'start' | 'center' | 'end' }>
 </template>
 
 <style scoped>
-/* 트리거는 아이콘 전용이라 ghost 가 허용된다 (버튼 규칙: icon-only 예외) */
+/* 아이콘 전용이라 테두리를 두르지 않는다 — 아이콘 하나를 상자에 가두면 어색하다.
+   배경은 눌렀을 때·열렸을 때만 뜬다 (버튼 규칙의 icon-only ghost 예외). */
 .ovf-trigger {
   /* 데스크탑에는 펼친 버튼이 따로 있다 — 900px 이하에서만 나타난다 */
   display: none;
@@ -44,12 +45,13 @@ withDefaults(defineProps<{ label?: string; align?: 'start' | 'center' | 'end' }>
   flex: none;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 0;
   border-radius: var(--radius);
   background: none;
   color: var(--mid);
   cursor: pointer;
 }
+.ovf-trigger:active { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
 .ovf-trigger:focus-visible { box-shadow: var(--focus-ring); border-color: var(--focus-border); }
 .ovf-trigger[data-state='open'] { background: rgba(146, 178, 169, 0.12); color: var(--ink); }
 

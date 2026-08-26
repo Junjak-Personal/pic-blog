@@ -284,9 +284,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
             편집 중
           </span>
-          <span class="mono state" :class="{ dirty: changes > 0 }">
-            {{ changes ? `변경 ${changes}건 · 저장 안 됨` : '변경 없음' }}
-          </span>
+          <span v-if="changes" class="mono state dirty">변경 {{ changes }}건 · 저장 안 됨</span>
           <span v-if="errorMessage" class="mono err">{{ errorMessage }}</span>
         </div>
 
@@ -500,7 +498,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     </template>
 
     <!-- 모바일: 저장은 화면 아래에서 손이 닿는 곳에 둔다 -->
-    <BottomCta v-if="post" :note="changes ? `변경 ${changes}건` : '변경 없음'">
+    <BottomCta v-if="post" :note="changes ? `변경 ${changes}건` : null">
       <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
         {{ saving ? '저장 중…' : '저장' }}
@@ -948,7 +946,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .editor, .split { display: block; min-height: 0; }
   .ehead { flex-wrap: wrap; padding: 12px 16px; }
   .grid-col { min-height: 0; padding: 14px 16px; }
-  .side { min-height: 0; padding: 14px 16px calc(74px + env(safe-area-inset-bottom)); }
+  .side { min-height: 0; padding: 14px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   /* 태그 칩도 터치 타깃이다 — 입력이 16px 로 커지므로 칩도 같이 키운다 */
   .tags { gap: 8px; }

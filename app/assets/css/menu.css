@@ -39,7 +39,14 @@
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
 
-/* BottomCta 가 fixed 라 마지막 내용이 가려진다 — 스크롤 컨테이너가 같은 높이만큼 비운다 */
+/*
+ * BottomCta 는 fixed 라 문서 흐름에서 자리를 차지하지 않는다. 그 아래 깔리는 내용을
+ * 페이지마다 손으로 74px 씩 적어두면 CTA 높이가 바뀔 때 전부 어긋난다 — 한 곳에서 센다.
+ * 노트 한 줄(약 16px) + 버튼 46px + 상하 여백 20px + 경계선.
+ */
+:root { --cta-h: 84px; }
+
 @media (max-width: 900px) {
-  .has-bottom-cta { padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important; }
+  /* CTA 가 있는 화면의 스크롤 컨테이너는 이만큼 비운다 */
+  .has-bottom-cta { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)) !important; }
 }

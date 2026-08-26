@@ -1,9 +1,13 @@
 <script setup lang="ts">
 /**
  * 사진 순서 그리드 — 아트보드 1e. 5열, 첫 칸이 커버다.
- * 재정렬은 HTML5 네이티브 드래그앤드롭으로만 한다 (드래그 라이브러리를 넣지 않는다).
- * 드래그가 불가능한 입력(키보드)을 위해 핸들에 ←/→ 이동을 붙였다 — 없으면 순서 편집이
- * 마우스 전용 기능이 된다.
+ *
+ * 재정렬은 Pointer Events 로 한다. 원래 HTML5 네이티브 드래그앤드롭이었는데
+ * 🔴 그건 터치 기기에서 아예 동작하지 않는다 — 아이폰에서 순서를 못 바꾸고 있었다.
+ * Pointer Events 는 마우스·터치·펜이 같은 경로를 타므로 한 벌로 전부 커버된다.
+ * 라이브러리는 여전히 넣지 않는다.
+ *
+ * 핸들의 ←/→ 이동은 그대로 둔다 — 키보드 사용자에게는 그게 유일한 경로다.
  */
 import type { Photo } from '#shared/types/db'
 import { formatTime } from '#shared/utils/format'
@@ -22,34 +26,52 @@ const emit = defineEmits<{
 
 const dragIndex = ref<number | null>(null)
 const overIndex = ref<number | null>(null)
+/** 스크롤과 구분하기 위한 임계값 — 이만큼 움직여야 드래그로 친다 */
+const DRAG_SLOP = 6
+let startX = 0
+let startY = 0
+let armed = false
 
 /** 커버는 「첫 포인트의 첫 사진」이라 모든 포인트가 커버를 갖지는 않는다 */
 const holdsCover = computed(() => props.photos.some((p) => p.id === props.coverId))
 
-function onDragStart(index: number, e: DragEvent) {
+function onPointerDown(index: number, e: PointerEvent) {
+  // 왼쪽 버튼·터치·펜만. 칸 안의 버튼(삭제·이동)을 누른 것이면 드래그가 아니다.
+  if (e.button !== 0) return
+  if ((e.target as HTMLElement).closest('button')) return
+  armed = true
+  startX = e.clientX
+  startY = e.clientY
   dragIndex.value = index
-  // Firefox 는 dataTransfer 에 아무것도 담기지 않으면 드래그를 시작조차 하지 않는다
-  e.dataTransfer?.setData('text/plain', String(index))
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+  // 포인터를 이 요소에 묶어둔다 — 손가락이 칸을 벗어나도 이벤트가 계속 온다
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 
-function onDragOver(index: number, e: DragEvent) {
+function onPointerMove(e: PointerEvent) {
   if (dragIndex.value === null) return
-  e.preventDefault()
-  overIndex.value = index
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+
+  // 임계값을 넘기 전에는 아무것도 하지 않는다 — 세로 스크롤을 뺏으면 안 된다
+  if (armed && Math.hypot(e.clientX - startX, e.clientY - startY) < DRAG_SLOP) return
+  armed = false
+
+  // 포인터가 잡혀 있어 e.target 은 항상 시작 칸이다. 실제로 어느 칸 위인지는 좌표로 찾는다.
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.tile')
+  if (!el || !el.parentElement) return
+  const to = [...el.parentElement.children].indexOf(el)
+  if (to >= 0 && to < props.photos.length) overIndex.value = to
+}
+
+function onPointerUp() {
+  const from = dragIndex.value
+  const to = overIndex.value
+  onDragEnd()
+  if (from !== null && to !== null) move(from, to)
 }
 
 function onDragEnd() {
+  armed = false
   dragIndex.value = null
   overIndex.value = null
-}
-
-function onDrop(to: number) {
-  const from = dragIndex.value
-  onDragEnd()
-  if (from === null) return
-  move(from, to)
 }
 
 function move(from: number, to: number) {
@@ -66,7 +88,7 @@ function move(from: number, to: number) {
   <div class="grid-wrap">
     <div class="grid-head">
       <span class="mono label">
-        사진 순서 · 드래그로 이동<template v-if="holdsCover"> · 첫 칸이 커버</template>
+        사진 순서 · 끌어서 이동<template v-if="holdsCover"> · 첫 칸이 커버</template>
       </span>
       <span class="mono count">{{ photos.length }}장</span>
     </div>
@@ -77,12 +99,10 @@ function move(from: number, to: number) {
         :key="ph.id"
         class="tile"
         :class="{ dragging: dragIndex === i, over: overIndex === i && dragIndex !== i }"
-        draggable="true"
-        @dragstart="onDragStart(i, $event)"
-        @dragover="onDragOver(i, $event)"
-        @dragleave="overIndex = null"
-        @drop.prevent="onDrop(i)"
-        @dragend="onDragEnd"
+        @pointerdown="onPointerDown(i, $event)"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onDragEnd"
       >
         <img class="thumb" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
 
@@ -133,6 +153,11 @@ function move(from: number, to: number) {
 }
 
 .tile {
+  /* 드래그가 세로 스크롤에 먹히지 않게. 임계값 전에는 우리도 아무것도 안 하므로
+     pan-y 를 남겨두면 스크롤과 드래그가 싸운다 — 칸 위에서는 우리가 가져간다. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   position: relative;
   aspect-ratio: 4 / 3;
   /* 썸네일이 오기 전 빈 칸이 배경과 붙어버리지 않도록 아트보드의 사선 패턴을 깔아 둔다 */

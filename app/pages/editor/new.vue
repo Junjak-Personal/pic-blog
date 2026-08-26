@@ -639,7 +639,7 @@ async function skip() {
   /* 확정은 하단 CTA, 뒤로는 좌측 ← 로 갔다 — 우측 묶음은 모바일에서 빈다 */
   .top-actions { display: none; }
   /* 하단 CTA 에 가리지 않게 목록 끝을 비운다 */
-  .side { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+  .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: 12.5px; }
   .scanbar-note { display: none; }

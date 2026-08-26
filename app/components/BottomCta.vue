@@ -11,10 +11,33 @@
  * .has-bottom-cta 로 같은 높이만큼 하단 패딩을 받는다.
  */
 withDefaults(defineProps<{ note?: string | null }>(), { note: null })
+
+/*
+ * 실제 높이를 재서 --cta-h 에 넣는다.
+ * fixed 라 문서 흐름에서 자리를 안 차지하므로, 아래 깔리는 내용은 이 값만큼 비워야 한다.
+ * 노트 한 줄이 생기고 없어지면서 높이가 바뀌므로(67↔84px) 상수로 박으면 어긋난다 —
+ * 실제로 하단이 잘렸다는 보고가 있었다.
+ */
+const el = useTemplateRef<HTMLElement>('cta')
+
+onMounted(() => {
+  if (!el.value) return
+  const set = () => {
+    const h = el.value?.offsetHeight
+    if (h) document.documentElement.style.setProperty('--cta-h', `${h}px`)
+  }
+  set()
+  const ro = new ResizeObserver(set)
+  ro.observe(el.value)
+  onBeforeUnmount(() => {
+    ro.disconnect()
+    document.documentElement.style.removeProperty('--cta-h')
+  })
+})
 </script>
 
 <template>
-  <div class="cta">
+  <div ref="cta" class="cta">
     <p v-if="note" class="mono note">{{ note }}</p>
     <div class="row">
       <slot />

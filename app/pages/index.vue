@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BrandMark from '~/components/BrandMark.vue'
+import SiteFooter from '~/components/SiteFooter.vue'
 /** 포스트 목록 — 아트보드 1a. 공개 경로라 절대 잠기지 않는다. */
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'
@@ -150,10 +151,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         </NuxtLink>
       </div>
 
-      <footer class="pagefoot mono">
-        <span>EXIF GPS로 포인트를 만들고, 촬영 시각으로 동선을 잇습니다</span>
-        <span>좌표 없는 사진은 포인트가 되지 않습니다</span>
-      </footer>
+      <SiteFooter />
     </template>
   </main>
 </template>

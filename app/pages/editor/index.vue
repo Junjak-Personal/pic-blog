@@ -101,23 +101,12 @@ function reasonOf(e: unknown) {
           <h3 class="title">{{ post.title }}</h3>
           <p v-if="post.summary" class="summary">{{ post.summary }}</p>
           <p class="mono meta">
+            <span v-if="!post.is_public" class="private">비공개</span>
             {{ post.started_at ? formatRange(post.started_at, post.ended_at) : '기간 없음' }}
             · {{ post.point_count }} 포인트 · {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km
           </p>
         </div>
 
-        <label class="switch">
-          <input
-            type="checkbox"
-            role="switch"
-            :checked="post.is_public"
-            :disabled="pending.has(post.slug)"
-            :aria-label="`${post.title} 공개 여부`"
-            @change="togglePublic(post)"
-          >
-          <span class="track"><span class="knob" /></span>
-          <span class="switch-label">{{ post.is_public ? '공개' : '비공개' }}</span>
-        </label>
 
         <div class="row-actions">
           <NuxtLink :to="`/editor/${post.slug}`" class="btn ghost mono wide-only">편집</NuxtLink>
@@ -221,7 +210,7 @@ function reasonOf(e: unknown) {
 
 .row {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) auto auto;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
   align-items: center;
   gap: 18px;
   padding: 14px 18px;
@@ -274,6 +263,15 @@ function reasonOf(e: unknown) {
   white-space: nowrap;
 }
 .meta { font-size: 10.5px; color: var(--deep); }
+/* 공개 토글은 편집 1단계로 갔다. 목록에는 상태만 남긴다 — 컨트롤이 아니라 표시다. */
+.private {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border: 1px solid rgba(177, 199, 193, 0.28);
+  border-radius: 4px;
+  color: var(--mid);
+}
 
 /* 공개 토글 — 아트보드 1e 의 42×24 pill. 네이티브 체크박스를 숨기지 않고 시각만 CSS 로 덮는다 */
 .switch { position: relative; display: flex; align-items: center; gap: 9px; flex: none; cursor: pointer; }
@@ -350,7 +348,7 @@ function reasonOf(e: unknown) {
 
   /* 모바일은 세로 스택 — 토글·링크는 44px 터치 타깃으로 한 줄씩 내려온다 */
   /* 커버 | 본문 | 토글 | ⋯ 네 칸을 한 줄에 — 64+42+44+간격 을 빼고 남는 폭이 제목 몫이다 */
-  .row { grid-template-columns: 64px minmax(0, 1fr) auto auto; gap: 10px; padding: 12px; align-items: start; }
+  .row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; align-items: start; }
   /* 제목 칸이 186px 밖에 안 되어 한 줄 ellipsis 로는 「2026.04.14 – 04.15 …」 가 된다.
      목록에서 세로는 싸고 가로는 비싸다 — 두 줄까지 흐르게 두고 그 다음에 자른다. */
   .title {
@@ -363,13 +361,11 @@ function reasonOf(e: unknown) {
   }
   .summary { display: none; }
   .meta { font-size: 10px; line-height: 1.5; }
-  .switch, .row-actions { align-self: center; }
+  .row-actions { align-self: center; }
   .cover { width: 64px; height: 48px; }
   /* 편집·보기는 ⋯ 로 접는다 — 행마다 폭 전체 버튼 두 개를 깔면 목록이 두 배로 길어진다.
      토글은 남긴다(상태가 한눈에 보여야 한다). 옆의 「공개/비공개」 글자는 스위치가
      이미 같은 정보를 주므로 폭을 위해 접는다. aria-label 은 그대로 남아 있다. */
-  .switch { min-height: 44px; gap: 0; }
-  .switch-label { display: none; }
   .wide-only { display: none; }
 }
 </style>
