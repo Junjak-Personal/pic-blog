@@ -6,7 +6,7 @@
  * Reka DialogRoot 가 포커스 트랩·ESC·스크롤 잠금을 맡는다.
  */
 import type { Photo } from '#shared/types/db'
-import { formatDateTime } from '#shared/utils/format'
+import { formatDateTime, formatOf } from '#shared/utils/format'
 
 const props = defineProps<{
   photos: Photo[]
@@ -69,7 +69,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
           <figure v-if="current" class="frame">
             <img :src="current.display_path" :alt="`${props.pointName} 사진`">
-            <figcaption v-if="current.w" class="mono cap">{{ current.w }} × {{ current.h }} WebP</figcaption>
+            <figcaption v-if="current.w" class="mono cap">{{ current.w }} × {{ current.h }} {{ formatOf(current.display_path) }}</figcaption>
           </figure>
 
           <button type="button" class="nav" aria-label="다음 사진" @click="move(1)">

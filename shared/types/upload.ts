@@ -28,6 +28,8 @@ export interface UploadPointInput {
 
 export interface CreatePostInput {
   title: string
+  /** 이 묶음을 만든 반경(m). 나중에 편집 화면에서 「현재 50m」 로 보여준다. */
+  radius: number
   points: UploadPointInput[]
 }
 

@@ -73,7 +73,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
         <button
           v-if="flow.stage.value === 'preview' && flow.scanned.value.length"
           type="button"
-          class="btn primary mono"
+          class="btn primary mono wide-only"
           @click="confirm"
         >
           포인트 {{ flow.totalAfter.value }}개로 추가
@@ -81,6 +81,17 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
         </button>
       </div>
     </header>
+
+    <!-- 모바일: 추가는 화면 아래에서 -->
+    <BottomCta
+      v-if="flow.stage.value === 'preview' && flow.scanned.value.length"
+      :note="`추가한 사진 ${flow.scanned.value.length}장 · 반경 ${flow.radius.value}m`"
+    >
+      <button type="button" class="btn primary mono" @click="confirm">
+        포인트 {{ flow.totalAfter.value }}개로 추가
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+      </button>
+    </BottomCta>
 
     <!-- 파일 선택 -->
     <section v-if="flow.stage.value === 'idle'" class="empty">
@@ -478,8 +489,10 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 @media (max-width: 900px) {
   .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: 10px 14px; }
   .left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }
-  .right { flex: 1 1 100%; gap: 8px; }
-  .right .btn { flex: 1; min-height: 44px; justify-content: center; }
+  .wide-only { display: none; }
+  .right { gap: 8px; }
+  .right .btn { min-height: 40px; }
+  .side { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */
   .preview { display: block; min-height: 0; }

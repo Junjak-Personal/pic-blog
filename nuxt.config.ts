@@ -7,6 +7,10 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'ko' },
       link: [
+        { rel: 'manifest', href: '/manifest.webmanifest' },
+        // iOS 는 manifest 의 icons 를 홈 화면에 쓰지 않는다 — apple-touch-icon 이 따로 필요하다
+        { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png', sizes: '180x180' },
+        { rel: 'icon', href: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
@@ -23,7 +27,18 @@ export default defineNuxtConfig({
           href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css',
         },
       ],
-      meta: [{ name: 'theme-color', content: '#040408' }],
+      meta: [
+        { name: 'theme-color', content: '#040408' },
+        // viewport-fit=cover 가 없으면 env(safe-area-inset-*) 가 전부 0 이라
+        // 하단 CTA 가 홈 인디케이터에 깔린다 (BottomCta.vue 참고)
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        // iOS 는 아직 manifest 의 display 만으로는 부족한 버전이 있어 레거시 키를 같이 둔다
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-title', content: 'pic·blog' },
+        // black-translucent 는 콘텐츠가 상태바 밑으로 들어가 상단바가 겹친다 — black 으로 둔다
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+      ],
     },
   },
   nitro: {

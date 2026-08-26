@@ -54,7 +54,12 @@ function reasonOf(e: unknown) {
   <div class="page">
     <header class="topbar">
       <div class="brand">
-        <span class="wordmark">pic<span class="dot">·</span>blog</span>
+        <!-- 마크가 홈 링크를 겸한다. PWA standalone 에는 브라우저 뒤로가기가 없어서
+             화면마다 상위로 가는 경로가 하나씩은 있어야 한다. -->
+        <NuxtLink to="/" class="home" aria-label="pic·blog 홈">
+          <BrandMark class="mark" />
+          <span class="wordmark">pic<span class="dot">·</span>blog</span>
+        </NuxtLink>
         <span class="mono kicker">기록 관리</span>
       </div>
 
@@ -82,7 +87,7 @@ function reasonOf(e: unknown) {
       </NuxtLink>
     </section>
 
-    <ul v-else class="list">
+    <ul v-else class="list safe-bottom">
       <li v-for="post in posts" :key="post.slug" class="row">
         <span class="cover">
           <img v-if="post.cover_thumb" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
@@ -149,7 +154,9 @@ function reasonOf(e: unknown) {
   padding: 0 32px;
   border-bottom: 1px solid var(--hair);
 }
-.brand { display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home { display: flex; align-items: center; gap: 12px; color: var(--ink); }
+.mark { flex: none; }
 .wordmark {
   font-family: var(--font-display);
   font-size: 21px;
@@ -314,15 +321,28 @@ function reasonOf(e: unknown) {
 
 @media (max-width: 900px) {
   .topbar { height: 54px; padding: 0 16px; gap: 10px; }
-  .wordmark { font-size: 18px; }
+  /* 모바일은 마크만 */
+  .wordmark { display: none; }
   .error { margin: 12px 16px 0; }
   .list { gap: 10px; padding: 16px; }
 
   /* 모바일은 세로 스택 — 토글·링크는 44px 터치 타깃으로 한 줄씩 내려온다 */
   /* 커버 | 본문 | 토글 | ⋯ 네 칸을 한 줄에 — 64+42+44+간격 을 빼고 남는 폭이 제목 몫이다 */
-  .row { grid-template-columns: 64px minmax(0, 1fr) auto auto; gap: 10px; padding: 12px; }
+  .row { grid-template-columns: 64px minmax(0, 1fr) auto auto; gap: 10px; padding: 12px; align-items: start; }
+  /* 제목 칸이 186px 밖에 안 되어 한 줄 ellipsis 로는 「2026.04.14 – 04.15 …」 가 된다.
+     목록에서 세로는 싸고 가로는 비싸다 — 두 줄까지 흐르게 두고 그 다음에 자른다. */
+  .title {
+    font-size: 15px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .summary { display: none; }
+  .meta { font-size: 10px; line-height: 1.5; }
+  .switch, .row-actions { align-self: center; }
   .cover { width: 64px; height: 48px; }
-  .title { font-size: 17px; }
   /* 편집·보기는 ⋯ 로 접는다 — 행마다 폭 전체 버튼 두 개를 깔면 목록이 두 배로 길어진다.
      토글은 남긴다(상태가 한눈에 보여야 한다). 옆의 「공개/비공개」 글자는 스위치가
      이미 같은 정보를 주므로 폭을 위해 접는다. aria-label 은 그대로 남아 있다. */

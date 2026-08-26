@@ -85,7 +85,7 @@ async function skip() {
         <button
           v-if="flow.stage.value === 'preview'"
           type="button"
-          class="btn primary mono"
+          class="btn primary mono wide-only"
           :disabled="!flow.clusters.value.length"
           @click="confirm"
         >
@@ -94,6 +94,17 @@ async function skip() {
         </button>
       </div>
     </header>
+
+    <!-- 모바일: 확정은 화면 아래에서. 반경 슬라이더를 만지다 바로 누르는 흐름이다 -->
+    <BottomCta
+      v-if="flow.stage.value === 'preview'"
+      :note="`사진 ${flow.scanned.value.length}장 · 반경 ${flow.radius.value}m`"
+    >
+      <button type="button" class="btn primary mono" :disabled="!flow.clusters.value.length" @click="confirm">
+        포인트 {{ flow.clusters.value.length }}개로 확정
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+      </button>
+    </BottomCta>
 
     <!-- 1단계 — 파일 선택 -->
     <section v-if="flow.stage.value === 'idle'" class="empty">
@@ -608,8 +619,11 @@ async function skip() {
      남기면(.on 은 완료도 포함한다) 390px 에서 4번째 동그라미가 화면 밖으로 밀린다 */
   .step-label:not(.now) { display: none; }
   .step-rule { width: 12px; margin: 0 6px; }
-  .top-actions { flex: 1 1 100%; gap: 8px; }
-  .top-actions .btn { flex: 1; min-height: 44px; justify-content: center; }
+  .wide-only { display: none; }
+  .top-actions { gap: 8px; }
+  .top-actions .btn { min-height: 40px; }
+  /* 하단 CTA 에 가리지 않게 목록 끝을 비운다 */
+  .side { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
 
   .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: 12.5px; }
   .scanbar-note { display: none; }

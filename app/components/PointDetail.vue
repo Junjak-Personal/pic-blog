@@ -6,7 +6,7 @@
  * 하단에 EXIF 촬영값. 값이 없으면 그 줄만 감춘다.
  */
 import type { Point } from '#shared/types/db'
-import { formatDate, formatExifLine, formatTime } from '#shared/utils/format'
+import { formatDate, formatExifLine, formatOf, formatTime } from '#shared/utils/format'
 import { formatCoord } from '#shared/utils/geo'
 
 const props = defineProps<{
@@ -33,7 +33,7 @@ const exifLine = computed(() => (lead.value ? formatExifLine(lead.value) : null)
 const deviceLine = computed(() => {
   const p = lead.value
   if (!p) return null
-  const parts = [p.camera, p.w ? `${Math.max(p.w, p.h)}px WebP` : null].filter(Boolean)
+  const parts = [p.camera, p.w ? `${Math.max(p.w, p.h)}px ${formatOf(p.display_path) ?? ''}`.trim() : null].filter(Boolean)
   return parts.length ? parts.join(' · ') : null
 })
 </script>

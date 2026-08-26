@@ -25,10 +25,10 @@ export default defineEventHandler(async (event): Promise<CreatePostResult> => {
     const postId = Number(
       db
         .prepare(
-          `INSERT INTO post (slug, title, summary, started_at, ended_at, is_public, created_at, updated_at)
-           VALUES (?, ?, NULL, ?, ?, 0, ?, ?)`,
+          `INSERT INTO post (slug, title, summary, started_at, ended_at, is_public, cluster_radius, created_at, updated_at)
+           VALUES (?, ?, NULL, ?, ?, 0, ?, ?, ?)`,
         )
-        .run(slug, input.title, allShotAt[0] ?? null, allShotAt.at(-1) ?? null, now, now).lastInsertRowid,
+        .run(slug, input.title, allShotAt[0] ?? null, allShotAt.at(-1) ?? null, input.radius, now, now).lastInsertRowid,
     )
 
     const insertPoint = db.prepare(

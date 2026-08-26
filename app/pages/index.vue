@@ -40,6 +40,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   <main class="page">
     <header class="topbar">
       <div class="brand">
+        <BrandMark class="mark" />
         <span class="wordmark">pic<span class="dot">·</span>blog</span>
         <span class="mono kicker">travel log</span>
       </div>
@@ -128,7 +129,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   padding: 0 32px;
   border-bottom: 1px solid var(--hair);
 }
-.brand { display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark { flex: none; color: var(--ink); }
 .wordmark {
   font-family: var(--font-display);
   font-size: 21px;
@@ -278,7 +280,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 }
 @media (max-width: 900px) {
   .topbar { height: 54px; padding: 0 16px; gap: 10px; }
-  .wordmark { font-size: 18px; }
+  /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
+  .wordmark { display: none; }
   .kicker, .sorts { display: none; }
   .map-strip { height: 166px; }
   .grid { grid-template-columns: 1fr; gap: 16px; padding: 16px 16px 0; }

@@ -38,3 +38,8 @@
 .ovf-item[data-state='checked'] .ovf-state { color: var(--acc); }
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
+
+/* BottomCta 가 fixed 라 마지막 내용이 가려진다 — 스크롤 컨테이너가 같은 높이만큼 비운다 */
+@media (max-width: 900px) {
+  .has-bottom-cta { padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important; }
+}

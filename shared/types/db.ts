@@ -9,6 +9,8 @@ export interface PostRow {
   started_at: string | null
   ended_at: string | null
   is_public: number
+  /** 이 기록을 묶을 때 쓴 클러스터 반경(m). 업로드 이전 기록은 null. */
+  cluster_radius: number | null
   created_at: string
   updated_at: string
 }

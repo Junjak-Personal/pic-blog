@@ -5,6 +5,8 @@
 import type { AddPhotosInput, CreatePostInput, UploadPhotoInput, UploadPointInput } from '#shared/types/upload'
 
 const EXTS = new Set(['webp', 'jpeg'])
+/** 클러스터 반경은 UI 가 주는 네 값 중 하나만 받는다 — 임의 값은 재현이 안 된다. */
+export const ALLOWED_RADII = new Set([20, 50, 100, 200])
 const MAX_POINTS = 2000
 const MAX_PHOTOS_PER_POINT = 2000
 
@@ -96,10 +98,21 @@ function points(raw: unknown, at: string): UploadPointInput[] {
   return raw.map((x, i) => point(x, `${at}[${i}]`))
 }
 
+export function radius(v: unknown, field = 'radius'): number {
+  if (typeof v !== 'number' || !ALLOWED_RADII.has(v)) {
+    bad(`${field}: 반경은 ${[...ALLOWED_RADII].join(' · ')} m 중 하나여야 합니다`)
+  }
+  return v
+}
+
 export function validateCreatePost(raw: unknown): CreatePostInput {
   if (typeof raw !== 'object' || raw === null) bad('본문이 비어 있습니다')
   const b = raw as Record<string, unknown>
-  return { title: str(b.title, 'title', 200), points: points(b.points, 'points') }
+  return {
+    title: str(b.title, 'title', 200),
+    radius: radius(b.radius),
+    points: points(b.points, 'points'),
+  }
 }
 
 export function validateAddPhotos(raw: unknown): AddPhotosInput {

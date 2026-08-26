@@ -40,6 +40,9 @@ const removedPhotoIds = ref<number[]>([])
 const activeId = ref<number | null>(null)
 const tagInput = ref('')
 const saving = ref(false)
+/** 편집은 「기록 설정」에서 시작한다 — 타이틀·공개·포인트 범위를 먼저 확인하고 포인트로 넘어간다 */
+const step = ref<'settings' | 'points'>('settings')
+const reclustering = ref(false)
 const errorMessage = ref<string | null>(null)
 
 const photoById = computed(
@@ -168,6 +171,26 @@ function revert() {
   hydrate()
 }
 
+/**
+ * 반경 변경 — 다른 편집과 달리 즉시 서버로 나간다. 2단계가 편집할 포인트 자체가
+ * 갈리기 때문에 초안에 담아둘 수가 없다. 확인은 PostSettings 의 다이얼로그가 이미 받았다.
+ */
+async function recluster(radius: number) {
+  if (reclustering.value || changes.value) return
+  reclustering.value = true
+  errorMessage.value = null
+  try {
+    await $fetch(`/api/posts/${slug.value}/recluster`, { method: 'POST', body: { radius } })
+    await refresh()
+    // 포인트가 통째로 갈렸으므로 초안과 선택을 새 데이터로 다시 세운다
+    hydrate()
+  } catch (e) {
+    errorMessage.value = reason(e)
+  } finally {
+    reclustering.value = false
+  }
+}
+
 async function save() {
   const p = post.value
   if (!p || saving.value || !changes.value) return
@@ -269,7 +292,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         <span class="rule" />
         <NuxtLink to="/editor" class="btn ghost mono wide-only">목록</NuxtLink>
         <button type="button" class="btn ghost mono wide-only" :disabled="!changes" @click="revert">취소</button>
-        <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
+        <button type="button" class="btn primary mono wide-only" :disabled="!changes || saving" @click="save">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
           {{ saving ? '저장 중' : '저장' }}
         </button>
@@ -304,27 +327,43 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     </section>
 
     <template v-else>
-      <!-- 포스트 헤더 — 타이틀 · 요약은 편집, 기간은 EXIF 원본 -->
-      <div class="posthead">
-        <label class="field">
-          <span class="mono flabel">포스트 타이틀</span>
-          <input v-model="draftTitle" class="input title" maxlength="200" placeholder="기록 제목" data-testid="editor-title-input">
-        </label>
-        <label class="field">
-          <span class="mono flabel">요약</span>
-          <input v-model="draftSummary" class="input" maxlength="1000" placeholder="한 줄 요약" data-testid="editor-summary-input">
-        </label>
-        <div class="field locked">
-          <span class="mono flabel">기간 · 촬영 시각</span>
-          <div class="lockbox">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
-            <span class="mono lock-value">{{ formatRange(post.started_at, post.ended_at) || '기간 없음' }}</span>
-            <span class="mono lock-note">EXIF 원본 · 편집 불가</span>
-          </div>
-        </div>
-      </div>
+      <!-- 단계 — 1 기록 설정 → 2 포인트 편집 -->
+      <nav class="steps" aria-label="편집 단계">
+        <button
+          type="button"
+          class="stepbtn mono"
+          :class="{ on: step === 'settings' }"
+          :aria-current="step === 'settings' ? 'step' : undefined"
+          @click="step = 'settings'"
+        >
+          <span class="sdot">1</span>
+          기록 설정
+        </button>
+        <button
+          type="button"
+          class="stepbtn mono"
+          :class="{ on: step === 'points' }"
+          :aria-current="step === 'points' ? 'step' : undefined"
+          @click="step = 'points'"
+        >
+          <span class="sdot">2</span>
+          포인트 편집
+          <span class="scount">{{ pointDrafts.length }}</span>
+        </button>
+      </nav>
 
-      <div class="body">
+      <PostSettings
+        v-if="step === 'settings'"
+        v-model:title="draftTitle"
+        v-model:summary="draftSummary"
+        v-model:is-public="draftPublic"
+        :post="post"
+        :dirty="changes > 0"
+        :busy="reclustering"
+        @recluster="recluster"
+      />
+
+      <div v-if="step === 'points'" class="body">
         <!-- 좌: 포인트 목록. 순서는 촬영 시각 순으로 고정이라 이동 UI 가 없다 -->
         <aside class="points">
           <div class="points-head">
@@ -437,6 +476,14 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         </section>
       </div>
     </template>
+
+    <!-- 모바일: 저장은 화면 아래에서 손이 닿는 곳에 둔다 -->
+    <BottomCta v-if="post" :note="changes ? `변경 ${changes}건` : '변경 없음'">
+      <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
+        {{ saving ? '저장 중…' : '저장' }}
+      </button>
+    </BottomCta>
   </div>
 </template>
 
@@ -521,6 +568,45 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .btn.primary { background: var(--mid); color: var(--s0); }
 .btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
 .btn:disabled { opacity: 0.4; cursor: default; }
+
+/* 단계 탭 */
+.steps {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 24px;
+  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+}
+.stepbtn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(177, 199, 193, 0.18);
+  border-radius: var(--radius);
+  background: rgba(11, 14, 18, 0.7);
+  color: var(--faint);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.stepbtn.on { border-color: var(--focus-border); background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.sdot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(146, 178, 169, 0.14);
+  border: 1px solid rgba(177, 199, 193, 0.22);
+  font-size: 10px;
+  color: var(--mid);
+}
+.stepbtn.on .sdot { background: var(--mid); border-color: var(--mid); color: var(--s0); }
+.scount { font-size: 10px; color: var(--deep); }
 
 /* 포스트 헤더 */
 .posthead {
@@ -726,8 +812,18 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border: 1px dashed rgba(177, 199, 193, 0.24);
   border-radius: var(--radius);
   padding: 4px 9px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+/* 테두리 없는 input 에 outline 을 그리면 점선 칩 안쪽에 사각형이 하나 더 생긴다.
+   감싸는 칩이 대신 빛나게 하고 input 자신의 링은 끈다. */
+.chip-add:focus-within {
+  border-style: solid;
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+  color: var(--mid);
 }
 .tag-input { width: 76px; font-size: 10.5px; color: var(--ink); }
+.tag-input:focus-visible { outline: none; }
 .tag-input::placeholder { color: var(--faint); }
 
 .counter { font-size: 9px; color: var(--faint); }
@@ -782,6 +878,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .toggle-label { display: none; }
   .top-right .btn { min-height: 40px; }
 
+  .steps { padding: 8px 14px; gap: 6px; }
+  .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }
+
   /* 포스트 헤더: flex-wrap 은 min-width:0 앞에서 무력하다 — 아예 세로로 쌓는다 */
   .posthead { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 16px; }
   .field.locked { width: 100%; }
@@ -798,7 +897,15 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   }
   .editor, .split { display: block; min-height: 0; }
   .ehead { flex-wrap: wrap; padding: 12px 16px; }
-  .grid-col, .side { min-height: 0; padding: 14px 16px; }
+  .grid-col { min-height: 0; padding: 14px 16px; }
+  .side { min-height: 0; padding: 14px 16px calc(74px + env(safe-area-inset-bottom)); }
+
+  /* 태그 칩도 터치 타깃이다 — 입력이 16px 로 커지므로 칩도 같이 키운다 */
+  .tags { gap: 8px; }
+  .chip { min-height: 36px; font-size: 12px; padding: 4px 6px 4px 11px; }
+  .chip-x { width: 24px; height: 24px; }
+  .chip-add { min-height: 40px; padding: 4px 12px; flex: 1; min-width: 140px; }
+  .tag-input { flex: 1; width: auto; min-width: 0; }
   .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
   .field.grow { min-height: 0; }
 }

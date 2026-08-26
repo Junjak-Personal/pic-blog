@@ -39,10 +39,26 @@ async function submit() {
           <p>읽기는 링크만으로 가능하고, 편집은 이 기기에서 비밀번호를 한 번 확인합니다.</p>
         </div>
 
+        <!--
+          사용자 이름 칸이 없는 비밀번호 전용 폼은 암호 관리자가 자격증명을 어디에
+          묶어야 할지 몰라 저장·자동입력이 불안정하다 (iOS 키체인 포함).
+          계정 개념이 없는 서비스라 값은 고정이고, 화면에서는 감춘다.
+        -->
+        <input
+          class="sr-only"
+          type="text"
+          name="username"
+          value="editor"
+          autocomplete="username"
+          tabindex="-1"
+          aria-hidden="true"
+        >
+
         <label class="field" :class="{ bad: !!error }">
           <input
             v-model="password"
             type="password"
+            name="password"
             autocomplete="current-password"
             :disabled="busy"
             aria-label="편집 비밀번호"
@@ -102,6 +118,19 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   box-shadow: var(--focus-ring);
 }
 .field.bad { border-color: rgba(255, 128, 128, 0.6); box-shadow: 0 0 0 3px rgba(255, 128, 128, 0.12); }
+/* 화면에서는 감추되 DOM 에는 남긴다 — display:none 이면 암호 관리자가 못 본다 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .field input {
   width: 100%;
   font-family: var(--font-mono);

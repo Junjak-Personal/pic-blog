@@ -1,0 +1,57 @@
+<script setup lang="ts">
+/**
+ * 모바일 하단 고정 액션 바 (≤900px 전용).
+ *
+ * 상단바에 있는 주 액션은 한 손으로 잡은 폰에서 엄지가 닿지 않는다 —
+ * 특히 편집처럼 아래쪽(태그·본문)을 보다가 저장하는 흐름에서 매번 위로 올라가야 했다.
+ * 주 액션 하나만 여기에 두고, 부가 동작은 상단 OverflowMenu 에 남긴다.
+ *
+ * 홈 인디케이터를 피하려고 safe-area 만큼 아래 여백을 준다.
+ * 자리를 차지하지 않는 fixed 이므로, 쓰는 쪽 스크롤 컨테이너는
+ * .has-bottom-cta 로 같은 높이만큼 하단 패딩을 받는다.
+ */
+withDefaults(defineProps<{ note?: string | null }>(), { note: null })
+</script>
+
+<template>
+  <div class="cta">
+    <p v-if="note" class="mono note">{{ note }}</p>
+    <div class="row">
+      <slot />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.cta { display: none; }
+
+@media (max-width: 900px) {
+  .cta {
+    position: fixed;
+    z-index: 60;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(4, 4, 8, 0.94);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(146, 178, 169, 0.22);
+  }
+  .note { font-size: 10.5px; color: var(--faint); text-align: center; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  /* 슬롯에 들어오는 버튼·링크는 폭을 나눠 갖고 44px 터치 타깃을 갖는다 */
+  .row :deep(> *) {
+    flex: 1;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+}
+</style>

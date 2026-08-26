@@ -4,7 +4,7 @@
  * 지도 + 목록 → 마커 선택 → 스캐터 상세 → 사진 확대, 네 층이 한 화면에서 겹친다.
  */
 import type { PostDetail } from '#shared/types/db'
-import { formatKm, formatRange } from '#shared/utils/format'
+import { formatKm, formatOf, formatRange } from '#shared/utils/format'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -34,8 +34,14 @@ const activeIndex = computed(() => points.value.findIndex((p) => p.id === active
 /** 대표 촬영 기기 — 레일 하단 표기 (아트보드 1b) */
 const lead = computed(() => points.value[0]?.photos[0] ?? null)
 const cameraLabel = computed(() => lead.value?.camera ?? null)
-// w 는 바이트 PUT 이 채운다 — 업로드 도중에 열면 아직 0 이라 라벨을 접는다
-const formatLabel = computed(() => (lead.value?.w ? `${Math.max(lead.value.w, lead.value.h)}px WebP` : null))
+// w 는 바이트 PUT 이 채운다 — 업로드 도중에 열면 아직 0 이라 라벨을 접는다.
+// 포맷은 실제 저장된 확장자에서 뽑는다 (아이폰 업로드는 JPEG 다).
+/** 모바일 상단바에서 통계를 접어둔다 — 4칸이 타이틀을 밀어내 「2026.0…」 로 잘렸다 */
+const showStats = ref(false)
+
+const formatLabel = computed(() =>
+  lead.value?.w ? `${Math.max(lead.value.w, lead.value.h)}px ${formatOf(lead.value.display_path) ?? ''}`.trim() : null,
+)
 
 /** 1c 「비공개 기록입니다」 — 403 이 통계와 기간을 함께 준다 */
 interface PrivatePayload {
@@ -131,7 +137,20 @@ useHead(() => ({
         </NuxtLink>
         <h1 class="title">{{ post.title }}</h1>
       </div>
-      <div class="stats mono">
+
+      <!-- 모바일 전용: 통계는 접고 아이콘으로 연다 -->
+      <button
+        type="button"
+        class="stats-toggle"
+        :aria-expanded="showStats"
+        aria-controls="post-stats"
+        aria-label="기록 정보"
+        @click="showStats = !showStats"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
+      </button>
+
+      <div id="post-stats" class="stats mono" :class="{ open: showStats }">
         <span v-if="post.started_at" class="stat">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
           {{ formatRange(post.started_at, post.ended_at) }}
@@ -160,7 +179,7 @@ useHead(() => ({
       />
 
       <PointRail
-        class="rail"
+        class="rail safe-bottom"
         :points="points"
         :active-id="activeId"
         :camera="cameraLabel"
@@ -229,6 +248,8 @@ useHead(() => ({
   text-overflow: ellipsis;
 }
 .stats { display: flex; align-items: center; gap: 16px; font-size: 11px; color: var(--deep); flex: none; }
+/* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다 */
+.stats-toggle { display: none; }
 .stat { display: flex; align-items: center; gap: 6px; }
 .stat svg { color: var(--faint); flex: none; }
 
@@ -282,9 +303,36 @@ useHead(() => ({
 
 /* 태블릿·모바일 — 세로 스택 */
 @media (max-width: 900px) {
-  .topbar { height: 50px; padding: 0 14px; gap: 10px; }
+  /* 상단바는 타이틀 몫이다. 통계 4칸을 같이 두면 타이틀이 「2026.0…」 로 잘린다 —
+     ⓘ 로 접어두고, 열면 상단바 아래에 한 줄로 펼친다. */
+  /* 펼치면 한 줄이 늘어나므로 높이를 고정하지 않는다 — 고정하면 지도 위로 넘친다 */
+  .topbar { height: auto; min-height: 50px; padding: 0 14px; gap: 10px; flex-wrap: wrap; }
   .title { font-size: 15px; }
-  .stats { gap: 10px; font-size: 9.5px; }
+  .left { flex: 1; min-width: 0; gap: 12px; }
+
+  .stats-toggle {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    margin-right: -8px;
+    border: 0;
+    background: none;
+    color: var(--deep);
+    cursor: pointer;
+  }
+  .stats-toggle[aria-expanded='true'] { color: var(--ink); }
+
+  .stats {
+    display: none;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 0 0 10px;
+    font-size: 10px;
+  }
+  .stats.open { display: flex; }
   .stat svg { display: none; }
 
   .stage { grid-template-columns: 1fr; grid-template-rows: 46dvh 1fr; }

@@ -138,7 +138,7 @@ export function useUploadFlow() {
     try {
       created = await $fetch<CreatePostResult>('/api/posts', {
         method: 'POST',
-        body: { title, points },
+        body: { title, radius: radius.value, points },
       })
     } catch (e) {
       errorMessage.value = e instanceof Error ? e.message : '기록을 만들지 못했습니다'

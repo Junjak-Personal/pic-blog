@@ -7,6 +7,18 @@ html, body, #__nuxt {
   min-height: 100%;
 }
 
+/* viewport-fit=cover 를 켜면 가로 모드에서 콘텐츠가 노치 밑으로 들어간다.
+   높이에는 손대지 않으므로 100dvh 를 쓰는 화면들이 깨지지 않는다. */
+#__nuxt {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 스크롤 컨테이너의 마지막 항목이 홈 인디케이터에 깔리지 않게 */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 body {
   font-family: var(--font-body);
   font-size: 15px;
@@ -45,8 +57,26 @@ input, textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--acc);
+  outline: 2px solid var(--focus-border);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * 🔴 iOS Safari 는 16px 미만인 입력에 포커스하면 페이지를 강제로 확대한다.
+ *    확대되면 레이아웃이 깨져 보이고, 되돌리려면 사용자가 직접 축소해야 한다.
+ *    (maximum-scale 로 막는 방법도 있지만 그건 확대 자체를 뺏는 접근성 문제다.)
+ *    모바일에서는 모든 입력이 최소 16px 이다.
+ */
+@media (max-width: 900px) {
+  /* !important 를 쓰는 이유: 각 페이지의 scoped `.input`/`.content` 같은 클래스 선택자가
+     엘리먼트 선택자를 항상 이긴다. 이건 디자인 취향이 아니라 기기 제약이라
+     컴포넌트가 뒤집을 수 있으면 안 된다. 적용 범위도 모바일 폭으로 한정돼 있다. */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* 데이터 텍스트 — 좌표 · 시각 · 거리 · 파일명 */

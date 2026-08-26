@@ -84,3 +84,19 @@ export function slugify(title: string) {
     .replace(/^-+|-+$/g, '')
   return base || 'record'
 }
+
+/**
+ * 저장된 파일 확장자에서 표기용 포맷 이름을 뽑는다.
+ *
+ * "WebP" 를 하드코딩하면 안 된다 — iOS Safari 는 canvas WebP 인코딩을 지원하지 않아
+ * (MDN BCD api.HTMLCanvasElement.toBlob.type_parameter_webp: safari/safari_ios false)
+ * 아이폰에서 올린 사진은 전부 JPEG 로 떨어진다. 실제 파일과 라벨이 어긋나면
+ * 화면이 조용히 거짓말을 하게 된다.
+ */
+export function formatOf(path: string | null | undefined) {
+  if (!path) return null
+  const ext = path.split('.').pop()?.toLowerCase()
+  if (ext === 'webp') return 'WebP'
+  if (ext === 'jpeg' || ext === 'jpg') return 'JPEG'
+  return null
+}
