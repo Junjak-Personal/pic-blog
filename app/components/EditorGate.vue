@@ -7,7 +7,13 @@ const error = ref<string | null>(null)
 const busy = ref(false)
 
 async function submit() {
-  if (!password.value || busy.value) return
+  if (busy.value) return
+  // 빈 값이면 버튼을 잠그는 대신 여기서 이유를 말한다 — 비활성 버튼은 왜 안 눌리는지
+  // 아무 신호도 주지 않고, 스크린리더·암호 관리자·자동화가 전부 막힌다.
+  if (!password.value) {
+    error.value = '비밀번호를 입력하세요'
+    return
+  }
   busy.value = true
   error.value = null
   try {
@@ -68,7 +74,7 @@ async function submit() {
         <p class="note mono">비밀번호는 서버 환경변수에 있습니다 — 재발급은 배포로만.</p>
 
         <div class="actions">
-          <button type="submit" class="primary mono" :disabled="busy || !password">
+          <button type="submit" class="primary mono" :disabled="busy">
             {{ busy ? '확인 중…' : '편집 시작' }}
           </button>
           <NuxtLink to="/" class="ghost mono">읽기로 돌아가기</NuxtLink>

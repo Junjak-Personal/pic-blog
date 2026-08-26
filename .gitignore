@@ -16,3 +16,6 @@ data/
 # 작업 부산물 — 아트보드 원본·E2E 스크린샷 (11MB). 가져갈 값은
 # _docs/reference/design-reference.md 로 뽑아두었다.
 _workspace/
+
+# 시크릿을 파일로 잠깐 꺼낼 일이 있어도 레포엔 절대 들어오면 안 된다
+ghenv/
