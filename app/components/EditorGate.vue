@@ -126,8 +126,14 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   height: 46px;
   padding: 0 14px;
   background: var(--field);
-  border: 1px solid var(--focus-border);
+  /* 평상시는 중립. 예전엔 --focus-border + --focus-ring 이 상시 걸려 있어
+     늘 포커스된 것처럼 보였고, 거기에 input 자신의 outline 이 겹쳐 이중 링이 됐다. */
+  border: 1px solid rgba(177, 199, 193, 0.16);
   border-radius: var(--radius);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.field:focus-within {
+  border-color: var(--focus-border);
   box-shadow: var(--focus-ring);
 }
 .field.bad { border-color: rgba(255, 128, 128, 0.6); box-shadow: 0 0 0 3px rgba(255, 128, 128, 0.12); }

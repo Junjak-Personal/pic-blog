@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppBack from '~/components/AppBack.vue'
+import BottomCta from '~/components/BottomCta.vue'
 /**
  * 사진 추가 · 배정 반경 — 아트보드 1f.
  * 최초 업로드(1g)와 화면 언어는 같지만 규칙이 다르다:
@@ -55,6 +57,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   <div v-else class="page">
     <header class="topbar">
       <div class="left">
+        <AppBack :fallback="`/editor/${slug}`" label="편집으로" />
         <span class="badge mono">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /></svg>
           사진 추가

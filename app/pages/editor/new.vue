@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BottomCta from '~/components/BottomCta.vue'
+import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
  * 새 기록 — 업로드. 아트보드 1g.
  * 1 사진 선택 → 2 검사 결과 → 3 클러스터 미리보기 + 반경 → 4 확정 → /editor/[slug]

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import AppBack from '~/components/AppBack.vue'
+import PostSettings from '~/components/PostSettings.vue'
+import OverflowMenu from '~/components/OverflowMenu.vue'
+import BottomCta from '~/components/BottomCta.vue'
 /**
  * 포스트 편집 — 아트보드 1e. 업로드 플로우의 마지막 단계이기도 하다 (설계문서 §7.1).
  * 측량값(좌표 · 촬영 시각 · 포인트 순서)은 읽기 전용으로만 보여준다 (§7.2).
@@ -264,6 +268,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     <!-- 상단바 — 변경 건수 · 공개 토글 · 취소 · 저장 -->
     <header class="topbar">
       <div class="top-left">
+        <AppBack fallback="/editor" label="기록 목록으로" />
         <span class="badge mono">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
           편집 중
@@ -549,6 +554,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
   transition: background 0.15s;
 }
+/* 다른 화면의 스위치와 같은 표현 — 링은 트랙 모양을 따라간다 */
+.toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .toggle.on { background: rgba(146, 178, 169, 0.9); border-color: var(--acc); }
 .knob {
   position: absolute;
@@ -880,7 +887,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
      펼친 채로 쌓으면 세로 110px 을 먹고 그만큼 편집 영역이 줄어든다. */
   .topbar { height: calc(56px + env(safe-area-inset-top)); gap: 8px; padding: env(safe-area-inset-top) 12px 0; }
   .wide-only { display: none; }
-  .top-left { gap: 8px; overflow: hidden; }
+  .top-left { gap: 8px; min-width: 0; }
   .badge { padding: 4px 7px; }
   .state { font-size: 10px; }
   .err { max-width: 120px; }

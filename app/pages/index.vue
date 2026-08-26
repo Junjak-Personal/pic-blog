@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BrandMark from '~/components/BrandMark.vue'
 /** 포스트 목록 — 아트보드 1a. 공개 경로라 절대 잠기지 않는다. */
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'

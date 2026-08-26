@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
  * 편집 1단계 「기록 설정」.
  *
@@ -67,6 +68,9 @@ const pendingCount = computed(() =>
   pending.value === null ? 0 : clusterAt(shots.value, pending.value).length,
 )
 
+/** 슬라이더에 보이는 값 — 확인 전에는 현재 반경을 유지한다 */
+const shown = computed(() => pending.value ?? currentRadius.value ?? DEFAULT_RADIUS)
+
 function pick(r: number) {
   if (props.dirty || props.busy) return
   if (r === currentRadius.value) return
@@ -122,19 +126,15 @@ function confirmRecluster() {
         </span>
       </div>
 
-      <div class="radii" role="group" aria-label="클러스터 반경">
-        <button
-          v-for="row in table"
-          :key="row.radius"
-          type="button"
-          class="rbtn mono"
-          :class="{ on: row.radius === currentRadius }"
-          :disabled="dirty || busy"
-          @click="pick(row.radius)"
-        >
-          <b>{{ row.radius }}m</b>
-          <span class="rcount">{{ row.count }}개</span>
-        </button>
+      <!-- 업로드 화면(1g)과 같은 컨트롤을 쓴다 — 같은 값을 고르는 자리에서
+           한쪽은 슬라이더, 한쪽은 버튼이면 같은 기능으로 안 읽힌다. -->
+      <div class="rwrap" :class="{ locked: dirty || busy }">
+        <RadiusSlider :model-value="shown" label="포인트 범위" compact @update:model-value="pick" />
+        <ul class="rcounts mono">
+          <li v-for="row in table" :key="row.radius" :class="{ on: row.radius === shown }">
+            {{ row.count }}개
+          </li>
+        </ul>
       </div>
 
       <p v-if="dirty" class="mono warn">
@@ -212,6 +212,10 @@ function confirmRecluster() {
   font-size: 14px;
   color: var(--ink);
 }
+.input:focus {
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+}
 .input.title { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
 .input::placeholder { color: var(--faint); }
 
@@ -238,24 +242,28 @@ function confirmRecluster() {
 .lock-value { font-size: 12.5px; color: var(--mid); }
 .lock-note { margin-left: auto; font-size: 9.5px; color: var(--faint); }
 
-.radii { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.rbtn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-height: 56px;
-  justify-content: center;
-  border: 1px solid rgba(177, 199, 193, 0.2);
-  border-radius: var(--radius);
+.rwrap {
   background: rgba(11, 14, 18, 0.7);
-  color: var(--mid);
-  cursor: pointer;
+  border: 1px solid rgba(177, 199, 193, 0.16);
+  border-radius: var(--radius);
+  padding: 14px 16px 10px;
 }
-.rbtn b { font-size: 14px; color: var(--ink); font-weight: 600; }
-.rcount { font-size: 10px; color: var(--deep); }
-.rbtn.on { border-color: var(--focus-border); background: rgba(146, 178, 169, 0.14); }
-.rbtn:disabled { opacity: 0.4; cursor: default; }
+/* 저장 안 된 변경이 있으면 반경을 못 바꾼다 — 눌리지 않는 이유는 아래 문구가 말한다 */
+.rwrap.locked { opacity: 0.45; pointer-events: none; }
+/* 슬라이더 눈금과 같은 자리에 결과 개수를 세운다 */
+.rcounts {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10px;
+  color: var(--faint);
+}
+.rcounts li { flex: 1; text-align: center; }
+.rcounts li:first-child { text-align: left; }
+.rcounts li:last-child { text-align: right; }
+.rcounts li.on { color: var(--acc); }
 
 .hint { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 .warn { font-size: 10.5px; line-height: 1.7; color: var(--danger); }
@@ -298,8 +306,6 @@ function confirmRecluster() {
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(74px + env(safe-area-inset-bottom)); gap: 20px; }
   .input.title { font-size: 18px; }
-  .radii { grid-template-columns: repeat(2, 1fr); }
-  .rbtn { min-height: 60px; }
   .lock-note { margin-left: 0; }
   .dlg-actions .btn { flex: 1; min-height: 46px; }
 }

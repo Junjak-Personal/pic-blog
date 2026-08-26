@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppBack from '~/components/AppBack.vue'
+import OverflowMenu from '~/components/OverflowMenu.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
  * 목록 자체는 아트보드 1a 와 같은 시각 언어지만, 여기서만 공개 여부를 뒤집을 수 있다 (설계문서 §7.2).
@@ -54,6 +56,7 @@ function reasonOf(e: unknown) {
   <div class="page">
     <header class="topbar">
       <div class="brand">
+        <AppBack fallback="/" label="홈으로" />
         <!-- 마크가 홈 링크를 겸한다. PWA standalone 에는 브라우저 뒤로가기가 없어서
              화면마다 상위로 가는 경로가 하나씩은 있어야 한다. -->
         <NuxtLink to="/" class="home" aria-label="pic·blog 홈">
