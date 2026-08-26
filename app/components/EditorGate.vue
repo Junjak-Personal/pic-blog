@@ -33,7 +33,14 @@ async function submit() {
 
 <template>
   <div class="gate">
-    <form class="card" @submit.prevent="submit">
+    <!--
+      method="post" 가 필수다. action 이 없는 form 은 기본이 GET 이라,
+      하이드레이션 전에 제출되면(느린 회선·JS 실패·자동화) 브라우저가
+      현재 URL 로 GET 을 날리면서 ?password=... 로 평문을 URL 에 싣는다.
+      그러면 브라우저 기록과 서버·CDN 접근 로그에 비밀번호가 남는다.
+      @submit.prevent 는 하이드레이션 이후에만 유효하므로 그것만 믿을 수 없다.
+    -->
+    <form class="card" method="post" @submit.prevent="submit">
       <header>
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
         <span>{{ error ? '비밀번호가 맞지 않습니다' : '편집 잠금' }}</span>
