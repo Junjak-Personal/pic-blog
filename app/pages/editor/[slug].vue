@@ -501,6 +501,16 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 0 24px;
   border-bottom: 1px solid rgba(146, 178, 169, 0.28);
   background: rgba(146, 178, 169, 0.06);
+  /*
+   * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
+   * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
+   * 투명한 채로 두면 시스템이 그 위에 합성해 헤더가 흐려 보인다.
+   * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
+   * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
+   */
+  padding-top: env(safe-area-inset-top);
+  height: calc(60px + env(safe-area-inset-top));
+  background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
 }
 .top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 14px; flex: none; }
@@ -868,7 +878,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 @media (max-width: 900px) {
   /* 상단바를 한 줄로 되돌린다 — 「저장 + ⋯」만 남기고 목록·취소는 메뉴로 접었다.
      펼친 채로 쌓으면 세로 110px 을 먹고 그만큼 편집 영역이 줄어든다. */
-  .topbar { height: 56px; gap: 8px; padding: 0 12px; }
+  .topbar { height: calc(56px + env(safe-area-inset-top)); gap: 8px; padding: env(safe-area-inset-top) 12px 0; }
   .wide-only { display: none; }
   .top-left { gap: 8px; overflow: hidden; }
   .badge { padding: 4px 7px; }

@@ -256,6 +256,16 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   padding: 0 24px;
   border-bottom: 1px solid rgba(146, 178, 169, 0.28);
   background: rgba(146, 178, 169, 0.06);
+  /*
+   * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
+   * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
+   * 투명한 채로 두면 시스템이 그 위에 합성해 헤더가 흐려 보인다.
+   * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
+   * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
+   */
+  padding-top: env(safe-area-inset-top);
+  height: calc(60px + env(safe-area-inset-top));
+  background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
 }
 .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .badge {
@@ -487,7 +497,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 /* 모바일 — new.vue 와 같은 처방. 3분할 격자·60px 상단바·452px 패널이 전부 안 들어간다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: 10px 14px; }
+  .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
   .left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }
   .wide-only { display: none; }
   .right { gap: 8px; }

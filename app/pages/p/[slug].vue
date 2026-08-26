@@ -218,9 +218,7 @@ useHead(() => ({
 /* 지도가 주인공인 화면이라 뷰포트에 고정한다.
    min-height 만 주면 레일 13행이 stage 를 밀어올려 지도가 화면 밖으로 넘친다. */
 .page {
-  /* .shell 이 상단 안전영역만큼 밀어주므로 그만큼 빼야 뷰포트를 넘지 않는다.
-     브라우저에서는 인셋이 0 이라 100dvh 그대로다. */
-  height: calc(100dvh - env(safe-area-inset-top));
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -237,6 +235,16 @@ useHead(() => ({
   border-bottom: 1px solid var(--hair);
   position: relative;
   z-index: 5;
+  /*
+   * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
+   * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
+   * 투명한 채로 두면 시스템이 그 위에 합성해 헤더가 흐려 보인다.
+   * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
+   * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
+   */
+  padding-top: env(safe-area-inset-top);
+  height: calc(56px + env(safe-area-inset-top));
+  background: var(--s0);
 }
 .left { display: flex; align-items: center; gap: 18px; min-width: 0; }
 .back { display: flex; align-items: center; gap: 7px; color: var(--deep); flex: none; }
@@ -308,7 +316,7 @@ useHead(() => ({
   /* 상단바는 타이틀 몫이다. 통계 4칸을 같이 두면 타이틀이 「2026.0…」 로 잘린다 —
      ⓘ 로 접어두고, 열면 상단바 아래에 한 줄로 펼친다. */
   /* 펼치면 한 줄이 늘어나므로 높이를 고정하지 않는다 — 고정하면 지도 위로 넘친다 */
-  .topbar { height: auto; min-height: 50px; padding: 0 14px; gap: 10px; flex-wrap: wrap; }
+  .topbar { height: auto; min-height: calc(50px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 14px 0; gap: 10px; flex-wrap: wrap; }
   .title { font-size: 15px; }
   .left { flex: 1; min-width: 0; gap: 12px; }
 

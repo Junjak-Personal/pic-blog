@@ -320,6 +320,16 @@ async function skip() {
   gap: 24px;
   padding: 0 24px;
   border-bottom: 1px solid var(--hair);
+  /*
+   * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
+   * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
+   * 투명한 채로 두면 시스템이 그 위에 합성해 헤더가 흐려 보인다.
+   * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
+   * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
+   */
+  padding-top: env(safe-area-inset-top);
+  height: calc(60px + env(safe-area-inset-top));
+  background: var(--s0);
 }
 .steps { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
 .step { display: flex; align-items: center; gap: 8px; }
@@ -614,7 +624,7 @@ async function skip() {
 }
 /* 모바일 — 4단계 스텝바와 3분할 격자가 390px 에 들어갈 리 없다. 둘 다 푼다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
+  .topbar { height: auto; flex-wrap: wrap; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
   /* 스텝바: 지금 단계 라벨만 남기고 나머지는 동그라미만. 완료 단계 라벨까지
      남기면(.on 은 완료도 포함한다) 390px 에서 4번째 동그라미가 화면 밖으로 밀린다 */
   .step-label:not(.now) { display: none; }

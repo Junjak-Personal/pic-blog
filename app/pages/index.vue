@@ -169,6 +169,16 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   gap: 20px;
   padding: 0 32px;
   border-bottom: 1px solid var(--hair);
+  /*
+   * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
+   * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
+   * 투명한 채로 두면 시스템이 그 위에 합성해 헤더가 흐려 보인다.
+   * 이 선언들은 블록 끝에 있어야 위의 padding/background 단축 선언을 이긴다.
+   * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
+   */
+  padding-top: env(safe-area-inset-top);
+  height: calc(68px + env(safe-area-inset-top));
+  background: var(--s0);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .markbtn {
@@ -334,7 +344,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
-  .topbar { height: 54px; padding: 0 16px; gap: 10px; }
+  .topbar { height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; gap: 10px; }
   /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
   .wordmark { display: none; }
   .kicker, .sorts { display: none; }
