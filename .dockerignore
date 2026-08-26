@@ -1,0 +1,29 @@
+# 빌드 컨텍스트에서 뺀다. 이미지 크기보다 "들어가면 안 되는 것" 이 중요하다.
+
+# 시크릿 — .env.local 에 URL 제한 없는 Mapbox 토큰이 있다. 이미지에 절대 넣지 않는다.
+# (.env.prd 는 이미지가 아니라 compose 의 env_file 로 런타임에 주입한다)
+.env
+.env.*
+
+# 런타임 데이터 — 볼륨으로 마운트된다. 이미지에 구워지면 안 된다.
+data
+
+# 빌드 산출물 / 설치물 — 컨테이너 안에서 다시 만든다 (호스트는 arm64 일 수 있다)
+node_modules
+.nuxt
+.output
+.data
+dist
+
+# 저장소 부산물
+.git
+.gitignore
+_workspace
+_docs
+.claude
+.playwright-mcp
+.DS_Store
+*.log
+Dockerfile
+.dockerignore
+docker-compose.yml

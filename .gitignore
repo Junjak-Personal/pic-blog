@@ -1,0 +1,18 @@
+node_modules
+.nuxt
+.output
+.data
+dist
+data/
+.DS_Store
+*.log
+.playwright-mcp
+
+# 환경변수 — .env.example 만 추적한다 (순서 중요: 마지막 매치가 이긴다)
+.env
+.env.*
+!.env.example
+
+# 작업 부산물 — 아트보드 원본·E2E 스크린샷 (11MB). 가져갈 값은
+# _docs/reference/design-reference.md 로 뽑아두었다.
+_workspace/

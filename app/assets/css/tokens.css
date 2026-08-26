@@ -1,0 +1,41 @@
+/* pic-blog design tokens — 아트보드 1d. 다크 단일 테마, 라이트 테마 없음. */
+:root {
+  /* 텍스트 */
+  --ink: #E8EBE9;          /* 본문 · 활성 마커 */
+  --mid: #B1C7C1;          /* 보조 텍스트 · 버튼 */
+  --acc: #92B2A9;          /* 동선 · 링크 */
+  --deep: #83A79E;         /* 데이터 · 캡션 */
+  --faint: #6B837E;        /* 3차 캡션 (아트보드 전반에서 실제로 쓰인 값) */
+
+  /* 표면 */
+  --s0: #040408;
+  --s1: #0B0E12;
+  --s2: #1E2125;
+  --s3: #2A2A30;
+  --field: #101317;        /* 입력 필드 · 패널 내부 */
+
+  /* 선 */
+  --hair: rgba(177, 199, 193, 0.14);
+  --hair-soft: rgba(177, 199, 193, 0.07);
+  --focus-ring: 0 0 0 3px rgba(146, 178, 169, 0.12);
+  --focus-border: rgba(146, 178, 169, 0.55);
+
+  --danger: #FF8080;
+
+  /* 타이포 */
+  /* Bricolage 에 한글 글리프가 없다 — 한글은 Pretendard 로 떨어뜨려
+     플랫폼마다 다른 system-ui 대신 디자인된 얼굴을 쓴다. 라틴·숫자는 Bricolage. */
+  --font-display: 'Bricolage Grotesque', 'Pretendard Variable', 'Pretendard JP Variable', system-ui, sans-serif;
+  --font-body: 'Pretendard Variable', 'Pretendard JP Variable', Pretendard, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* 마커 · 동선 (지도 레이어와 CSS 마커가 같은 값을 읽는다) */
+  --marker-size: 26px;
+  /* 동선은 팔레트 밖 난색이다 — 이유는 app/utils/route-style.ts 참고 (SSOT 는 그쪽) */
+  --route: #FFB454;
+  --route-dash: 2 5;
+  --route-width: 2.75px;
+
+  --radius: 8px;
+  --radius-lg: 10px;
+}

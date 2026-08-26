@@ -1,0 +1,40 @@
+/* OverflowMenu 의 포털 내용 — DropdownMenuPortal 이 body 로 옮기므로 전역이어야 한다 */
+.ovf-content {
+  min-width: 190px;
+  padding: 6px;
+  background: rgba(11, 14, 18, 0.98);
+  border: 1px solid rgba(146, 178, 169, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  z-index: 90;
+}
+
+.ovf-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  /* 터치 타깃 44px */
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--mid);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ovf-item svg { flex: none; color: var(--deep); }
+.ovf-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
+.ovf-item[data-disabled] { opacity: 0.4; cursor: default; }
+.ovf-item.danger { color: var(--danger); }
+.ovf-item.danger svg { color: var(--danger); }
+
+/* 체크 표시가 붙는 항목(공개 토글 등) — 오른쪽 끝에 상태를 둔다 */
+.ovf-item .ovf-state { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.ovf-item[data-state='checked'] .ovf-state { color: var(--acc); }
+
+.ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }

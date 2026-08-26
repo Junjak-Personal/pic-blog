@@ -1,0 +1,78 @@
+/*
+ * 지도 마커 — 아트보드 1d 스펙. Mapbox 오버레이 안에 들어가므로 전역이어야 한다
+ * (scoped 스타일은 마커 DOM 에 닿지 않는다). TripMap · PostsMap 이 함께 쓴다.
+ */
+.map-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.map-marker .body {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(19, 28, 24, 0.94);
+  color: #B1C7C1;
+  border: 1.5px solid rgba(146, 178, 169, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  transition: transform 0.12s, background 0.12s, color 0.12s;
+}
+
+.map-marker .tail {
+  display: block;
+  width: 0;
+  height: 0;
+  margin-top: -1px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 7px solid rgba(146, 178, 169, 0.62);
+}
+
+.map-marker:hover { filter: brightness(1.12); }
+
+/* 활성 — 1.15× · #E8EBE9 배경 · #040408 텍스트 */
+.map-marker.on { z-index: 80; }
+.map-marker.on .body {
+  background: #E8EBE9;
+  color: #040408;
+  border-color: #E8EBE9;
+  transform: scale(1.15);
+}
+.map-marker.on .tail { border-top-color: #E8EBE9; }
+
+/* 축소 시 dot 12px */
+.map-marker.dot .body {
+  width: 12px;
+  height: 12px;
+  font-size: 0;
+  border-width: 1.5px;
+}
+.map-marker.dot .tail { display: none; }
+
+/* 시간 공백 표식 (클러스터 미리보기) */
+.map-marker .clock {
+  position: absolute;
+  right: -7px;
+  top: -6px;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #040408;
+  border: 1px solid #92B2A9;
+  color: #92B2A9;
+  pointer-events: none;
+}
