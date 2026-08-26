@@ -57,6 +57,13 @@ export default defineNuxtConfig({
     adminPasswordHash: '',
     session: { name: 'pic-blog-session', password: '' },
     public: {
+      /*
+       * 빌드마다 바뀌는 표식. 실행 중인 앱이 자기 값과 서버의 값을 비교해
+       * 새 배포를 알아챈다 (app/composables/useAppUpdate.ts).
+       * 서비스워커를 쓰지 않으므로 오프라인 캐시가 낡을 일은 없다 —
+       * 낡는 건 「이미 열려 있는 페이지」뿐이고, 그건 새로고침으로 끝난다.
+       */
+      buildId: process.env.NUXT_PUBLIC_BUILD_ID || Date.now().toString(36),
       mapboxToken: '',
       mapboxStyle: 'mapbox://styles/mapbox/dark-v11',
     },

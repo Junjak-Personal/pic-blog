@@ -1,6 +1,7 @@
 <template>
   <div class="shell">
     <slot />
+    <UpdateBanner />
   </div>
 </template>
 
