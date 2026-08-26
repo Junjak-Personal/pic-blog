@@ -266,43 +266,60 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 <template>
   <div class="page">
     <!-- 상단바 — 변경 건수 · 공개 토글 · 취소 · 저장 -->
+    <!--
+      헤더는 모바일/데스크탑을 나눠서 그린다. 같은 마크업을 미디어쿼리로 눌러 담으면
+      모바일이 「데스크탑을 찌그러뜨린 것」이 된다 — 실제로 배지·상태문구·공개토글·저장이
+      56px 한 줄에 다 들어가 어색했다.
+
+      모바일에서 뺀 것들은 사라진 게 아니라 원래 자리로 갔다:
+        저장 · 변경 건수  → 하단 CTA (엄지가 닿는 곳)
+        공개 토글         → 1단계 「기록 설정」
+      그래서 모바일 헤더는 [뒤로] [무엇을 편집 중인지] [부가 메뉴] 셋만 남는다.
+    -->
     <header class="topbar">
-      <div class="top-left">
-        <AppBack fallback="/editor" label="기록 목록으로" />
-        <span class="badge mono">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-          편집 중
-        </span>
-        <span class="mono state" :class="{ dirty: changes > 0 }">
-          {{ changes ? `변경 ${changes}건 · 저장 안 됨` : '변경 없음' }}
-        </span>
-        <span v-if="errorMessage" class="mono err">{{ errorMessage }}</span>
+      <!-- 데스크탑 -->
+      <div class="hd-desktop">
+        <div class="top-left">
+          <span class="badge mono">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+            편집 중
+          </span>
+          <span class="mono state" :class="{ dirty: changes > 0 }">
+            {{ changes ? `변경 ${changes}건 · 저장 안 됨` : '변경 없음' }}
+          </span>
+          <span v-if="errorMessage" class="mono err">{{ errorMessage }}</span>
+        </div>
+
+        <div class="top-right">
+          <span class="toggle-wrap">
+            <button
+              type="button"
+              class="toggle"
+              role="switch"
+              :aria-checked="draftPublic"
+              :class="{ on: draftPublic }"
+              aria-label="공개 여부"
+              @click="draftPublic = !draftPublic"
+            >
+              <span class="knob" />
+            </button>
+            <span class="toggle-label">공개</span>
+          </span>
+          <span class="rule" />
+          <NuxtLink to="/editor" class="btn ghost mono">목록</NuxtLink>
+          <button type="button" class="btn ghost mono" :disabled="!changes" @click="revert">취소</button>
+          <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
+            {{ saving ? '저장 중' : '저장' }}
+          </button>
+        </div>
       </div>
 
-      <div class="top-right">
-        <span class="toggle-wrap">
-          <button
-            type="button"
-            class="toggle"
-            role="switch"
-            :aria-checked="draftPublic"
-            :class="{ on: draftPublic }"
-            aria-label="공개 여부"
-            @click="draftPublic = !draftPublic"
-          >
-            <span class="knob" />
-          </button>
-          <span class="toggle-label">공개</span>
-        </span>
-        <span class="rule" />
-        <NuxtLink to="/editor" class="btn ghost mono wide-only">목록</NuxtLink>
-        <button type="button" class="btn ghost mono wide-only" :disabled="!changes" @click="revert">취소</button>
-        <button type="button" class="btn primary mono wide-only" :disabled="!changes || saving" @click="save">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
-          {{ saving ? '저장 중' : '저장' }}
-        </button>
-
-        <!-- 모바일: 주 동작(저장)만 남기고 나머지는 ⋯ 로 접는다 -->
+      <!-- 모바일 -->
+      <div class="hd-mobile">
+        <AppBack fallback="/editor" label="기록 목록으로" />
+        <h1 class="hd-title">{{ draftTitle || '기록 편집' }}</h1>
+        <span v-if="changes" class="dot" aria-label="저장 안 된 변경 있음" />
         <OverflowMenu label="기록 메뉴">
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
@@ -585,6 +602,29 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .btn.primary { background: var(--mid); color: var(--s0); }
 .btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
 .btn:disabled { opacity: 0.4; cursor: default; }
+
+/*
+ * 헤더 두 갈래. 둘 다 렌더하고 CSS 로 하나만 보인다 —
+ * SSR 은 뷰포트를 모르므로 JS 로 분기하면 하이드레이션 불일치와 깜빡임이 난다.
+ */
+.hd-desktop { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; }
+.hd-mobile { display: none; }
+
+/* 모바일 헤더 — [뒤로] [편집 대상] [메뉴] */
+.hd-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 저장 안 된 변경이 있다는 최소 신호 — 건수는 하단 CTA 가 말한다 */
+.dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--route); }
 
 /* 단계 탭 */
 .steps {
@@ -883,17 +923,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
    390px 에서는 상단바가 한 줄에 안 들어가 겹치고, min-width:0 인 flex 필드는
    wrap 대신 무한히 찌그러지고, 패널 격자는 서로 파고든다. */
 @media (max-width: 900px) {
-  /* 상단바를 한 줄로 되돌린다 — 「저장 + ⋯」만 남기고 목록·취소는 메뉴로 접었다.
-     펼친 채로 쌓으면 세로 110px 을 먹고 그만큼 편집 영역이 줄어든다. */
-  .topbar { height: calc(56px + env(safe-area-inset-top)); gap: 8px; padding: env(safe-area-inset-top) 12px 0; }
-  .wide-only { display: none; }
-  .top-left { gap: 8px; min-width: 0; }
-  .badge { padding: 4px 7px; }
-  .state { font-size: 10px; }
-  .err { max-width: 120px; }
-  .rule { display: none; }
-  .toggle-label { display: none; }
-  .top-right .btn { min-height: 40px; }
+  /* 헤더 갈래 전환 — 데스크탑 마크업은 통째로 빠지고 모바일 것이 들어온다 */
+  .hd-desktop { display: none; }
+  .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .topbar { height: calc(56px + env(safe-area-inset-top)); gap: 0; padding: env(safe-area-inset-top) 12px 0; }
 
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }

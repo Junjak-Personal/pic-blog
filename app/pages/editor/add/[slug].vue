@@ -58,6 +58,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     <header class="topbar">
       <div class="left">
         <AppBack :fallback="`/editor/${slug}`" label="편집으로" />
+        <span class="hd-name">사진 추가</span>
         <span class="badge mono">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /></svg>
           사진 추가
@@ -271,6 +272,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
 }
 .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* 모바일에서만 쓰는 화면 이름 — 데스크탑은 배지가 그 역할을 한다 */
+.hd-name { display: none; }
 .badge {
   display: flex;
   align-items: center;
@@ -502,7 +505,17 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 @media (max-width: 900px) {
   .topbar { height: auto; flex-wrap: wrap; align-items: stretch; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; }
   .left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }
-  .wide-only { display: none; }
+  .wide-only, .badge, .skipped { display: none; }
+  .hd-name {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
   .right { gap: 8px; }
   .right .btn { min-height: 40px; }
   .side { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }

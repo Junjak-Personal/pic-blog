@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * 앱(standalone) 전용 뒤로가기.
+ * 모바일 헤더의 뒤로가기.
  *
- * 홈 화면에 추가한 PWA 에는 브라우저 뒤로가기도 주소 표시줄도 없다. 화면마다
- * 상위로 가는 길이 없으면 갇힌다 — 실제로 편집 화면에서 그랬다.
- * 브라우저에서는 뒤로가기가 이미 있으므로 숨긴다.
+ * 모바일에서는 헤더 좌측 뒤로가기가 기본 관용구다. 홈 화면에 추가한 PWA 에는
+ * 브라우저 뒤로가기도 주소창도 없어 없으면 화면에 갇히기까지 한다.
+ * 데스크탑에는 「목록」 같은 명시 링크가 따로 있어 숨긴다.
  *
- * 히스토리가 없으면(앱을 그 화면으로 바로 열었을 때) fallback 으로 간다 —
+ * 히스토리가 없으면(그 화면으로 바로 들어왔을 때) fallback 으로 간다 —
  * router.back() 만 믿으면 아무 일도 안 일어나는 막다른 골목이 된다.
  */
 const props = withDefaults(defineProps<{ fallback: string; label?: string }>(), {
@@ -28,10 +28,10 @@ function back() {
 </template>
 
 <style scoped>
-/* 브라우저에는 자체 뒤로가기가 있다 — 앱으로 띄웠을 때만 나타난다 */
+/* 데스크탑에는 명시 링크가 따로 있다 — 모바일에서만 나타난다 */
 .appback { display: none; }
 
-@media (display-mode: standalone) {
+@media (max-width: 900px) {
   .appback {
     display: grid;
     place-items: center;

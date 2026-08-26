@@ -334,8 +334,17 @@ function reasonOf(e: unknown) {
 
 @media (max-width: 900px) {
   .topbar { height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; gap: 10px; }
-  /* 모바일은 마크만 */
-  .wordmark { display: none; }
+  /* 모바일 헤더 = [뒤로] [화면 이름] [주 액션]. 워드마크·마크는 접는다 —
+     어느 화면인지가 브랜드보다 중요하다. 홈은 뒤로가기가 가리킨다. */
+  .wordmark, .mark, .markbtn { display: none; }
+  .home { gap: 0; }
+  .kicker {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
   .error { margin: 12px 16px 0; }
   .list { gap: 10px; padding: 16px; }
 
