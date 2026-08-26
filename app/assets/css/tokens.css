@@ -70,6 +70,6 @@
  */
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) {
-    :root { --top-inset: 12px; }
+    :root { --top-inset: 15px; }
   }
 }
