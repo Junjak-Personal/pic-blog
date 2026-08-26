@@ -37,8 +37,11 @@ export default defineNuxtConfig({
         // iOS 는 아직 manifest 의 display 만으로는 부족한 버전이 있어 레거시 키를 같이 둔다
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-title', content: 'pic·blog' },
-        // black-translucent 는 콘텐츠가 상태바 밑으로 들어가 상단바가 겹친다 — black 으로 둔다
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'black' },
+        // black-translucent: 콘텐츠가 상태바 영역까지 올라간다. .shell 의
+        // padding-top: env(safe-area-inset-top) 이 실제 콘텐츠를 그 밑으로 밀어주므로
+        // 상태바 뒤에는 셸 배경만 깔린다. black 일 때 상단바가 흐려 보이던 것을
+        // 이걸로 바꿔본다 (기기에서 확인 필요).
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'mobile-web-app-capable', content: 'yes' },
       ],
     },
