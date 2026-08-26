@@ -1,0 +1,130 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '_docs/**'
+      - '**.md'
+      - '.gitignore'
+
+# 같은 브랜치 배포가 겹치면 뒤엣것만 살린다 — 두 배포가 동시에 컨테이너를 갈아치우면
+# 어느 이미지가 떠 있는지 알 수 없게 된다.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      # Dockerfile 이 node:22-slim 이다. CI 도 22 로 맞춰야 여기서 통과한 게
+      # 이미지 빌드에서도 통과한다.
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # 클러스터링·산포·좌표·EXIF 포맷의 회귀 검사. 목업 data.js 와 대조해 만든 것이라
+      # 여기가 깨지면 포인트가 조용히 다르게 묶인다.
+      - name: Algorithm checks
+        run: node --experimental-strip-types shared/utils/__checks.ts
+
+      # 빌드는 이미지 안에서 다시 하지만, 실패를 운영 머신까지 끌고 가지 않으려고 먼저 본다.
+      - name: Build
+        run: pnpm build
+
+  deploy:
+    needs: verify
+    # 러너가 둘 등록돼 있다(raspi=ARM64, junserver=X64/n100). 맨 self-hosted 만 쓰면
+    # 노는 쪽이 잡히는데, pic-blog 의 SQLite·사진 볼륨과 Cloudflare 터널은 junserver 에만 있다.
+    # 머신 라벨로 못 박는다.
+    runs-on: [self-hosted, n100]
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # BuildKit 을 끄는 이유: 러너의 docker-buildx-plugin 이 낡으면 BuildKit 빌드가
+      # "buildx component is missing or broken" 으로 통째로 죽는다. 이 Dockerfile 은
+      # BuildKit 전용 문법(캐시 마운트·heredoc·멀티플랫폼)을 하나도 안 쓰므로
+      # 고전 빌더로 충분하고, 그쪽은 그렇게 죽을 일이 없다.
+      - name: Build image
+        run: DOCKER_BUILDKIT=0 docker build -t pic-blog:prd .
+
+      # 🔴 볼륨은 러너 작업공간이 아니라 고정 절대경로다. $GITHUB_WORKSPACE 아래에 두면
+      #    다음 체크아웃에서 SQLite 와 사진이 통째로 날아간다.
+      - name: Deploy container
+        env:
+          DATA_DIR: /home/junja/apps/pic-blog/data
+          # 값을 run 스크립트에 ${{ }} 로 직접 박지 않는다. NUXT_ADMIN_PASSWORD_HASH 는
+          # `$scrypt$n=16384...` 형태라 스크립트 본문에 들어가면 셸이 $scrypt / $n 을
+          # 변수로 읽어 해시를 망가뜨린다(로그인이 항상 실패하는데 로그엔 아무것도 안 남는다).
+          # env 로 넘기고 "$VAR" 로 참조하면 값 안의 $ 는 그대로 남는다.
+          NUXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NUXT_PUBLIC_MAPBOX_TOKEN }}
+          NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
+          NUXT_ADMIN_PASSWORD_HASH: ${{ secrets.NUXT_ADMIN_PASSWORD_HASH }}
+          NUXT_PUBLIC_MAPBOX_STYLE: ${{ vars.NUXT_PUBLIC_MAPBOX_STYLE }}
+          NUXT_DATA_DIR: ${{ vars.NUXT_DATA_DIR }}
+        run: |
+          set -euo pipefail
+
+          case "$NUXT_ADMIN_PASSWORD_HASH" in
+            '$scrypt$'*) ;;
+            *) echo "중단: NUXT_ADMIN_PASSWORD_HASH 가 scrypt 해시가 아니다 (평문을 넣지 않았는지 확인)"; exit 1 ;;
+          esac
+          [ "${#NUXT_SESSION_PASSWORD}" -ge 32 ] || { echo "중단: NUXT_SESSION_PASSWORD 가 32자 미만"; exit 1; }
+
+          mkdir -p "$DATA_DIR"
+
+          # 이미지 빌드가 끝난 뒤에 내린다 — 빌드가 실패하면 옛 컨테이너가 계속 서비스한다.
+          docker rm -f pic-blog 2>/dev/null || true
+
+          docker run -d \
+            --name pic-blog \
+            --restart unless-stopped \
+            -p 127.0.0.1:4600:4600 \
+            -v "$DATA_DIR":/app/data \
+            -e NUXT_DATA_DIR="$NUXT_DATA_DIR" \
+            -e NUXT_PUBLIC_MAPBOX_TOKEN="$NUXT_PUBLIC_MAPBOX_TOKEN" \
+            -e NUXT_PUBLIC_MAPBOX_STYLE="$NUXT_PUBLIC_MAPBOX_STYLE" \
+            -e NUXT_SESSION_PASSWORD="$NUXT_SESSION_PASSWORD" \
+            -e NUXT_ADMIN_PASSWORD_HASH="$NUXT_ADMIN_PASSWORD_HASH" \
+            pic-blog:prd
+
+      # 200 이 뜰 때까지 기다린다. 컨테이너가 떴다는 것과 앱이 산다는 건 다르다 —
+      # 마이그레이션이나 볼륨 권한 문제는 여기서만 드러난다.
+      - name: Health check
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if body=$(curl -fsS --max-time 3 http://127.0.0.1:4600/api/health); then
+              echo "정상: $body"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "헬스체크 실패 — 아래는 컨테이너 로그다"
+          docker logs --tail 60 pic-blog
+          exit 1
+
+      - name: Prune dangling images
+        if: always()
+        run: docker image prune -f
