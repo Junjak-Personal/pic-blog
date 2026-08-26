@@ -294,15 +294,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .range { display: flex; align-items: center; gap: 6px; color: var(--faint); }
 .range .mono, .stat { font-size: 10.5px; color: var(--deep); }
 
-.pagefoot {
-  flex: none;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 32px;
-  font-size: 10.5px;
-  color: var(--faint);
-}
 
 /* 1c ① 기록 0 */
 .empty {

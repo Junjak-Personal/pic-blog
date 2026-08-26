@@ -34,15 +34,16 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
         { name: 'apple-mobile-web-app-title', content: 'pic·blog' },
         /*
-         * 🔴 apple-mobile-web-app-capable 을 일부러 넣지 않는다.
+         * apple-mobile-web-app-capable 은 넣지 않는다 — 폐기된 메타이고
+         * standalone 은 manifest 의 display 가 담당한다.
          *
-         * 그건 레거시 iOS 웹앱 모드를 켜는 메타이고, 그 모드가 콘텐츠를 상태바 밑까지
-         * 밀어 넣은 뒤 시스템이 그 위에 합성한다 — 상단바 글자·로고가 뭉개져 보이던
-         * 원인이 이것이었다. 상태바 스타일을 black / black-translucent 로 바꿔도
-         * 증상이 남았던 것도 같은 이유다(모드가 계속 켜져 있었다).
+         * ⚠ 한때 이 메타를 「상단바가 뭉개져 보이는 원인」으로 지목했는데 틀렸다.
+         *   그 현상은 iOS 버전이 올라가면서 생긴 것이고 standalone PWA 전반에
+         *   나타난다 — 이 메타와 무관하다. 제거는 여전히 옳지만 그건 별개 이유다.
+         *   실제 대응은 tokens.css 의 --top-inset 이다.
          *
-         * standalone 은 manifest 의 display 가 이미 담당하므로 이 메타가 필요 없다.
-         * 같은 기기에서 문제없이 도는 다른 PWA(nivoca)도 이 메타 없이 default 를 쓴다.
+         * 다만 이 메타를 빼면 뷰포트가 상태바 밑까지 들어가지 않아
+         * env(safe-area-inset-top) 이 0 이 된다 — --top-inset 값 계산의 전제다.
          */
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
       ],

@@ -8,7 +8,7 @@
  *
  * 홈 인디케이터를 피하려고 safe-area 만큼 아래 여백을 준다.
  * 자리를 차지하지 않는 fixed 이므로, 쓰는 쪽 스크롤 컨테이너는
- * .has-bottom-cta 로 같은 높이만큼 하단 패딩을 받는다.
+ * calc(var(--cta-h) + env(safe-area-inset-bottom)) 만큼 하단을 비운다.
  */
 withDefaults(defineProps<{ note?: string | null }>(), { note: null })
 

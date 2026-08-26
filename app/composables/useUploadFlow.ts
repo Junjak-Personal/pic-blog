@@ -25,7 +25,6 @@ export function useUploadFlow() {
   const skipped = ref<SkippedPhoto[]>([])
   const radius = ref<number>(DEFAULT_RADIUS)
   const scanProgress = ref({ done: 0, total: 0 })
-  const uploadProgress = ref({ done: 0, total: 0 })
   /** 실제로 디스크에 안착한 사진 수. 진행률은 시도가 아니라 이 값으로 낸다 —
       시도 기준이면 전부 실패해도 100% 로 보고하는 거짓말이 된다 (설계문서 §8). */
   const uploaded = ref(0)
@@ -117,7 +116,6 @@ export function useUploadFlow() {
 
     const shots = scanned.value
     totalPhotos.value = shots.length
-    uploadProgress.value = { done: 0, total: shots.length }
 
     const byKey = new Map(shots.map((s) => [s.key, s]))
     const ext = outputExt()
@@ -153,7 +151,6 @@ export function useUploadFlow() {
     for (const shot of shots) {
       const id = created.photoIds[shot.key]
       if (id != null) await uploadOne(shot, id)
-      uploadProgress.value = { ...uploadProgress.value, done: uploadProgress.value.done + 1 }
     }
 
     stage.value = 'done'
@@ -219,7 +216,6 @@ export function useUploadFlow() {
     radiusTable,
     gapCount,
     scanProgress,
-    uploadProgress,
     uploaded,
     totalPhotos,
     failed,

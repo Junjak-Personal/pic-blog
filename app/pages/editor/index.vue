@@ -263,36 +263,12 @@ function reasonOf(e: unknown) {
   color: var(--mid);
 }
 
-/* 공개 토글 — 아트보드 1e 의 42×24 pill. 네이티브 체크박스를 숨기지 않고 시각만 CSS 로 덮는다 */
-.switch { position: relative; display: flex; align-items: center; gap: 9px; flex: none; cursor: pointer; }
 .switch input { position: absolute; width: 42px; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
 .switch input:disabled { cursor: default; }
-.track {
-  position: relative;
-  display: block;
-  width: 42px;
-  height: 24px;
-  flex: none;
-  border-radius: 999px;
-  background: rgba(177, 199, 193, 0.16);
-  transition: background 0.14s;
-}
-.knob {
-  position: absolute;
-  left: 3px;
-  top: 3px;
-  display: block;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--faint);
-  transition: transform 0.14s, background 0.14s;
-}
 .switch input:checked ~ .track { background: rgba(146, 178, 169, 0.9); }
 .switch input:checked ~ .track .knob { transform: translateX(18px); background: var(--s0); }
 .switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
 .switch input:disabled ~ .track { opacity: 0.45; }
-.switch-label { width: 34px; font-size: 13px; color: var(--mid); }
 
 /* 행 전체를 덮는 투명 링크. 위에 떠야 하는 것(.edit)만 z-index 로 빠져나온다. */
 .stretch { color: inherit; }

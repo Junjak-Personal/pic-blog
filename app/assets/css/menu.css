@@ -46,7 +46,3 @@
  */
 :root { --cta-h: 84px; }
 
-@media (max-width: 900px) {
-  /* CTA 가 있는 화면의 스크롤 컨테이너는 이만큼 비운다 */
-  .has-bottom-cta { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)) !important; }
-}

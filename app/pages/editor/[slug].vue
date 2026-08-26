@@ -663,19 +663,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .stepbtn.on .sdot { background: var(--mid); border-color: var(--mid); color: var(--s0); }
 .scount { font-size: 10px; color: var(--deep); }
 
-/* 포스트 헤더 */
-.posthead {
-  flex: none;
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  padding: 16px 24px;
-  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
-}
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
 .field.locked { flex: none; width: 320px; }
 .flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.flabel-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 
 .input {
   width: 100%;
@@ -699,18 +689,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 .input::placeholder { color: var(--faint); }
 
-.lockbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--s1);
-  border: 1px dashed rgba(177, 199, 193, 0.18);
-  border-radius: var(--radius);
-  padding: 11px 14px;
-  color: var(--faint);
-}
-.lock-value { font-size: 11px; color: var(--mid); }
-.lock-note { margin-left: auto; font-size: 9.5px; color: var(--faint); white-space: nowrap; }
 
 /* 본문 2열 */
 .body { flex: 1; display: grid; grid-template-columns: 348px 1fr; min-height: 0; }
