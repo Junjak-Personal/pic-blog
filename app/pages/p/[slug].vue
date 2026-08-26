@@ -218,6 +218,14 @@ useHead(() => ({
 /* 지도가 주인공인 화면이라 뷰포트에 고정한다.
    min-height 만 주면 레일 13행이 stage 를 밀어올려 지도가 화면 밖으로 넘친다. */
 .page {
+  /*
+   * 이 화면은 문서가 스크롤되지 않는다(overflow: hidden). 그런데 헤더처럼 스크롤
+   * 대상이 아닌 곳을 끌면 iOS 가 화면 전체를 고무줄로 끌어내려 상단에 빈 검은 띠가
+   * 생긴다. overscroll-behavior 는 Safari 에서 「스크롤 오버플로가 없으면 무효」라
+   * (WebKit #243452) 여기서는 브라우저 제스처 자체를 끈다.
+   * 안쪽 스크롤 영역은 .scroll-y 가 touch-action: pan-y 로 다시 연다.
+   */
+  touch-action: none;
   height: 100dvh;
   display: flex;
   flex-direction: column;

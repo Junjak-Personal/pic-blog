@@ -5,6 +5,13 @@ html, body, #__nuxt {
   padding: 0;
   background: var(--s0);
   min-height: 100%;
+  /*
+   * 문서 바깥으로 튀는 고무줄 스크롤 차단.
+   * ⚠ Safari 에서는 「스크롤 오버플로가 없는 컨테이너에는 효과가 없다」는 제약이 있다
+   *   (WebKit #243452). 그래서 뷰포트에 고정된 화면(/p/[slug])은 이것만으로 안 되고
+   *   그쪽에서 touch-action 으로 따로 막는다.
+   */
+  overscroll-behavior: none;
 }
 
 /* viewport-fit=cover 를 켜면 가로 모드에서 콘텐츠가 노치 밑으로 들어간다.
@@ -112,5 +119,10 @@ select:focus-visible {
 .scroll-y {
   overflow-y: auto;
   scrollbar-width: none;
+  /* 세로 스크롤만 허용한다. 조상이 touch-action: none 으로 브라우저 제스처를 막아도
+     여기서 다시 열어줘야 목록이 스크롤된다. */
+  touch-action: pan-y;
+  /* 끝에 닿았을 때 바깥으로 번지지 않게 (지원하는 곳에서만) */
+  overscroll-behavior-y: contain;
 }
 .scroll-y::-webkit-scrollbar { width: 0; height: 0; }
