@@ -40,10 +40,14 @@
    * 상단바가 위로 비워야 하는 높이.
    * 브라우저에서는 안전영역 그대로(보통 0), 홈 화면 앱에서는 76px 고정이다.
    *
-   * 76px 인 이유: iOS 26 이 standalone 상단에 시스템 블러 띠를 그리는데,
-   * 화면에 자를 띄워 재보니 약 75pt 까지 덮는다. 안전영역(59pt)만으로는 헤더
-   * 글자가 그 안에 걸려 뭉개졌다. CSS 로 끌 수 있는 스위치는 없다 —
-   * WebKit 이 iOS 26 에서 상태바 처리를 바꿨고 Apple Feedback 에 접수돼 있다.
+   * iOS 26 이 standalone 상단에 시스템 블러 띠를 그린다. CSS 로 끌 수 있는 스위치가
+   * 없어서(WebKit 이 상태바 처리를 바꿨고 Apple Feedback 에 접수돼 있다) 콘텐츠를
+   * 띠 밖으로 내리는 수밖에 없다.
+   *
+   * 값이 작은 이유: 레거시 apple-mobile-web-app-capable 을 걷어낸 뒤로는 뷰포트가
+   * 상태바 밑까지 들어가지 않는다. 그래서 standalone 에서도 env(safe-area-inset-top)
+   * 이 0 이고, 여기 적는 값이 통째로 덧붙는다. 한때 76px 을 넣었다가 기기에서
+   * 크게 남아돌았다 — 안전영역(59) 위에 더해질 걸로 착각한 것이다.
    */
   --top-inset: env(safe-area-inset-top);
 
@@ -66,6 +70,6 @@
  */
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) {
-    :root { --top-inset: 76px; }
+    :root { --top-inset: 19px; }
   }
 }
