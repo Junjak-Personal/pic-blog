@@ -10,6 +10,37 @@ const { loggedIn } = useUserSession()
 
 const sort = ref<Sort>('recent')
 
+/**
+ * 로고 3연타로 편집 화면에 들어간다.
+ *
+ * 「기록 관리」 링크는 loggedIn 일 때만 보이는데, 로그인하려면 /editor 로 가야 한다.
+ * 브라우저에서는 주소를 치면 되지만 홈 화면에 추가한 standalone 에는 주소 표시줄이
+ * 없어서 길이 아예 없다 — 실제로 그래서 못 들어가셨다.
+ *
+ * 링크를 항상 노출하지 않는 이유는, 여기가 아무나 보는 공개 목록이라 편집 입구를
+ * 광고할 필요가 없어서다. 보안 장치는 아니다(비밀번호가 그 역할을 한다) —
+ * 그냥 눈에 안 띄는 문이다.
+ */
+const SECRET_TAPS = 3
+const TAP_WINDOW_MS = 1200
+const taps = ref(0)
+let tapTimer: ReturnType<typeof setTimeout> | null = null
+
+function tapBrand() {
+  taps.value += 1
+  if (tapTimer) clearTimeout(tapTimer)
+
+  if (taps.value >= SECRET_TAPS) {
+    taps.value = 0
+    navigateTo('/editor')
+    return
+  }
+  // 창 안에 다음 탭이 안 오면 처음부터. 세다가 놓쳐도 그냥 다시 누르면 된다.
+  tapTimer = setTimeout(() => { taps.value = 0 }, TAP_WINDOW_MS)
+}
+
+onBeforeUnmount(() => { if (tapTimer) clearTimeout(tapTimer) })
+
 const SORTS: { key: Sort; label: string }[] = [
   { key: 'recent', label: '최신' },
   { key: 'range', label: '기간' },
@@ -40,7 +71,17 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   <main class="page">
     <header class="topbar">
       <div class="brand">
-        <BrandMark class="mark" />
+        <!-- 3연타로 편집 화면 (위 tapBrand 주석 참고). 두 번째 탭부터 마크가
+             살짝 반응해서, 세다가 놓쳤는지 알 수 있게 한다. -->
+        <button
+          type="button"
+          class="markbtn"
+          :class="{ armed: taps > 0 }"
+          aria-label="pic·blog"
+          @click="tapBrand"
+        >
+          <BrandMark class="mark" />
+        </button>
         <span class="wordmark">pic<span class="dot">·</span>blog</span>
         <span class="mono kicker">travel log</span>
       </div>
@@ -130,7 +171,21 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   border-bottom: 1px solid var(--hair);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
-.mark { flex: none; color: var(--ink); }
+.markbtn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  /* 터치 타깃 — 3연타를 하려면 넉넉해야 한다 */
+  width: 44px;
+  height: 44px;
+  margin-left: -9px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.mark { flex: none; color: var(--ink); transition: color 0.15s, transform 0.15s; }
+/* 세는 중이라는 최소한의 신호. 문을 광고하지는 않는다. */
+.markbtn.armed .mark { color: var(--route); transform: scale(1.06); }
 .wordmark {
   font-family: var(--font-display);
   font-size: 21px;

@@ -218,7 +218,9 @@ useHead(() => ({
 /* 지도가 주인공인 화면이라 뷰포트에 고정한다.
    min-height 만 주면 레일 13행이 stage 를 밀어올려 지도가 화면 밖으로 넘친다. */
 .page {
-  height: 100dvh;
+  /* .shell 이 상단 안전영역만큼 밀어주므로 그만큼 빼야 뷰포트를 넘지 않는다.
+     브라우저에서는 인셋이 0 이라 100dvh 그대로다. */
+  height: calc(100dvh - env(safe-area-inset-top));
   display: flex;
   flex-direction: column;
   overflow: hidden;

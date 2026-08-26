@@ -31,7 +31,9 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#040408' },
         // viewport-fit=cover 가 없으면 env(safe-area-inset-*) 가 전부 0 이라
         // 하단 CTA 가 홈 인디케이터에 깔린다 (BottomCta.vue 참고)
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        // user-scalable=no 는 Safari 브라우저에서는 접근성 때문에 무시되고(정상),
+        // 홈 화면에 추가한 standalone 모드에서만 먹는다 — 앱처럼 쓸 때만 확대가 잠긴다.
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no' },
         // iOS 는 아직 manifest 의 display 만으로는 부족한 버전이 있어 레거시 키를 같이 둔다
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-title', content: 'pic·blog' },

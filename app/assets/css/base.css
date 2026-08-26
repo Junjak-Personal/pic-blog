@@ -20,6 +20,9 @@ html, body, #__nuxt {
 }
 
 body {
+  /* 더블탭 확대를 끈다. touch-action 은 상속되지 않으므로 지도 컨테이너
+     (Mapbox 가 자기 요소에 touch-action 을 따로 건다)에는 영향이 없다. */
+  touch-action: manipulation;
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.78;
