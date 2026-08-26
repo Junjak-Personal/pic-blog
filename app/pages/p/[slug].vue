@@ -255,6 +255,8 @@ useHead(() => ({
   background: var(--s0);
 }
 .left { display: flex; align-items: center; gap: 18px; min-width: 0; }
+/* 이 화면의 주 뒤로가기다. 높이가 20px 이라 사실상 못 눌렀다 —
+   모바일에서는 아래 미디어쿼리가 36px 로 올린다. */
 .back { display: flex; align-items: center; gap: 7px; color: var(--deep); flex: none; }
 .back .mono { font-size: 11px; letter-spacing: 0.08em; }
 .title {
@@ -328,12 +330,13 @@ useHead(() => ({
   .title { font-size: 15px; }
   .left { flex: 1; min-width: 0; gap: 12px; }
 
+  .back { min-height: 36px; padding-right: 4px; }
   .stats-toggle {
     display: grid;
     place-items: center;
     flex: none;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     margin-right: -8px;
     border: 0;
     background: none;

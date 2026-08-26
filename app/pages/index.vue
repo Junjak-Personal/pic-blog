@@ -185,9 +185,9 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   place-items: center;
   flex: none;
   /* 터치 타깃 — 3연타를 하려면 넉넉해야 한다 */
-  width: 44px;
-  height: 44px;
-  margin-left: -9px;
+  width: 36px;
+  height: 36px;
+  margin-left: -6px;
   border: 0;
   background: none;
   cursor: pointer;

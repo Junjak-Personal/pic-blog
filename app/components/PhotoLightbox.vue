@@ -5,6 +5,11 @@
  * 좌우 ‹ › 순차 이동, 키보드 ←/→ 도 받는다. 배경에 스캐터가 흐리게 비친다.
  * Reka DialogRoot 가 포커스 트랩·ESC·스크롤 잠금을 맡는다.
  */
+import { Keyboard, Zoom } from 'swiper/modules'
+import { Swiper, SwiperSlide } from 'swiper/vue'
+import type { Swiper as SwiperClass } from 'swiper/types'
+import 'swiper/css'
+import 'swiper/css/zoom'
 import type { Photo } from '#shared/types/db'
 import { formatDateTime, formatOf } from '#shared/utils/format'
 
@@ -35,6 +40,38 @@ function move(step: number) {
   emit('move', next)
 }
 
+/*
+ * 확대·스와이프는 Swiper 의 Zoom 모듈이 맡는다.
+ * 손으로 짜면 핀치 배율·팬 경계·더블탭·「스와이프인지 팬인지」 판별에서 버그가 난다 —
+ * 확대된 상태에서 옆으로 끌면 슬라이드가 넘어가면 안 되고 사진이 움직여야 하는데,
+ * 그 경계 처리가 특히 까다롭다.
+ */
+const swiper = shallowRef<SwiperClass | null>(null)
+
+function onSwiper(sw: SwiperClass) {
+  swiper.value = sw
+}
+
+/** 슬라이드가 바뀌면 부모의 index 와 맞춘다 (헤더의 「3 / 5」와 파일명이 따라간다) */
+function onSlideChange(sw: SwiperClass) {
+  if (props.index !== null && sw.activeIndex !== props.index) emit('move', sw.activeIndex)
+}
+
+/**
+ * 휠 확대. Swiper 의 mousewheel 모듈은 «슬라이드 이동»이라 여기서는 쓰지 않는다.
+ *
+ * zoom.in() 은 배율 인자를 받지 않고 maxRatio 로 한 번에 간다 — 그래서 휠은
+ * 「최대 ↔ 원본」 토글처럼 동작한다. 연속적인 배율 조절은 핀치가 맡는다
+ * (Swiper Zoom 이 제대로 처리하는 영역이고, 그게 모바일의 주 조작이다).
+ */
+function onWheel(e: WheelEvent) {
+  const sw = swiper.value
+  if (!sw?.zoom) return
+  e.preventDefault()
+  if (e.deltaY < 0) sw.zoom.in()
+  else sw.zoom.out()
+}
+
 function onKey(e: KeyboardEvent) {
   if (props.index === null) return
   if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1) }
@@ -43,6 +80,11 @@ function onKey(e: KeyboardEvent) {
 
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+// 부모가 index 를 바꾸면(레일 클릭 등) 캐러셀도 따라간다
+watch(() => props.index, (i) => {
+  if (i !== null && swiper.value && swiper.value.activeIndex !== i) swiper.value.slideTo(i, 0)
+})
 </script>
 
 <template>
@@ -67,10 +109,25 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
           </button>
 
-          <figure v-if="current" class="frame">
-            <img :src="current.display_path" :alt="`${props.pointName} 사진`">
-            <figcaption v-if="current.w" class="mono cap">{{ current.w }} × {{ current.h }} {{ formatOf(current.display_path) }}</figcaption>
-          </figure>
+          <Swiper
+            class="carousel"
+            :modules="[Zoom, Keyboard]"
+            :initial-slide="props.index ?? 0"
+            :zoom="{ maxRatio: 4, toggle: true }"
+            :keyboard="{ enabled: true }"
+            :space-between="24"
+            @swiper="onSwiper"
+            @slide-change="onSlideChange"
+            @wheel="onWheel"
+          >
+            <SwiperSlide v-for="(ph, i) in props.photos" :key="ph.id">
+              <!-- swiper-zoom-container 안이어야 핀치·더블탭 확대가 걸린다 -->
+              <div class="swiper-zoom-container">
+                <img :src="ph.display_path" :alt="`${props.pointName} 사진 ${i + 1}`">
+              </div>
+              <figcaption v-if="ph.w" class="mono cap">{{ ph.w }} × {{ ph.h }} {{ formatOf(ph.display_path) }}</figcaption>
+            </SwiperSlide>
+          </Swiper>
 
           <button type="button" class="nav" aria-label="다음 사진" @click="move(1)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
@@ -81,7 +138,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           <button type="button" class="nav sm" aria-label="이전 사진" @click="move(-1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
           </button>
-          <span class="mono swipe">← → 키로 이동</span>
+          <span class="mono swipe">쓸어서 이동 · 두 손가락/더블탭으로 확대</span>
           <button type="button" class="nav sm" aria-label="다음 사진" @click="move(1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
           </button>
@@ -151,18 +208,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   padding: 20px;
   min-height: 0;
 }
-.frame {
-  margin: 0;
+/* Swiper 가 슬라이드 폭·전환을 잡는다. 우리는 안쪽 배치만 정한다. */
+.carousel {
+  flex: 1;
   height: 100%;
+  min-width: 0;
+}
+.carousel :deep(.swiper-slide) {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-width: 0;
 }
-.frame img {
-  max-height: calc(100% - 26px);
+/* 확대 대상은 이 컨테이너 안의 img 다 — Swiper Zoom 의 규약 */
+.carousel :deep(.swiper-zoom-container) {
+  width: 100%;
+  height: calc(100% - 26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel :deep(.swiper-zoom-container img) {
+  max-height: 100%;
   max-width: 100%;
   object-fit: contain;
   border: 1px solid rgba(177, 199, 193, 0.16);

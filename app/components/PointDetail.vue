@@ -24,6 +24,9 @@ const emit = defineEmits<{ close: []; openPhoto: [index: number] }>()
  * 손잡이(.grip)와 헤더에서만 시작한다. 본문에서 잡으면 사진 산포·태그 스크롤과
  * 싸우고, 스크롤을 내리려다 시트가 닫히는 일이 생긴다.
  */
+/** 모바일에서 사진 수·기기·EXIF 를 ⓘ 로 접어둔다 — 스캐터 밑에 두면 화면 밖으로 밀린다 */
+const infoOpen = ref(false)
+
 const DISMISS_PX = 110
 const dragY = ref(0)
 const dragging = ref(false)
@@ -105,12 +108,30 @@ const deviceLine = computed(() => {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
         <span class="mono">{{ formatCoord(props.point.lat, props.point.lng) }}</span>
       </span>
+      <button
+        v-if="props.mobile"
+        type="button"
+        class="info"
+        :class="{ on: infoOpen }"
+        :aria-expanded="infoOpen"
+        aria-label="사진 정보"
+        @click="infoOpen = !infoOpen"
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
+      </button>
       <button type="button" class="close" aria-label="상세 닫기" @click="emit('close')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
       </button>
     </header>
 
     <div class="body">
+      <!-- 모바일 전용 정보 패널. 데스크탑은 힌트·EXIF 가 제자리에 다 보인다. -->
+      <div v-if="props.mobile && infoOpen" class="infobox mono">
+        <span>탭 → 확대 · {{ props.point.photos.length }}장</span>
+        <span v-if="deviceLine">{{ deviceLine }}</span>
+        <span v-if="exifLine">{{ exifLine }}</span>
+      </div>
+
       <div class="scatter-slot">
         <ScatterField
           :photos="props.point.photos"
@@ -185,8 +206,9 @@ const deviceLine = computed(() => {
 }
 .meta { display: flex; align-items: center; gap: 6px; padding-top: 3px; color: var(--faint); flex: none; }
 .meta .mono { font-size: 11px; color: var(--deep); }
+.info { margin-left: auto; }
+
 .close {
-  margin-left: auto;
   width: 26px;
   height: 26px;
   flex: none;
@@ -199,6 +221,30 @@ const deviceLine = computed(() => {
 
 .body { flex: 1; display: grid; grid-template-columns: 1fr 352px; min-height: 0; }
 .scatter-slot { position: relative; min-width: 0; overflow: hidden; }
+
+/* ⓘ 토글 — 데스크탑에는 없다 (v-if) */
+.info {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--deep);
+  cursor: pointer;
+}
+.info.on { color: var(--ink); }
+
+.infobox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+  font-size: 10.5px;
+  color: var(--faint);
+}
 
 .side {
   display: flex;

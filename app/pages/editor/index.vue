@@ -315,10 +315,11 @@ function reasonOf(e: unknown) {
 
 @media (max-width: 900px) {
   .topbar { height: calc(54px + var(--top-inset)); padding: var(--top-inset) 16px 0; gap: 10px; }
-  /* 모바일 헤더 = [뒤로] [화면 이름] [주 액션]. 워드마크·마크는 접는다 —
-     어느 화면인지가 브랜드보다 중요하다. 홈은 뒤로가기가 가리킨다. */
-  .wordmark, .mark, .markbtn { display: none; }
-  .home { gap: 0; }
+  /* 모바일 헤더 = [뒤로] [화면 이름] [주 액션]. 브랜드는 통째로 접는다 —
+     어느 화면인지가 브랜드보다 중요하고, 홈은 뒤로가기가 가리킨다.
+     .home 까지 숨기는 이유: 안이 비면 0x0 으로 찌부러져 보이지도 눌리지도 않는
+     죽은 링크가 남는다. 실제로 그랬다. */
+  .home, .wordmark, .mark, .markbtn { display: none; }
   .kicker {
     font-family: var(--font-display);
     font-size: 16px;

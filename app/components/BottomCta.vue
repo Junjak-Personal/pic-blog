@@ -68,7 +68,7 @@ onMounted(() => {
   /* 슬롯에 들어오는 버튼·링크는 폭을 나눠 갖고 44px 터치 타깃을 갖는다 */
   .row :deep(> *) {
     flex: 1;
-    min-height: 46px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;

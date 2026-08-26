@@ -90,7 +90,8 @@ const cards = computed(() => scatter(props.photos.length, 9301 + props.pointId *
 .hint .mono { font-size: 10px; }
 
 @media (max-width: 900px) {
-  .hint { left: 18px; bottom: 12px; }
-  .hint .mono { font-size: 9.5px; }
+  /* 모바일에서는 접는다 — 세로가 부족해 스캐터 밑으로 밀려 안 보였다.
+     같은 내용을 PointDetail 의 ⓘ 패널이 보여준다. */
+  .hint { display: none; }
 }
 </style>

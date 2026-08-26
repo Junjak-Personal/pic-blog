@@ -36,8 +36,8 @@ function back() {
     display: grid;
     place-items: center;
     flex: none;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     margin-left: -8px;
     border: 0;
     border-radius: var(--radius);

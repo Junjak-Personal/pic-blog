@@ -43,8 +43,8 @@ withDefaults(defineProps<{ label?: string; align?: 'start' | 'center' | 'end' }>
   display: none;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: var(--radius);
   background: none;

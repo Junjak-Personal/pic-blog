@@ -517,7 +517,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     color: var(--ink);
   }
   .right { gap: 8px; }
-  .right .btn { min-height: 40px; }
+  .right .btn { min-height: 36px; }
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */

@@ -99,6 +99,25 @@ select:focus-visible {
  *    (maximum-scale 로 막는 방법도 있지만 그건 확대 자체를 뺏는 접근성 문제다.)
  *    모바일에서는 모든 입력이 최소 16px 이다.
  */
+/*
+ * 조작 요소 크기 두 단계.
+ *   헤더 안 36px — 밀도가 높은 크롬이다. 한 줄에 여럿이 들어가야 한다.
+ *   그 밖   44px — 본문의 조작 요소. 터치 타깃 권장치다.
+ * 값이 화면마다 제각각이면(20·34·36·38·40·44 가 섞여 있었다) 리듬이 깨진다.
+ */
+@media (max-width: 900px) {
+  .topbar button,
+  .topbar a {
+    /* 세로 padding 을 걷어야 높이를 이 규칙이 정한다 — min-height 는 하한이라
+       padding 으로 커진 버튼(38·40px)은 그대로 남는다. 가로 padding 은 살린다. */
+    min-height: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
+    /* 줄높이가 남아 38px 로 뜨는 것들이 있었다 — 높이는 이 규칙이 정한다 */
+    line-height: 1;
+  }
+}
+
 @media (max-width: 900px) {
   /* !important 를 쓰는 이유: 각 페이지의 scoped `.input`/`.content` 같은 클래스 선택자가
      엘리먼트 선택자를 항상 이긴다. 이건 디자인 취향이 아니라 기기 제약이라
