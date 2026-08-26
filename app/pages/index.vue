@@ -217,11 +217,15 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .sort.on { background: var(--mid); color: var(--s0); }
 .totals { font-size: 11px; color: var(--deep); }
 .editor-link {
-  font-size: 11px;
+  /* 헤더 버튼은 높이가 36px 로 고정된다(base.css). 글자가 11px 이면 상자 안이
+     텅 비어 「빈 테두리」처럼 보인다 — 글자를 상자에 맞춘다. */
+  display: flex;
+  align-items: center;
+  font-size: 12.5px;
   color: var(--mid);
   border: 1px solid rgba(177, 199, 193, 0.2);
-  border-radius: 6px;
-  padding: 6px 11px;
+  border-radius: var(--radius);
+  padding: 0 13px;
 }
 
 .map-strip { height: 236px; flex: none; border-bottom: 1px solid var(--hair); }
