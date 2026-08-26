@@ -221,10 +221,16 @@ watch(() => props.index, (i) => {
   justify-content: center;
   gap: 10px;
 }
-/* 확대 대상은 이 컨테이너 안의 img 다 — Swiper Zoom 의 규약 */
+/* 확대 대상은 이 컨테이너 안의 img 다 — Swiper Zoom 의 규약.
+   높이를 고정하면(height) 컨테이너가 슬라이드를 꽉 채워 캡션이 저 아래로 밀린다.
+   max-height 로 두면 사진 크기에 맞춰 줄어들어 캡션이 사진에 붙는다. */
 .carousel :deep(.swiper-zoom-container) {
-  width: 100%;
-  height: calc(100% - 26px);
+  /* Swiper 기본 CSS 가 width/height: 100% 를 준다 — auto 로 덮어야 사진 크기만큼
+     줄어들고 캡션이 사진에 붙는다. max-height 만으로는 height 를 못 이긴다. */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100% - 30px);
   display: flex;
   align-items: center;
   justify-content: center;

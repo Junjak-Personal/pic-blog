@@ -145,6 +145,7 @@ useHead(() => ({
         :aria-expanded="showStats"
         aria-controls="post-stats"
         aria-label="기록 정보"
+        :class="{ hidden: detailOpen }"
         @click="showStats = !showStats"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
@@ -344,6 +345,8 @@ useHead(() => ({
     cursor: pointer;
   }
   .stats-toggle[aria-expanded='true'] { color: var(--ink); }
+  /* 상세 시트가 떠 있으면 시트의 ⓘ 가 정보를 맡는다 — ⓘ 가 둘로 보이면 안 된다 */
+  .stats-toggle.hidden { display: none; }
 
   .stats {
     display: none;
