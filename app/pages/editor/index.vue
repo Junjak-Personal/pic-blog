@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AppBack from '~/components/AppBack.vue'
-import OverflowMenu from '~/components/OverflowMenu.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
  * 목록 자체는 아트보드 1a 와 같은 시각 언어지만, 여기서만 공개 여부를 뒤집을 수 있다 (설계문서 §7.2).
@@ -98,7 +97,14 @@ function reasonOf(e: unknown) {
         </span>
 
         <div class="main">
-          <h3 class="title">{{ post.title }}</h3>
+          <h3 class="title">
+            <!--
+              행 전체가 상세로 가는 링크다. ::after 로 행을 덮되 제목이 링크의 이름이 되어
+              스크린리더가 「무엇으로 가는 링크인지」 읽을 수 있다.
+              편집 아이콘은 그 위에 떠 있다 (.edit 의 z-index).
+            -->
+            <NuxtLink :to="`/p/${post.slug}`" class="stretch">{{ post.title }}</NuxtLink>
+          </h3>
           <p v-if="post.summary" class="summary">{{ post.summary }}</p>
           <p class="mono meta">
             <span v-if="!post.is_public" class="private">비공개</span>
@@ -108,26 +114,9 @@ function reasonOf(e: unknown) {
         </div>
 
 
-        <div class="row-actions">
-          <NuxtLink :to="`/editor/${post.slug}`" class="btn ghost mono wide-only">편집</NuxtLink>
-          <NuxtLink :to="`/p/${post.slug}`" class="btn ghost mono wide-only">보기</NuxtLink>
-
-          <!-- 모바일: 행마다 버튼 두 개를 폭 전체로 깔면 목록이 두 배로 길어진다 -->
-          <OverflowMenu :label="`${post.title} 메뉴`">
-            <DropdownMenuItem as-child class="ovf-item">
-              <NuxtLink :to="`/editor/${post.slug}`">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-                편집
-              </NuxtLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem as-child class="ovf-item">
-              <NuxtLink :to="`/p/${post.slug}`">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6s6.6 2 9 6" /></svg>
-                공개 화면 보기
-              </NuxtLink>
-            </DropdownMenuItem>
-          </OverflowMenu>
-        </div>
+        <NuxtLink :to="`/editor/${post.slug}`" class="edit" :aria-label="`${post.title} 편집`">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+        </NuxtLink>
       </li>
     </ul>
   </div>
@@ -219,6 +208,7 @@ function reasonOf(e: unknown) {
   border-radius: var(--radius);
   transition: border-color 0.14s;
 }
+.row { position: relative; cursor: pointer; }
 .row:hover { border-color: rgba(146, 178, 169, 0.45); }
 
 .cover {
@@ -304,7 +294,24 @@ function reasonOf(e: unknown) {
 .switch input:disabled ~ .track { opacity: 0.45; }
 .switch-label { width: 34px; font-size: 13px; color: var(--mid); }
 
-.row-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* 행 전체를 덮는 투명 링크. 위에 떠야 하는 것(.edit)만 z-index 로 빠져나온다. */
+.stretch { color: inherit; }
+.stretch::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+
+/* 우측 끝 편집 — 아이콘 전용이라 상자를 두르지 않는다 */
+.edit {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius);
+  color: var(--deep);
+}
+.edit:hover { color: var(--ink); background: rgba(146, 178, 169, 0.12); }
+.edit:active { background: rgba(146, 178, 169, 0.18); }
 
 /* 아트보드 1c ① 기록 0 */
 .empty {
@@ -361,7 +368,7 @@ function reasonOf(e: unknown) {
   }
   .summary { display: none; }
   .meta { font-size: 10px; line-height: 1.5; }
-  .row-actions { align-self: center; }
+  .edit { align-self: center; width: 44px; height: 44px; }
   .cover { width: 64px; height: 48px; }
   /* 편집·보기는 ⋯ 로 접는다 — 행마다 폭 전체 버튼 두 개를 깔면 목록이 두 배로 길어진다.
      토글은 남긴다(상태가 한눈에 보여야 한다). 옆의 「공개/비공개」 글자는 스위치가
