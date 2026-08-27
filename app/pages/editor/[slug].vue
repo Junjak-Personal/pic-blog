@@ -20,12 +20,28 @@ import BusyOverlay from '~/components/BusyOverlay.vue'
  * 예외는 포인트 범위(재클러스터링) 하나뿐이고, 그건 1단계가 별도 확인을 받는다.
  */
 import { onBeforeRouteLeave } from 'vue-router'
-import type { Photo, PostDetail } from '#shared/types/db'
+import type { Photo, Point, PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
+import {
+  cleanExpenses, cleanLinks, CURRENCIES, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
+  MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
+  type CurrencyCode, type PointExpense, type PointLink,
+} from '#shared/utils/extras'
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
 import { askConfirm } from '~/composables/useConfirm'
+
+/**
+ * 편집 중의 금액은 «문자열»이다.
+ * 숫자로 묶어두면 「12.」 를 치는 도중에 Number('12.') → 12 로 되돌아가 점이 지워지고,
+ * 빈 칸은 NaN 이 된다. 저장할 때 한 번만 숫자로 옮긴다 (outExpenses).
+ */
+interface ExpenseDraft {
+  item: string
+  amount: string
+  currency: CurrencyCode
+}
 
 interface PointDraft {
   /** 서버 포인트 id. 🔴 음수면 2단계에서 사진을 끌어내 만든 «아직 없는» 포인트다. */
@@ -37,10 +53,14 @@ interface PointDraft {
   ids: number[]
   /** 대표 썸네일. null 이면 첫 사진 (서버의 규칙과 같다). */
   coverId: number | null
+  links: PointLink[]
+  expenses: ExpenseDraft[]
 }
 
 const MAX_BODY = 2000
 const MAX_TAGS = 20
+/** 마지막으로 고른 화폐를 기억한다 — 한 여행에서는 대개 같은 화폐로만 적는다 */
+const CURRENCY_KEY = 'pic-blog:currency'
 
 definePageMeta({ layout: 'editor' })
 
@@ -143,6 +163,8 @@ const changes = computed(() => {
     if (d.body.trim() !== (base.body ?? '')) n++
     if (d.tags.join('\n') !== base.tags.join('\n')) n++
     if (d.coverId !== base.cover_photo_id) n++
+    if (!sameLinks(d, base)) n++
+    if (!sameExpenses(d, base)) n++
   }
   return n
 })
@@ -186,6 +208,8 @@ function hydrate() {
     tags: [...pt.tags],
     ids: pt.photos.map((ph) => ph.id),
     coverId: pt.cover_photo_id,
+    links: pt.links.map((l) => ({ ...l })),
+    expenses: pt.expenses.map((e) => ({ ...e, amount: String(e.amount) })),
   }))
   if (!pointDrafts.value.some((d) => d.id === activeId.value)) {
     activeId.value = pointDrafts.value[0]?.id ?? null
@@ -256,6 +280,8 @@ function confirmVanish(d: PointDraft, how: '옮기면' | '지우면') {
   if (d.title.trim()) lost.push('이름')
   if (d.tags.length) lost.push(`태그 ${d.tags.length}개`)
   if (d.body.trim()) lost.push(`본문 ${d.body.trim().length}자`)
+  if (outLinks(d).length) lost.push(`링크 ${outLinks(d).length}개`)
+  if (outExpenses(d).length) lost.push(`소비 기록 ${outExpenses(d).length}건`)
   const tail = lost.length ? ` 적어둔 ${lost.join(' · ')} 도 함께 없어집니다.` : ''
   return askConfirm({
     title: `「${name}」 포인트가 사라집니다`,
@@ -288,6 +314,8 @@ async function onBoardDrop(from: DragFrom, over: DragOver) {
       tags: [],
       ids: [from.photoId],
       coverId: null,
+      links: [],
+      expenses: [],
     })
     resort()
     return
@@ -369,6 +397,90 @@ function rowThumb(draftId: number) {
   if (!d) return null
   return pointThumb({ cover_photo_id: d.coverId, photos: photosOf(d.ids) })
 }
+
+/* ── 기타 정보 (링크 · 소비 금액) ───────────────────────────────────────────
+ * 서버로 나가는 형태로 옮기는 길은 이 두 함수뿐이다. 「변경 N건」도 저장도 같은 값을
+ * 보고 판단해야 저장한 뒤에 건수가 0 이 된다 (extras.ts cleanLinks 의 🔴).
+ */
+function outLinks(d: PointDraft) {
+  return cleanLinks(d.links)
+}
+
+function outExpenses(d: PointDraft): PointExpense[] {
+  return cleanExpenses(
+    // 자릿수 쉼표를 찍는 사람이 있다 — 숫자로 옮기기 전에 걷어낸다
+    d.expenses.map((e) => ({ item: e.item, amount: Number(e.amount.replace(/,/g, '')), currency: e.currency })),
+  )
+}
+
+/** 서버 값과 같은가. 두 쪽이 키를 같은 순서로 만들어서 문자열 비교로 충분하다 (__checks.ts 가 지킨다). */
+function sameLinks(d: PointDraft, base: Point) {
+  return JSON.stringify(outLinks(d)) === JSON.stringify(base.links)
+}
+
+function sameExpenses(d: PointDraft, base: Point) {
+  return JSON.stringify(outExpenses(d)) === JSON.stringify(base.expenses)
+}
+
+function addLink() {
+  const d = activeDraft.value
+  if (!d || d.links.length >= MAX_LINKS) return
+  d.links.push({ label: '', url: '' })
+}
+
+/** 🔴 포인트 앵커가 아니라 «대표 사진»의 좌표다 — 앵커는 사진들의 평균이라 실제로 간 자리가 아니다 */
+const mapLink = computed(() => {
+  const id = activeThumbId.value
+  const ph = id === null ? undefined : photoById.value.get(id)
+  return ph ? googleMapsUrl(ph.lat, ph.lng) : null
+})
+
+/** 이미 같은 링크가 있으면 버튼을 잠근다 — 눌러도 아무 일이 없는 버튼은 고장으로 읽힌다 */
+const mapLinkExists = computed(() => {
+  const url = mapLink.value
+  const d = activeDraft.value
+  return !!url && !!d && d.links.some((l) => l.url.trim() === url)
+})
+
+function addMapLink() {
+  const d = activeDraft.value
+  const url = mapLink.value
+  if (!d || !url || mapLinkExists.value || d.links.length >= MAX_LINKS) return
+  d.links.push({ label: '구글 지도', url })
+}
+
+function lastCurrency(): CurrencyCode {
+  try {
+    const v = localStorage.getItem(CURRENCY_KEY)
+    if (v && isCurrency(v)) return v
+  } catch {
+    // 사파리 비공개 모드 등 — 기억을 못 할 뿐이라 기본값으로 간다
+  }
+  return DEFAULT_CURRENCY
+}
+
+function rememberCurrency(c: CurrencyCode) {
+  try {
+    localStorage.setItem(CURRENCY_KEY, c)
+  } catch {
+    // 위와 같다
+  }
+}
+
+function addExpense() {
+  const d = activeDraft.value
+  if (!d || d.expenses.length >= MAX_EXPENSES) return
+  d.expenses.push({ item: '', amount: '', currency: lastCurrency() })
+}
+
+/** 숫자로 안 읽히는 금액은 표시로 알린다 — 저장할 때 조용히 0 이 되면 안 된다 */
+function badAmount(e: ExpenseDraft) {
+  const t = e.amount.replace(/,/g, '').trim()
+  return t !== '' && !(isFinite(Number(t)) && Number(t) >= 0)
+}
+
+/** 편집 중에도 합계를 보여준다 — 화폐가 섞이면 화폐마다 한 줄 */
+const activeTotals = computed(() => (activeDraft.value ? totalsOf(outExpenses(activeDraft.value)) : []))
 
 function addTag() {
   const t = tagInput.value.trim()
@@ -487,10 +599,15 @@ async function save() {
         d.title.trim() !== (base.title ?? '') ||
         d.body.trim() !== (base.body ?? '') ||
         d.tags.join('\n') !== base.tags.join('\n') ||
-        d.coverId !== base.cover_photo_id
+        d.coverId !== base.cover_photo_id ||
+        !sameLinks(d, base) ||
+        !sameExpenses(d, base)
       // 새 포인트인데 적은 것이 하나도 없으면 보낼 것도 없다
       if (!dirty) continue
-      if (!base && !d.title.trim() && !d.body.trim() && !d.tags.length && d.coverId === null) continue
+      if (
+        !base && !d.title.trim() && !d.body.trim() && !d.tags.length && d.coverId === null
+        && !outLinks(d).length && !outExpenses(d).length
+      ) continue
       await $fetch(`/api/points/${d.id}`, {
         method: 'PATCH',
         body: {
@@ -498,6 +615,8 @@ async function save() {
           body: d.body.trim() || null,
           tags: d.tags,
           cover_photo_id: d.coverId,
+          links: outLinks(d),
+          expenses: outExpenses(d),
         },
       })
     }
@@ -802,6 +921,123 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   placeholder="이 포인트에서 있었던 일을 적습니다"
                   data-testid="editor-point-body-input"
                 />
+              </div>
+
+              <!--
+                기타 정보 — 콘텐츠 아래. 공개 화면에서는 포인트 상세(데스크탑 우측 칸 ·
+                모바일 ⓘ 판)에 같은 것이 뜬다 (PointExtras.vue).
+              -->
+              <div class="field">
+                <span class="flabel-row">
+                  <span class="mono flabel">링크</span>
+                  <span class="mono counter">{{ activeDraft.links.length }} / {{ MAX_LINKS }}</span>
+                </span>
+
+                <div v-for="(l, i) in activeDraft.links" :key="i" class="xrow">
+                  <input
+                    v-model="l.url"
+                    class="input mini mono"
+                    :maxlength="MAX_URL"
+                    inputmode="url"
+                    placeholder="https://"
+                    :aria-label="`링크 ${i + 1} 주소`"
+                    :data-testid="`editor-link-input-${i}`"
+                  >
+                  <button
+                    type="button"
+                    class="xkill"
+                    :aria-label="`링크 ${i + 1} 삭제`"
+                    @click="activeDraft.links.splice(i, 1)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div class="xacts">
+                  <!-- 잠근 이유를 글자로 말한다 — 눌러도 아무 일이 없는 버튼을 두지 않는다 -->
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="!mapLink || mapLinkExists || activeDraft.links.length >= MAX_LINKS"
+                    data-testid="editor-maplink-btn"
+                    @click="addMapLink"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
+                    {{ mapLinkExists ? '구글 지도 — 이미 있음' : '구글 지도 자동 입력' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="activeDraft.links.length >= MAX_LINKS"
+                    @click="addLink"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    링크 추가
+                  </button>
+                </div>
+                <p class="mono xnote">자동 입력한 것은 「구글 지도」로, 직접 넣은 주소는 도메인으로 보입니다</p>
+              </div>
+
+              <div class="field">
+                <span class="flabel-row">
+                  <span class="mono flabel">소비한 금액</span>
+                  <span class="mono counter">{{ activeDraft.expenses.length }} / {{ MAX_EXPENSES }}</span>
+                </span>
+
+                <div v-for="(e, i) in activeDraft.expenses" :key="i" class="xrow">
+                  <input
+                    v-model="e.item"
+                    class="input mini"
+                    :maxlength="MAX_ITEM"
+                    placeholder="품목명"
+                    :aria-label="`${i + 1}번 품목명`"
+                    :data-testid="`editor-expense-item-${i}`"
+                  >
+                  <input
+                    v-model="e.amount"
+                    class="input mini amt mono"
+                    :class="{ bad: badAmount(e) }"
+                    inputmode="decimal"
+                    maxlength="16"
+                    placeholder="0"
+                    :aria-label="`${i + 1}번 금액`"
+                    :data-testid="`editor-expense-amount-${i}`"
+                  >
+                  <select
+                    v-model="e.currency"
+                    class="input mini cur mono"
+                    :aria-label="`${i + 1}번 화폐`"
+                    @change="rememberCurrency(e.currency)"
+                  >
+                    <option v-for="c in CURRENCIES" :key="c.code" :value="c.code">{{ c.label }}</option>
+                  </select>
+                  <button
+                    type="button"
+                    class="xkill"
+                    :aria-label="`${i + 1}번 항목 삭제`"
+                    @click="activeDraft.expenses.splice(i, 1)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div class="xacts">
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="activeDraft.expenses.length >= MAX_EXPENSES"
+                    data-testid="editor-expense-add"
+                    @click="addExpense"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    항목 추가
+                  </button>
+                  <!-- 화폐가 섞이면 화폐마다 한 줄 — 섞어서 더하지 않는다 -->
+                  <span v-if="activeTotals.length" class="xtotal">
+                    <span class="mono xtlabel">합계</span>
+                    <b v-for="t in activeTotals" :key="t.currency" class="mono">{{ formatMoney(t.amount, t.currency) }}</b>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -1183,7 +1419,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-left: 1px solid rgba(177, 199, 193, 0.1);
   min-height: 0;
 }
-.field.grow { flex: 1; min-height: 0; }
+/* 아래에 기타 정보가 붙는다 — min-height 0 이면 콘텐츠 칸이 눌려 텍스트영역이 넘쳐 나온다 */
+.field.grow { flex: 1; min-height: 190px; }
 
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
@@ -1265,6 +1502,53 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .content:focus { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .content::placeholder { color: var(--faint); }
 
+/* 기타 정보 — 링크 · 소비 금액. 352px 칸에 들어가야 해서 줄바꿈을 허용한다 */
+.xrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.input.mini { padding: 7px 10px; font-size: 12px; }
+/* 352px 칸에 [품목][금액][화폐][✕] 가 한 줄로 들어가야 한다 — 합이 여백을 넘으면 ✕ 만 다음 줄로 떨어진다 */
+.xrow .input { flex: 1 1 84px; min-width: 0; }
+.xrow .input.amt { flex: 0 1 68px; text-align: right; }
+/*
+ * 화폐 고르개는 네이티브 select 를 그대로 쓴다 (직접 그리면 목록 팝업까지 만들어야 한다).
+ * color-scheme 은 이 요소에만 건다 — 이게 없으면 펼친 목록이 흰 바탕으로 뜬다.
+ * :root 에 걸면 날짜 입력·스크롤바까지 앱 전체가 한꺼번에 바뀌므로 여기서 멈춘다.
+ */
+.xrow .input.cur { flex: 0 0 84px; color-scheme: dark; }
+/* 숫자로 안 읽히는 금액 — 저장하면 0 이 되므로 미리 붉게 알린다 */
+.input.bad { border-color: rgba(255, 128, 128, 0.55); color: var(--danger); }
+
+.xkill {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.xkill:hover { background: rgba(255, 128, 128, 0.14); color: var(--danger); }
+
+.xacts { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.minibtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: var(--radius);
+  font-size: 10.5px;
+  color: var(--mid);
+  cursor: pointer;
+}
+.minibtn:hover:not(:disabled) { background: rgba(146, 178, 169, 0.1); }
+.minibtn:disabled { opacity: 0.45; cursor: default; }
+.xnote { font-size: 9.5px; color: var(--faint); }
+.xtotal { margin-left: auto; display: flex; align-items: baseline; gap: 10px; }
+.xtlabel { font-size: 9.5px; color: var(--faint); }
+.xtotal b { font-size: 12px; color: var(--ink); }
+
 /* 빈 상태 */
 .blank {
   flex: 1;
@@ -1334,6 +1618,16 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .chip-x { width: 24px; height: 24px; }
   /* 입력은 보이지 않는 판을 못 넓힌다 — 상자 자체가 손가락이 닿는 곳이라 44px */
   .chip-add { min-height: 44px; padding: 4px 12px; flex: 1; min-width: 140px; }
+
+  /* 기타 정보 — 입력이 16px 로 커지므로(base.css) 줄이 넘친다. 지우기·추가도 손가락 크기로 */
+  .xrow { gap: 8px; }
+  .input.mini { padding: 10px 11px; }
+  .xrow .input.amt { flex: 1 1 96px; }
+  .xrow .input.cur { flex: 1 1 104px; }
+  .xkill { width: 40px; height: 40px; }
+  .minibtn { min-height: 40px; font-size: 12px; padding: 0 12px; }
+  .xnote { font-size: 11px; }
+  .xtotal b { font-size: 13.5px; }
   .tag-input { flex: 1; width: auto; min-width: 0; }
   .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
   .field.grow { min-height: 0; }

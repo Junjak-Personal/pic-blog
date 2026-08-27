@@ -5,6 +5,7 @@
  * 모바일:   스캐터«만». 시각·좌표·사진수·기기·EXIF·태그·본문은 전부 ⓘ 판(.infopane)에
  *           모여 있고 .side 는 감춘다 — 세로가 부족해 스크롤로 흩어놓으면 못 읽는다.
  */
+import PointExtras from '~/components/PointExtras.vue'
 import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
 import { formatDate, formatExifLine, formatOf, formatTime } from '#shared/utils/format'
@@ -166,6 +167,8 @@ const deviceLine = computed(() => {
         </div>
 
         <p v-for="(para, i) in paragraphs" :key="i" class="para">{{ para }}</p>
+
+        <PointExtras :links="props.point.links" :expenses="props.point.expenses" />
       </div>
 
       <div class="scatter-slot">
@@ -209,6 +212,8 @@ const deviceLine = computed(() => {
         </div>
 
         <p v-for="(para, i) in paragraphs" :key="i" class="para">{{ para }}</p>
+
+        <PointExtras :links="props.point.links" :expenses="props.point.expenses" />
 
         <div v-if="deviceLine || exifLine" class="exif mono">
           <span v-if="deviceLine">{{ deviceLine }}</span>

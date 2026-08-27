@@ -49,11 +49,13 @@ const table = computed(() =>
 /** 재클러스터링으로 내용을 잃게 될 포인트들 — 이름을 그대로 보여준다 */
 const atRisk = computed(() =>
   props.post.points
-    .filter((p) => p.title || p.body || p.tags.length)
+    .filter((p) => p.title || p.body || p.tags.length || p.links.length || p.expenses.length)
     .map((p) => {
       const bits: string[] = []
       if (p.tags.length) bits.push(`태그 ${p.tags.length}`)
       if (p.body) bits.push(`본문 ${p.body.length}자`)
+      if (p.links.length) bits.push(`링크 ${p.links.length}`)
+      if (p.expenses.length) bits.push(`소비 ${p.expenses.length}건`)
       return { id: p.id, name: p.title || `포인트 ${p.order_index + 1}`, detail: bits.join(', ') }
     }),
 )
@@ -228,7 +230,7 @@ function confirmRecluster() {
               아래 내용이 사라집니다. 되돌릴 수 없습니다.
             </template>
             <template v-else>
-              사진이 다시 묶입니다. 지금은 잃을 이름·태그·본문이 없습니다.
+              사진이 다시 묶입니다. 지금은 잃을 이름·태그·본문·기타 정보가 없습니다.
             </template>
           </AlertDialogDescription>
 

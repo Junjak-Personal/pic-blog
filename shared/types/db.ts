@@ -1,4 +1,5 @@
 /** SQLite row shapes — 설계 문서 §3 스키마와 1:1. */
+import type { PointExpense, PointLink } from '#shared/utils/extras'
 
 export interface PostRow {
   id: number
@@ -28,6 +29,10 @@ export interface PointRow {
   order_index: number
   /** 대표 썸네일로 쓸 사진 id. NULL 이면 첫 사진. 지운 사진을 가리킬 수 있어 읽는 쪽이 되짚어야 한다. */
   cover_photo_id: number | null
+  /** JSON 배열 문자열 — tags 와 같은 방식. 읽을 때 parseLinks() 로 좁힌다. */
+  links: string
+  /** JSON 배열 문자열. 읽을 때 parseExpenses() 로 좁힌다. */
+  expenses: string
 }
 
 export interface PhotoRow {
@@ -50,8 +55,10 @@ export interface PhotoRow {
 /** API 응답 — tags 를 배열로 편 형태. */
 export interface Photo extends Omit<PhotoRow, 'point_id'> {}
 
-export interface Point extends Omit<PointRow, 'tags' | 'post_id'> {
+export interface Point extends Omit<PointRow, 'tags' | 'post_id' | 'links' | 'expenses'> {
   tags: string[]
+  links: PointLink[]
+  expenses: PointExpense[]
   photos: Photo[]
 }
 

@@ -274,6 +274,21 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border-radius: var(--radius-lg);
   background: rgba(146, 178, 169, 0.03);
   transition: border-color 0.12s, background 0.12s;
+  /*
+   * 가상 스크롤 — 화면 밖 그룹은 브라우저가 통째로 건너뛴다 (레이아웃도 페인트도).
+   *
+   * 사진 한 장이 칸 하나라 500장이면 칸이 500개고, 그 전부를 매번 다시 재는 순간
+   * 스크롤이 끊긴다. JS 로 잘라 붙이는 가상 목록 대신 이걸 쓴 이유는 셋이다:
+   *   · 칸이 DOM 에서 사라지지 않아 드래그의 elementFromPoint 조준이 그대로 산다
+   *   · flex-wrap 로 줄이 접히는 높이를 미리 계산할 필요가 없다
+   *   · 지원하지 않는 브라우저에서는 두 줄이 무시될 뿐, 화면은 지금과 똑같다
+   *
+   * contain-intrinsic-size 의 auto 는 「한 번이라도 그려봤으면 그때 높이를 기억한다」다 —
+   * 두 번째부터는 자리표시 높이가 실제와 같아 스크롤바가 튀지 않는다. 240px 은
+   * 두 줄짜리 그룹의 대략적인 높이(머리 44 + 타일 두 줄)로, 처음 훑을 때만 쓰인다.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
 }
 /* 손끝이 올라온 그룹 — 어디에 떨어질지 그룹 단위로 먼저 보여준다 */
 .group.target { border-color: rgba(146, 178, 169, 0.6); background: rgba(146, 178, 169, 0.09); }

@@ -9,6 +9,10 @@ import { distanceM, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
 import { badgesOf, DAY_COLORS, groupByDay } from './days.ts'
+import {
+  cleanExpenses, cleanLinks, formatMoney, googleMapsUrl, isSafeUrl, linkLabel,
+  parseExpenses, parseLinks, totalsOf, type PointExpense,
+} from './extras.ts'
 
 // ── 좌표 순서 — 놓치면 마커가 지구 반대편에 찍힌다 ────────────────────────
 assert.deepEqual(toLngLat({ lat: 37.763847, lng: 128.899886 }), [128.899886, 37.763847])
@@ -139,4 +143,54 @@ assert.equal(
   '7자리 이하의 흔들림은 같은 사진으로 본다 (서버를 거쳐 온 값과 비교하므로)',
 )
 
-console.log('✓ cluster · scatter · geo · format · days · photo checks passed')
+// ── 기타 정보: 링크 ──────────────────────────────────────────────────────
+assert.deepEqual(
+  cleanLinks([{ label: '  구글 지도 ', url: ' https://a.com  ' }, { label: 'x', url: '   ' }]),
+  [{ label: '구글 지도', url: 'https://a.com' }],
+  '주소가 빈 줄은 버리고, 앞뒤 공백은 턴다',
+)
+assert.equal(isSafeUrl('https://a.com'), true)
+assert.equal(isSafeUrl('http://a.com'), true)
+assert.equal(isSafeUrl('javascript:alert(1)'), false, '클릭 한 번이 스크립트가 되면 안 된다')
+assert.equal(isSafeUrl('data:text/html,<script>'), false)
+assert.equal(isSafeUrl('a.com'), false, '스킴이 없으면 URL 이 아니다')
+assert.equal(linkLabel({ label: '', url: 'https://www.google.com/maps' }), 'google.com', '이름이 없으면 도메인')
+assert.equal(linkLabel({ label: ' 숙소 ', url: 'https://a.com' }), '숙소')
+assert.equal(
+  googleMapsUrl(37.763847, 128.899886),
+  'https://www.google.com/maps/search/?api=1&query=37.763847,128.899886',
+  '🔴 lat,lng 순서다 — 뒤집히면 지구 반대편이 열린다',
+)
+
+// ── 기타 정보: 소비 금액 ─────────────────────────────────────────────────
+const spend: PointExpense[] = [
+  { item: ' 라멘 ', amount: 1200, currency: 'JPY' },
+  { item: '', amount: 0, currency: 'KRW' },
+  { item: '커피', amount: 0.1 + 0.2, currency: 'USD' },
+  { item: '교통', amount: 800, currency: 'JPY' },
+]
+const cleanedSpend = cleanExpenses(spend)
+assert.equal(cleanedSpend.length, 3, '품목도 금액도 없는 줄은 버린다')
+assert.equal(cleanedSpend[1]!.amount, 0.3, '부동소수 꼬리를 자른다 — 합계가 0.30000000000000004 가 되면 안 된다')
+assert.deepEqual(
+  totalsOf(cleanedSpend),
+  [{ currency: 'JPY', amount: 2000 }, { currency: 'USD', amount: 0.3 }],
+  '화폐가 다르면 섞어서 더하지 않는다',
+)
+assert.equal(formatMoney(12300, 'KRW'), '12,300원')
+assert.equal(formatMoney(1200, 'JPY'), '1,200엔', 'Intl 의 JP¥ 대신 사용자가 쓰는 말로 적는다')
+
+/*
+ * 🔴 이 두 줄이 「저장했는데 변경 N건이 안 사라지는」 버그를 막는다.
+ *    편집 화면은 clean 한 초안을, 서버는 parse 한 값을 내놓고 둘을 «문자열»로 비교한다 —
+ *    키 순서가 한 곳만 달라져도 초안이 영원히 더러운 상태로 남는다.
+ */
+assert.equal(
+  JSON.stringify(parseExpenses(JSON.stringify(cleanedSpend))),
+  JSON.stringify(cleanedSpend),
+  'clean → 저장 → parse 를 돌아도 문자열이 같아야 한다',
+)
+const cleanedLinks = cleanLinks([{ label: '구글 지도', url: 'https://a.com' }])
+assert.equal(JSON.stringify(parseLinks(JSON.stringify(cleanedLinks))), JSON.stringify(cleanedLinks))
+
+console.log('✓ cluster · scatter · geo · format · days · photo · extras checks passed')

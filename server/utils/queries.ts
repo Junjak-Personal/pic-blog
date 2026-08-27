@@ -1,6 +1,7 @@
 import type { PhotoRow, PointRow, PostDetail, PostRow, PostSummary } from '#shared/types/db'
 import { distanceKm } from '#shared/utils/geo'
 import { parseTags } from '#shared/utils/format'
+import { parseExpenses, parseLinks } from '#shared/utils/extras'
 
 const PHOTO_URL = '/photos/'
 
@@ -152,9 +153,11 @@ export function getPost(slug: string, includePrivate: boolean): PostDetail | nul
 
   return {
     ...summarize(post),
-    points: points.map(({ post_id: _postId, tags, ...pt }) => ({
+    points: points.map(({ post_id: _postId, tags, links, expenses, ...pt }) => ({
       ...pt,
       tags: parseTags(tags),
+      links: parseLinks(links),
+      expenses: parseExpenses(expenses),
       photos: photoStmt.all(pt.id).map(({ point_id: _pointId, ...ph }) => photoUrls({ ...ph, point_id: pt.id })),
     })),
   }
