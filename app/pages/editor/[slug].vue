@@ -697,6 +697,17 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
             {{ saving ? '저장 중' : '저장' }}
           </button>
+          <!--
+            되돌릴 수 없는 것은 메뉴 안으로. 저장·취소와 나란히 두면 손이 미끄러질 자리다.
+            always — 넓은 화면에는 펼친 버튼이 따로 있는 게 이 메뉴의 기본이지만,
+            삭제는 펼쳐둘 자리가 없다.
+          -->
+          <OverflowMenu label="기록 메뉴" always testid="editor-menu-wide">
+          <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+            기록 삭제
+          </DropdownMenuItem>
+          </OverflowMenu>
         </div>
       </div>
 
@@ -704,7 +715,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <div class="hd-mobile">
         <AppBack fallback="/editor" label="기록 목록으로" />
         <h1 class="hd-title">{{ draftTitle || '기록 편집' }}</h1>
-        <OverflowMenu label="기록 메뉴">
+        <OverflowMenu label="기록 메뉴" testid="editor-menu-narrow">
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
             변경 취소
@@ -722,6 +733,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6s6.6 2 9 6" /></svg>
               공개 화면 보기
             </NuxtLink>
+          </DropdownMenuItem>
+          <div class="ovf-sep" />
+          <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+            기록 삭제
           </DropdownMenuItem>
         </OverflowMenu>
       </div>
@@ -778,7 +794,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         :dirty="changes > 0"
         :busy="reclustering || deleting"
         @recluster="recluster"
-        @remove="removePost"
       />
 
       <!-- 2단계 — 사진 전체를 포인트별 그룹으로 -->
@@ -1363,7 +1378,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 아직 저장 전인 포인트 — 좌표가 없다는 걸 색으로도 구분한다 */
 .lockrow.fresh { border-color: rgba(214, 178, 106, 0.42); color: var(--route); white-space: normal; }
 
-.split { flex: 1; display: grid; grid-template-columns: 1fr 352px; min-height: 0; }
+.split { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
 .grid-col {
   display: flex;
   flex-direction: column;
@@ -1409,6 +1424,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 .pick-note { flex: none; font-size: 10px; color: var(--faint); }
 
+/* 🔴 .field 는 flex: 1 이다 (태그+콘텐츠 둘뿐이던 시절의 값). 그대로 두면 링크·소비까지
+   남는 높이를 나눠 가져 링크 아래에 빈 칸이 크게 뜬다 — 늘어나는 건 콘텐츠 하나뿐이다. */
+.side > .field { flex: none; }
+.side > .field.grow { flex: 1; }
 .side {
   display: flex;
   flex-direction: column;
@@ -1503,9 +1522,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 기타 정보 — 링크 · 소비 금액. 352px 칸에 들어가야 해서 줄바꿈을 허용한다 */
 .xrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .input.mini { padding: 7px 10px; font-size: 12px; }
-/* 352px 칸에 [품목][금액][화폐][✕] 가 한 줄로 들어가야 한다 — 합이 여백을 넘으면 ✕ 만 다음 줄로 떨어진다 */
-.xrow .input { flex: 1 1 84px; min-width: 0; }
-.xrow .input.amt { flex: 0 1 68px; text-align: right; }
+/*
+ * [품목 45 · 금액 30 · 화폐 15] 로 «남는 폭»을 나눈다. flex-basis 를 고정값으로 주면
+ * 좁은 칸(352px)에서 품목·금액이 나란히 쪼그라든다 — 실제로 84/68px 까지 줄어 있었다.
+ * 지우기(✕)만 비율에서 뺀다: 5% 면 15px 이라 손가락이 닿지 않는다.
+ */
+.xrow .input { flex: 45 1 0; min-width: 0; }
+.xrow .input.amt { flex: 30 1 0; text-align: right; }
 /* 숫자로 안 읽히는 금액 — 저장하면 0 이 되므로 미리 붉게 알린다 */
 .input.bad { border-color: rgba(255, 128, 128, 0.55); color: var(--danger); }
 
@@ -1614,8 +1637,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 기타 정보 — 입력이 16px 로 커지므로(base.css) 줄이 넘친다. 지우기·추가도 손가락 크기로 */
   .xrow { gap: 8px; }
   .input.mini { padding: 10px 11px; }
-  .xrow .input.amt { flex: 1 1 96px; }
-  .xkill { width: 40px; height: 40px; }
+  /* 보이는 크기는 줄이고 닿는 면적은 44px 로 넓힌다 — 그 8px 이 품목명 칸으로 간다 */
+  .xkill { position: relative; width: 32px; height: 32px; }
+  .xkill::after { content: ''; position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; }
   .minibtn { min-height: 40px; font-size: 12px; padding: 0 12px; }
   .xnote { font-size: 11px; }
   .xtotal b { font-size: 13.5px; }

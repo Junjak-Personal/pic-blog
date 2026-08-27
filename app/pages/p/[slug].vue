@@ -10,6 +10,7 @@ import type { PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { badgesOf, groupByDay } from '#shared/utils/days'
 import { formatKm, formatOf, formatRange } from '#shared/utils/format'
+import { formatMoney, totalsOf } from '#shared/utils/extras'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -42,6 +43,12 @@ const points = computed(() => post.value?.points ?? [])
  */
 const dayGroups = computed(() => groupByDay(points.value))
 const badges = computed(() => badgesOf(dayGroups.value))
+
+/**
+ * 이 기록에서 쓴 돈 — 포인트마다 적어둔 것을 화폐별로 합친다.
+ * 적은 것이 하나도 없으면 빈 배열이라 그 줄 자체가 뜨지 않는다.
+ */
+const spendTotals = computed(() => totalsOf(points.value.flatMap((p) => p.expenses)))
 /** null = 전체 */
 const activeDay = ref<string | null>(null)
 const visiblePoints = computed(() =>
@@ -253,6 +260,17 @@ useHead(() => ({
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
           {{ post.photo_count }}장
         </span>
+
+        <!--
+          합계는 «아래 줄» 통째로 쓴다. 다른 값들 옆에 붙이면 자리가 모자라고, 화폐가
+          둘 이상이면 「12,500원 · 1,200엔」이 옆 항목과 같은 구분점으로 이어져
+          무엇이 한 값인지 읽히지 않는다.
+        -->
+        <span v-if="spendTotals.length" class="stat spend">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M18 11v-2a2 2 0 0 0 -2 -2h-10a2 2 0 0 0 0 4h1" /><path d="M17 14v.01" /></svg>
+          <span class="spend-label">쓴 돈</span>
+          <b v-for="t in spendTotals" :key="t.currency" class="spend-amt">{{ formatMoney(t.amount, t.currency) }}</b>
+        </span>
       </div>
     </header>
 
@@ -365,10 +383,17 @@ useHead(() => ({
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.stats { display: flex; align-items: center; gap: 16px; font-size: 11px; color: var(--deep); flex: none; }
+/* wrap — 합계가 아래 줄을 통째로 쓴다. 두 줄이어도 11px×2 + 여백이라 56px 상단바 안이다 */
+.stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 11px; color: var(--deep); flex: none; }
 /* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다 */
 .stats-toggle { display: none; }
 .stat { display: flex; align-items: center; gap: 6px; }
+/* 아래 줄 전체 — 앞 줄과 선으로 끊어 「이건 다른 종류의 값」임을 보인다 */
+.spend { flex: 1 1 100%; justify-content: flex-end; gap: 8px; padding-top: 4px; border-top: 1px solid var(--hair-soft); }
+.spend-label { color: var(--faint); }
+.spend-amt { color: var(--ink); font-weight: 600; }
+/* 화폐가 여럿이면 사이를 벌려 둔다 — 붙어 있으면 한 값으로 읽힌다 */
+.spend-amt + .spend-amt { margin-left: 4px; }
 .stat svg { color: var(--faint); flex: none; }
 
 .stage { flex: 1; position: relative; min-height: 0; display: grid; grid-template-columns: 1fr 348px; }

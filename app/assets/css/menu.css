@@ -84,4 +84,6 @@
 .cur-item[data-state='checked'] { color: var(--ink); }
 /* 체크 자리는 늘 비워둔다 — 고른 항목만 아이콘이 들어오면서 글자가 밀리면 안 된다 */
 .cur-check { display: grid; place-items: center; width: 16px; flex: none; color: var(--acc); }
-.cur-item .cur-code { margin-left: auto; font-size: 10px; letter-spacing: 0.08em; color: var(--faint); }
+/* 코드가 주인공이고(트리거에도 이게 뜬다) 한글은 무엇인지 알려주는 몫이다 */
+.cur-item .cur-code { letter-spacing: 0.06em; color: var(--ink); }
+.cur-item .cur-name { margin-left: auto; font-size: 12px; color: var(--faint); }

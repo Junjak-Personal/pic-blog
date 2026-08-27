@@ -51,8 +51,13 @@ const model = defineModel<CurrencyCode>({ required: true })
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg>
               </SelectItemIndicator>
             </span>
-            <SelectItemText>{{ c.label }}</SelectItemText>
-            <span class="mono cur-code">{{ c.code }}</span>
+            <!--
+              🔴 트리거에 뜨는 글자는 SelectItemText 의 내용이다. 줄의 화폐 칸이 좁아
+                 「대만달러」가 안 들어가므로 코드를 여기 넣는다. 무엇인지는 목록에서
+                 한글로 보면 된다 — 좁은 것은 줄이지 목록이 아니다.
+            -->
+            <SelectItemText class="mono cur-code">{{ c.code }}</SelectItemText>
+            <span class="cur-name">{{ c.label }}</span>
           </SelectItem>
         </SelectViewport>
       </SelectContent>
@@ -63,7 +68,14 @@ const model = defineModel<CurrencyCode>({ required: true })
 <style scoped>
 /* .input.mini 와 같은 값 — 같은 줄에 선 입력들과 높이·테두리가 어긋나면 안 된다 */
 .curtrigger {
-  flex: 0 0 84px;
+  /*
+   * 폭은 «줄»이 정한다 (editor/[slug].vue 의 .xrow 비율 — 품목 45 · 금액 30 · 화폐 15).
+   * min-width 는 「KRW ⌄」가 안 잘리는 최소값이다 — 비율만 두면 좁은 화면에서 코드가 잘린다.
+   */
+  flex: 15 1 0;
+  /* 실측: 트리거 폭 - 글자 칸 = 45px (테두리 2 · 여백 18 · 화살표 12 · 간격 4 · 정렬 여유).
+     mono 세 글자가 12px 에서 24px 이므로 70px 이면 잘리지 않는다. */
+  min-width: 70px;
   /* 같은 줄의 입력들과 높이를 맞춘다. 여백·글꼴이 폭마다 달라져 min-height 로 맞추면
      모바일에서 6px 씩 어긋난다 — 줄 높이를 따라가게 두는 편이 어디서나 맞다. */
   align-self: stretch;
@@ -71,7 +83,6 @@ const model = defineModel<CurrencyCode>({ required: true })
   align-items: center;
   justify-content: space-between;
   gap: 4px;
-  min-width: 0;
   min-height: 31px;
   padding: 7px 8px 7px 10px;
   background: var(--field);
@@ -89,6 +100,11 @@ const model = defineModel<CurrencyCode>({ required: true })
 
 @media (max-width: 900px) {
   /* 입력이 16px 로 커지는 폭이다 (base.css) — 트리거도 같이 커야 줄이 어긋나지 않는다 */
-  .curtrigger { flex: 1 1 104px; min-height: 44px; font-size: 16px; }
+  /*
+   * 16px 로 키우지 않는다. iOS 의 강제 확대는 «입력»에 초점이 갈 때 걸리는 것이고
+   * 이건 button 이라 해당이 없다 (base.css 의 16px 규칙도 input/textarea/select 만 잡는다).
+   * 그만큼 아낀 폭은 품목명 칸으로 간다 — 좁은 화면에서 거기가 제일 아쉽다.
+   */
+  .curtrigger { min-width: 74px; min-height: 44px; font-size: 13px; }
 }
 </style>
