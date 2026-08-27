@@ -579,7 +579,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
   transition: background 0.15s;
 }
-/* 다른 화면의 스위치와 같은 표현 — 링은 트랙 모양을 따라간다 */
+/* 앱에 남은 유일한 스위치다 (목록의 공개 토글은 여기 1단계로 흡수됐다).
+   링은 트랙 모양을 따라간다 — base.css 의 36px 규칙에서 role="switch" 를 뺀 이유다. */
 .toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .toggle.on { background: rgba(146, 178, 169, 0.9); border-color: var(--acc); }
 .knob {
@@ -674,7 +675,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .scount { font-size: 10px; color: var(--deep); }
 
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
-.field.locked { flex: none; width: 320px; }
 .flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
 .input {
@@ -932,11 +932,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }
 
-  /* 포스트 헤더: flex-wrap 은 min-width:0 앞에서 무력하다 — 아예 세로로 쌓는다 */
-  .posthead { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 16px; }
-  .field.locked { width: 100%; }
   .input.title { font-size: 18px; }
-  .lockbox { flex-wrap: wrap; }
 
   /* 본문: 격자와 내부 높이 제약을 풀고 페이지가 통째로 스크롤하게 둔다 */
   .body { display: block; min-height: 0; }

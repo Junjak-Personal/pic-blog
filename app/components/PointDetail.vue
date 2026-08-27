@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
  * 아트보드 1b 포인트 상세 시트.
- * 데스크탑: 좌 스캐터 · 우 태그+본문 (1fr 352px)
- * 모바일:   세로 스택 — 스캐터 먼저, 스크롤하면 태그·본문
- * 하단에 EXIF 촬영값. 값이 없으면 그 줄만 감춘다.
+ * 데스크탑: 좌 스캐터 · 우 태그+본문 (1fr 352px). 하단에 EXIF 촬영값.
+ * 모바일:   스캐터«만». 시각·좌표·사진수·기기·EXIF·태그·본문은 전부 ⓘ 판(.infopane)에
+ *           모여 있고 .side 는 감춘다 — 세로가 부족해 스크롤로 흩어놓으면 못 읽는다.
  */
 import type { Point } from '#shared/types/db'
 import { formatDate, formatExifLine, formatOf, formatTime } from '#shared/utils/format'
@@ -18,13 +18,13 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; openPhoto: [index: number] }>()
 
 /*
- * 모바일 시트 — 아래로 쓸어서 닫기 (아트боard 1b).
+ * 모바일 시트 — 아래로 쓸어서 닫기 (아트보드 1b).
  * ✕ 는 화면 위쪽 끝에 있어서 한 손으로 잡으면 엄지가 안 닿는다.
  *
  * 손잡이(.grip)와 헤더에서만 시작한다. 본문에서 잡으면 사진 산포·태그 스크롤과
  * 싸우고, 스크롤을 내리려다 시트가 닫히는 일이 생긴다.
  */
-/** 모바일에서 사진 수·기기·EXIF 를 ⓘ 로 접어둔다 — 스캐터 밑에 두면 화면 밖으로 밀린다 */
+/** 모바일 상세는 전부 ⓘ 판에 모은다 — 시각·좌표·사진수·기기·EXIF·태그·본문 */
 const infoOpen = ref(false)
 
 const DISMISS_PX = 110

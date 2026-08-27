@@ -3,7 +3,8 @@ import { vSk } from '~/utils/img'
 /**
  * 갤러리 층 2 — 라이트박스가 캐러셀이다 (아트보드 1b).
  * 헤더: 파일명 · 8 / 14 · 포인트명 · 시각 · 닫기
- * 좌우 ‹ › 순차 이동, 키보드 ←/→ 도 받는다. 배경에 스캐터가 흐리게 비친다.
+ * 스와이프·핀치 확대(Swiper Zoom)가 주 조작이고, 좌우 ‹ › 와 키보드 ←/→ 도 받는다.
+ * 배경에 스캐터가 흐리게 비친다.
  * Reka DialogRoot 가 포커스 트랩·ESC·스크롤 잠금을 맡는다.
  */
 import { Keyboard, Zoom } from 'swiper/modules'

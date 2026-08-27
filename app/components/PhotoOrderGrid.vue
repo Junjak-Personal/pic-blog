@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { vSk } from '~/utils/img'
 /**
- * 사진 순서 그리드 — 아트보드 1e. 5열, 첫 칸이 커버다.
+ * 사진 순서 그리드 — 아트보드 1e. 넓으면 5열, 1240px 이하는 3열. 첫 칸이 커버다.
  *
  * 재정렬은 Pointer Events 로 한다. 원래 HTML5 네이티브 드래그앤드롭이었는데
  * 🔴 그건 터치 기기에서 아예 동작하지 않는다 — 아이폰에서 순서를 못 바꾸고 있었다.
@@ -161,7 +161,8 @@ function move(from: number, to: number) {
   user-select: none;
   position: relative;
   aspect-ratio: 4 / 3;
-  /* 썸네일이 오기 전 빈 칸이 배경과 붙어버리지 않도록 아트보드의 사선 패턴을 깔아 둔다 */
+  /* 아트보드의 사선 패턴. 지금은 썸네일이 오기 전에도 img 자신의 .sk 가 상자를 채우므로
+     이건 그 뒤에 깔리는 바닥이다 — 그림이 상자를 못 채우는 경우에만 드러난다. */
   background: repeating-linear-gradient(135deg, #26262C 0 7px, #1E1E24 7px 14px);
   border: 1px solid var(--hair);
   border-radius: var(--radius);

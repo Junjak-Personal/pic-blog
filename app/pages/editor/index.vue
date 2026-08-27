@@ -3,7 +3,8 @@ import { vSk } from '~/utils/img'
 import AppBack from '~/components/AppBack.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
- * 목록 자체는 아트보드 1a 와 같은 시각 언어지만, 여기서만 공개 여부를 뒤집을 수 있다 (설계문서 §7.2).
+ * 목록 자체는 아트보드 1a 와 같은 시각 언어다. 행은 상세로 가고, 우측 연필이 편집으로 간다.
+ * 공개 여부는 여기서 바꾸지 않는다 — 편집 1단계(PostSettings)가 갖고 있다.
  */
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'
@@ -13,42 +14,11 @@ definePageMeta({ layout: 'editor' })
 const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { fetch: refreshSession } = useUserSession()
 
-const error = ref<string | null>(null)
-/** 요청 중인 slug — 응답 전에 다시 눌러 되돌리기 대상이 어긋나는 것을 막는다 */
-const pending = ref(new Set<string>())
-
 useHead({ title: '기록 관리 — pic·blog' })
-
-/** 낙관적으로 먼저 뒤집고, 실패하면 되돌린 뒤 문구를 띄운다 (조용한 실패 금지 — 설계문서 §8) */
-async function togglePublic(post: PostSummary) {
-  if (pending.value.has(post.slug)) return
-  const next = !post.is_public
-  post.is_public = next
-  pending.value.add(post.slug)
-  error.value = null
-  try {
-    await $fetch(`/api/posts/${post.slug}`, { method: 'PATCH', body: { is_public: next } })
-  } catch (e) {
-    post.is_public = !next
-    error.value = `${post.title} — ${reasonOf(e)}`
-  } finally {
-    pending.value.delete(post.slug)
-  }
-}
 
 async function logout() {
   await $fetch('/api/auth/logout', { method: 'POST' })
   await refreshSession()
-}
-
-/**
- * 실패 사유는 응답 본문(`data.statusMessage`)에서 읽는다 — FetchError 의 `statusMessage` 는
- * HTTP status line 의 reason phrase 라서 h3 가 비ASCII 를 털어낸다. 한국어 문구는 거기서 빈 값이 된다.
- */
-function reasonOf(e: unknown) {
-  if (!(e instanceof Error)) return '공개 여부를 바꾸지 못했습니다'
-  const detail = e as Error & { data?: { statusMessage?: string } }
-  return detail.data?.statusMessage || '공개 여부를 바꾸지 못했습니다'
 }
 </script>
 
@@ -74,8 +44,6 @@ function reasonOf(e: unknown) {
         <button type="button" class="btn ghost mono" @click="logout">로그아웃</button>
       </div>
     </header>
-
-    <p v-if="error" class="mono error" role="alert">{{ error }}</p>
 
     <!-- 불러오는 중 — 행의 «모양»을 잡아둔다. pending 에도 posts 는 [] 라 이 갈래가 먼저다. -->
     <ul v-if="status === 'pending'" class="list safe-bottom" role="status" aria-label="기록을 불러오는 중">
@@ -188,17 +156,6 @@ function reasonOf(e: unknown) {
 .btn.ghost:hover { border-color: rgba(146, 178, 169, 0.45); color: var(--ink); }
 .btn.big { padding: 12px 20px; font-size: 12px; }
 
-.error {
-  margin: 14px 32px 0;
-  padding: 10px 13px;
-  border: 1px solid rgba(255, 128, 128, 0.4);
-  background: rgba(255, 128, 128, 0.08);
-  border-radius: var(--radius);
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--danger);
-}
-
 .list {
   flex: 1;
   display: flex;
@@ -288,13 +245,6 @@ function reasonOf(e: unknown) {
   color: var(--mid);
 }
 
-.switch input { position: absolute; width: 42px; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
-.switch input:disabled { cursor: default; }
-.switch input:checked ~ .track { background: rgba(146, 178, 169, 0.9); }
-.switch input:checked ~ .track .knob { transform: translateX(18px); background: var(--s0); }
-.switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
-.switch input:disabled ~ .track { opacity: 0.45; }
-
 /* 행 전체를 덮는 투명 링크. 위에 떠야 하는 것(.edit)만 z-index 로 빠져나온다. */
 .stretch { color: inherit; }
 .stretch::after { content: ''; position: absolute; inset: 0; z-index: 1; }
@@ -344,7 +294,7 @@ function reasonOf(e: unknown) {
      어느 화면인지가 브랜드보다 중요하고, 홈은 뒤로가기가 가리킨다.
      .home 까지 숨기는 이유: 안이 비면 0x0 으로 찌부러져 보이지도 눌리지도 않는
      죽은 링크가 남는다. 실제로 그랬다. */
-  .home, .wordmark, .mark, .markbtn { display: none; }
+  .home, .wordmark, .mark { display: none; }
   .kicker {
     font-family: var(--font-display);
     font-size: 16px;
@@ -352,11 +302,9 @@ function reasonOf(e: unknown) {
     letter-spacing: -0.02em;
     color: var(--ink);
   }
-  .error { margin: 12px 16px 0; }
   .list { gap: 10px; padding: 16px; }
 
-  /* 모바일은 세로 스택 — 토글·링크는 44px 터치 타깃으로 한 줄씩 내려온다 */
-  /* 커버 | 본문 | 토글 | ⋯ 네 칸을 한 줄에 — 64+42+44+간격 을 빼고 남는 폭이 제목 몫이다 */
+  /* 커버 | 본문 | 연필 세 칸을 한 줄에 — 64+44+간격 을 빼고 남는 폭이 제목 몫이다 */
   .row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; align-items: start; }
   /* 제목 칸이 186px 밖에 안 되어 한 줄 ellipsis 로는 「2026.04.14 – 04.15 …」 가 된다.
      목록에서 세로는 싸고 가로는 비싸다 — 두 줄까지 흐르게 두고 그 다음에 자른다. */
@@ -372,9 +320,5 @@ function reasonOf(e: unknown) {
   .meta { font-size: 10px; line-height: 1.5; }
   .edit { align-self: center; width: 44px; height: 44px; }
   .cover { width: 64px; height: 48px; }
-  /* 편집·보기는 ⋯ 로 접는다 — 행마다 폭 전체 버튼 두 개를 깔면 목록이 두 배로 길어진다.
-     토글은 남긴다(상태가 한눈에 보여야 한다). 옆의 「공개/비공개」 글자는 스위치가
-     이미 같은 정보를 주므로 폭을 위해 접는다. aria-label 은 그대로 남아 있다. */
-  .wide-only { display: none; }
 }
 </style>

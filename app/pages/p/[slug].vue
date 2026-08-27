@@ -286,8 +286,9 @@ useHead(() => ({
   background: var(--s0);
 }
 .left { display: flex; align-items: center; gap: 18px; min-width: 0; }
-/* 이 화면의 주 뒤로가기다. 높이가 20px 이라 사실상 못 눌렀다 —
-   모바일에서는 아래 미디어쿼리가 36px 로 올린다. */
+/* 이 화면의 주 뒤로가기다. 높이는 base.css 의 `.topbar a { min-height: 36px }` 가
+   폭에 상관없이 정한다 — 예전엔 20px 이라 사실상 못 눌렀다.
+   아래 미디어쿼리는 가로 여백만 손본다. */
 .back { display: flex; align-items: center; gap: 7px; color: var(--deep); flex: none; }
 .back .mono { font-size: 11px; letter-spacing: 0.08em; }
 .title {

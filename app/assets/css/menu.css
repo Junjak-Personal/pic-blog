@@ -34,9 +34,9 @@
 .ovf-item.danger { color: var(--danger); }
 .ovf-item.danger svg { color: var(--danger); }
 
-/* 체크 표시가 붙는 항목(공개 토글 등) — 오른쪽 끝에 상태를 둔다 */
+/* 항목 오른쪽 끝의 상태 표시 — 지금은 「변경 취소」의 건수 하나뿐이다.
+   (체크형 항목이 있던 시절의 [data-state='checked'] 변형은 지웠다 — 쓰는 데가 없다.) */
 .ovf-item .ovf-state { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
-.ovf-item[data-state='checked'] .ovf-state { color: var(--acc); }
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
 

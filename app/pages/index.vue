@@ -399,6 +399,5 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .title { font-size: 20px; }
   .summary { font-size: 13px; }
   .foot { padding: 10px 14px; }
-  .pagefoot { flex-direction: column; gap: 6px; padding: 16px; }
 }
 </style>
