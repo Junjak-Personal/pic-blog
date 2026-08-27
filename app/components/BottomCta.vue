@@ -74,6 +74,7 @@ onMounted(() => {
     justify-content: center;
     gap: 7px;
     border-radius: var(--radius);
+    /* 기본값일 뿐이다 — 쓰는 쪽이 .btn 처럼 더 구체적인 규칙을 갖고 있으면 그쪽이 이긴다 */
     font-size: 13px;
   }
 }

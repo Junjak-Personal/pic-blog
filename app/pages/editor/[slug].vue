@@ -529,7 +529,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <div class="hd-mobile">
         <AppBack fallback="/editor" label="기록 목록으로" />
         <h1 class="hd-title">{{ draftTitle || '기록 편집' }}</h1>
-        <span v-if="changes" class="dot" aria-label="저장 안 된 변경 있음" />
         <OverflowMenu label="기록 메뉴">
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
@@ -580,7 +579,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         >
           <span class="sdot">2</span>
           포인트 편집
-          <span class="scount">{{ pointDrafts.length }}</span>
         </button>
         <button
           type="button"
@@ -761,7 +759,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     </template>
 
     <!-- 모바일: 저장은 화면 아래에서 손이 닿는 곳에 둔다 -->
-    <BottomCta v-if="post" :note="changes ? `변경 ${changes}건` : null">
+    <BottomCta v-if="post">
       <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
         {{ saving ? '저장 중…' : '저장' }}
@@ -893,8 +891,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* 저장 안 된 변경이 있다는 최소 신호 — 건수는 하단 CTA 가 말한다 */
-.dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--route); }
 
 /* 단계 탭 */
 .steps {
@@ -933,7 +929,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   color: var(--mid);
 }
 .stepbtn.on .sdot { background: var(--mid); border-color: var(--mid); color: var(--s0); }
-.scount { font-size: 10px; color: var(--deep); }
 
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
 .flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
@@ -1241,6 +1236,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
   .topbar { height: calc(56px + var(--top-inset)); gap: 0; padding: var(--top-inset) 12px 0; }
+
+  /* 하단 CTA 의 저장은 이 화면에서 가장 큰 버튼이다. .btn 의 11px 은 헤더용 크기라
+     상자만 크고 글자가 작아 보인다 — BottomCta 의 규칙은 .btn 에 밀리므로 여기서 올린다. */
+  .cta .btn { font-size: 15px; }
 
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }
