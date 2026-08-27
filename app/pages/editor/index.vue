@@ -7,7 +7,7 @@ import AppBack from '~/components/AppBack.vue'
  * 공개 여부는 여기서 바꾸지 않는다 — 편집 1단계(PostSettings)가 갖고 있다.
  */
 import type { PostSummary } from '#shared/types/db'
-import { formatKm, formatRange } from '#shared/utils/format'
+import { formatRange } from '#shared/utils/format'
 
 definePageMeta({ layout: 'editor' })
 
@@ -87,10 +87,12 @@ async function logout() {
             <NuxtLink :to="`/p/${post.slug}`" class="stretch">{{ post.title }}</NuxtLink>
           </h3>
           <p v-if="post.summary" class="summary">{{ post.summary }}</p>
+          <!-- 날짜 + 포인트 수만. 장수·km 까지 넣으면 좁은 화면에서 이 줄이 두 줄로 접혀
+               행 높이가 들쭉날쭉해진다 — 세부 수치는 상세·편집 화면이 말한다. -->
           <p class="mono meta">
             <span v-if="!post.is_public" class="private">비공개</span>
             {{ post.started_at ? formatRange(post.started_at, post.ended_at) : '기간 없음' }}
-            · {{ post.point_count }} 포인트 · {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km
+            · {{ post.point_count }} 포인트
           </p>
         </div>
 
@@ -234,7 +236,7 @@ async function logout() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.meta { font-size: 10.5px; color: var(--deep); }
+.meta { font-size: 10.5px; color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 공개 토글은 편집 1단계로 갔다. 목록에는 상태만 남긴다 — 컨트롤이 아니라 표시다. */
 .private {
   display: inline-block;

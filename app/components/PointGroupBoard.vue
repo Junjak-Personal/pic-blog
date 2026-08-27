@@ -209,7 +209,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 <style scoped>
 .board-wrap { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 
-.board-head { display: flex; align-items: center; gap: 12px; flex: none; }
+/* 모바일에서는 .hint 가 접히므로 flex:1 로 미는 것만으로는 버튼이 오른쪽에 안 붙는다 */
+.board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; }
 .label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 .hint { flex: 1; font-size: 10px; color: var(--deep); }
 .addbtn {

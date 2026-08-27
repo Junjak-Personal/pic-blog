@@ -224,3 +224,33 @@ img.sk { border-radius: 0; }
 /* 복제본 안의 버튼·배지는 잡음이다 — 사진만 남긴다 */
 .tile-ghost button,
 .tile-ghost .bar { display: none; }
+
+/*
+ * 잘린 글자 툴팁 (app/utils/tip.ts 의 v-tip).
+ * 툴팁 상자는 body 로 붙으므로 전역이어야 한다 — scoped 스타일은 여기 닿지 않는다.
+ */
+.eltip {
+  position: fixed;
+  z-index: 210;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 7px 10px;
+  border: 1px solid rgba(146, 178, 169, 0.3);
+  border-radius: var(--radius);
+  background: var(--s1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.45;
+  /* 손끝·마우스가 툴팁 자신에게 걸리면 곧바로 mouseleave 가 돌아 깜빡인다 */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.eltip.on { opacity: 1; }
+
+/* 꾹 누르는 동안 브라우저가 자기 콜아웃(링크 미리보기·글자 선택)을 띄우면 툴팁과 겹친다 */
+.has-tip {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
