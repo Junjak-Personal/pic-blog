@@ -96,6 +96,7 @@ function dayLabel(g: DayGroup<Point>) {
     <ol ref="listEl" class="scroll-y list">
       <template v-for="g in shownGroups" :key="g.date">
         <li v-if="multiDay" class="sep" :style="{ '--day': g.color }">
+          <span class="dot" />
           <span class="mono sep-day">{{ dayLabel(g) }}</span>
           <span class="mono sep-date">{{ formatDate(g.date) }}</span>
           <span class="mono sep-count">{{ g.points.length }}개</span>
@@ -191,7 +192,9 @@ function dayLabel(g: DayGroup<Point>) {
 
 .list { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; }
 
-/* 날짜 구분줄 — 「전체」에서 같은 번호가 두 번 나오는 이유를 여기서 말한다 */
+/* 날짜 구분줄 — 「전체」에서 같은 번호가 두 번 나오는 이유를 여기서 말한다.
+   날짜 표시는 탭과 같은 «색 점» 하나로 통일한다 — 왼쪽 색 띠를 쓰던 걸 걷어냈다.
+   같은 화면에서 색을 말하는 방식이 점·띠 둘로 갈리면 띠가 장식으로 읽힌다. */
 .sep {
   position: sticky;
   top: 0;
@@ -203,7 +206,6 @@ function dayLabel(g: DayGroup<Point>) {
   background: rgba(11, 14, 18, 0.97);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--hair-soft);
-  box-shadow: inset 3px 0 0 var(--day);
 }
 .sep-day { font-size: 10px; letter-spacing: 0.1em; color: var(--day); }
 .sep-date { font-size: 9.5px; color: var(--faint); }
@@ -219,8 +221,7 @@ function dayLabel(g: DayGroup<Point>) {
   cursor: pointer;
 }
 .row:hover { background: rgba(232, 235, 233, 0.06); }
-/* 활성 배지는 마커와 같이 흰색이다 — 날짜는 왼쪽 색 띠가 계속 말해준다 */
-.row.on { background: rgba(232, 235, 233, 0.1); box-shadow: inset 3px 0 0 var(--day); }
+.row.on { background: rgba(232, 235, 233, 0.1); }
 
 .num {
   display: grid;
@@ -234,7 +235,9 @@ function dayLabel(g: DayGroup<Point>) {
   color: var(--day, var(--mid));
   border: 1px solid var(--day, rgba(146, 178, 169, 0.55));
 }
-.row.on .num { background: var(--ink); color: var(--s0); border-color: var(--ink); }
+/* 상태는 «링 → 채움»으로만 말한다. 색은 두 상태에서 같은 날짜 색이라
+   고른 행에서도 며칠차가 그대로 읽힌다 (예전엔 흰색으로 덮여 날짜가 사라졌다). */
+.row.on .num { background: var(--day, var(--ink)); color: var(--s0); border-color: var(--day, var(--ink)); }
 
 .main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .name {

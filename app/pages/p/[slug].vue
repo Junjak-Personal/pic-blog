@@ -431,9 +431,11 @@ useHead(() => ({
 /* 태블릿·모바일 — 세로 스택 */
 @media (max-width: 900px) {
   /* 상단바는 타이틀 몫이다. 통계 4칸을 같이 두면 타이틀이 「2026.0…」 로 잘린다 —
-     ⓘ 로 접어두고, 열면 상단바 아래에 한 줄로 펼친다. */
-  /* 펼치면 한 줄이 늘어나므로 높이를 고정하지 않는다 — 고정하면 지도 위로 넘친다 */
-  .topbar { height: auto; min-height: calc(50px + var(--top-inset)); padding: var(--top-inset) 14px 0; gap: 10px; flex-wrap: wrap; }
+     ⓘ 로 접어두고, 열면 상단바 «아래»에 겹쳐 펼친다.
+     🔴 높이는 고정이다. 예전엔 통계가 상단바 안에서 한 줄 더 차지해서, ⓘ 를 누를 때마다
+        헤더가 자라고 그만큼 지도·레일이 아래로 밀렸다 — 여닫을 때마다 화면이 출렁였다.
+        상세 시트의 ⓘ 판과 같은 처리를 쓴다: 흐름에서 빼서(absolute) 덮는다. */
+  .topbar { height: calc(50px + var(--top-inset)); min-height: 0; padding: var(--top-inset) 14px 0; gap: 10px; flex-wrap: nowrap; }
   .title { font-size: 15px; }
   .left { flex: 1; min-width: 0; gap: 12px; }
 
@@ -454,12 +456,20 @@ useHead(() => ({
   /* 상세 시트가 떠 있으면 시트의 ⓘ 가 정보를 맡는다 — ⓘ 가 둘로 보이면 안 된다 */
   .stats-toggle.hidden { display: none; }
 
+  /* 상단바 아래에 겹쳐 뜬다 — 흐름 밖이라 여닫아도 지도·레일이 움직이지 않는다.
+     지도 위를 덮으므로 배경은 반드시 불투명해야 한다. */
   .stats {
     display: none;
-    flex-basis: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 6;
     flex-wrap: wrap;
     gap: 8px 14px;
-    padding: 0 0 10px;
+    padding: 10px 14px;
+    background: var(--s0);
+    border-bottom: 1px solid var(--hair);
     font-size: 10px;
   }
   .stats.open { display: flex; }

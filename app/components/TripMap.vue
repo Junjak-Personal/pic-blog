@@ -239,5 +239,13 @@ onBeforeUnmount(clearMarkers)
 
 @media (max-width: 900px) {
   .legend { display: none; }
+  /*
+   * Mapbox 로고·저작권은 요금제·약관상 «지울 수 없다» (설계문서 §6.3, useMapbox 주석).
+   * 옮기는 것만 된다. top-left 는 데스크탑 기준으로 고른 자리다 — 거기는 하단을
+   * 상세 시트가 덮으니까. 모바일은 시트가 화면을 통째로 덮으므로 지도 하단이 비어 있고,
+   * 위쪽은 마커·동선이 몰리는 데다 헤더 바로 밑이라 로고가 계속 눈에 걸렸다.
+   * 범례를 감춰 비워둔 그 자리로 내린다.
+   */
+  .map :deep(.mapboxgl-ctrl-top-left) { top: auto; bottom: 0; }
 }
 </style>
