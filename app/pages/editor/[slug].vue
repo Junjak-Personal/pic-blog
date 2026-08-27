@@ -25,6 +25,7 @@ import type { Photo, PostDetail } from '#shared/types/db'
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
+import { askConfirm } from '~/composables/useConfirm'
 
 interface PointDraft {
   /** 서버 포인트 id. 🔴 음수면 2단계에서 사진을 끌어내 만든 «아직 없는» 포인트다. */
@@ -65,6 +66,8 @@ const tagInput = ref('')
 const saving = ref(false)
 const step = ref<'basic' | 'points' | 'notes'>('basic')
 const reclustering = ref(false)
+/** 삭제 중 — 나가기 확인을 건너뛰게 한다 (기록이 사라졌는데 「저장할까요?」를 물으면 안 된다) */
+const deleting = ref(false)
 const errorMessage = ref<string | null>(null)
 /** 새 포인트의 임시 id — 서버 id 와 절대 겹치지 않게 음수로 센다 */
 const nextTempId = ref(-1)
@@ -149,11 +152,15 @@ hydrate()
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
-onBeforeRouteLeave(
-  () =>
-    changes.value === 0 ||
-    window.confirm(`저장하지 않은 변경 ${changes.value}건이 있습니다. 저장하지 않고 나갈까요?`),
-)
+onBeforeRouteLeave(async () => {
+  if (deleting.value || changes.value === 0) return true
+  return askConfirm({
+    title: '저장하지 않고 나갈까요?',
+    body: `변경 ${changes.value}건이 저장되지 않았습니다. 나가면 사라집니다.`,
+    confirmLabel: '저장하지 않고 나가기',
+    danger: true,
+  })
+})
 
 /** 서버 응답을 초안으로 되돌린다. 최초 진입 · 저장 직후 · 「취소」가 모두 이걸 부른다. */
 function hydrate() {
@@ -250,9 +257,12 @@ function confirmVanish(d: PointDraft, how: '옮기면' | '지우면') {
   if (d.tags.length) lost.push(`태그 ${d.tags.length}개`)
   if (d.body.trim()) lost.push(`본문 ${d.body.trim().length}자`)
   const tail = lost.length ? ` 적어둔 ${lost.join(' · ')} 도 함께 없어집니다.` : ''
-  return window.confirm(
-    `「${name}」의 마지막 사진입니다. ${how} 이 포인트가 지도에서 사라집니다.${tail} 계속할까요?`,
-  )
+  return askConfirm({
+    title: `「${name}」 포인트가 사라집니다`,
+    body: `이 포인트의 마지막 사진입니다. ${how} 포인트가 지도에서 없어집니다.${tail}`,
+    confirmLabel: how === '옮기면' ? '옮기기' : '사진 지우기',
+    danger: true,
+  })
 }
 
 function dropDraft(id: number) {
@@ -261,16 +271,15 @@ function dropDraft(id: number) {
 }
 
 /** 2단계 — 사진 한 장이 어디에서 어디로 */
-function onBoardDrop(from: DragFrom, over: DragOver) {
+async function onBoardDrop(from: DragFrom, over: DragOver) {
   const src = pointDrafts.value.find((d) => d.id === from.groupId)
   if (!src) return
-  const at = src.ids.indexOf(from.photoId)
-  if (at < 0) return
+  if (src.ids.indexOf(from.photoId) < 0) return
 
   // 새 포인트로 분리 — 혼자 남은 사진을 떼어내는 건 제자리 놓기라 아무 일도 하지 않는다
   if (over.groupId === null) {
     if (src.ids.length <= 1) return
-    src.ids.splice(at, 1)
+    src.ids.splice(src.ids.indexOf(from.photoId), 1)
     if (src.coverId === from.photoId) src.coverId = null
     pointDrafts.value.push({
       id: nextTempId.value--,
@@ -286,6 +295,7 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
 
   // 같은 그룹 안 = 순서 바꾸기. 자기 자리를 빼고 나면 뒤쪽 인덱스가 하나씩 당겨진다.
   if (over.groupId === src.id) {
+    const at = src.ids.indexOf(from.photoId)
     const to = over.index > at ? over.index - 1 : over.index
     if (to === at) return
     src.ids.splice(at, 1)
@@ -295,7 +305,11 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
 
   const dst = pointDrafts.value.find((d) => d.id === over.groupId)
   if (!dst) return
-  if (src.ids.length === 1 && !confirmVanish(src, '옮기면')) return
+  // 🔴 물어보는 동안 화면이 멈춰 있지만, 자리는 답을 받은 «뒤에» 다시 찾는다 —
+  //    await 앞에서 잡아둔 인덱스를 그대로 쓰면 조용히 엉뚱한 사진을 옮기게 된다.
+  if (src.ids.length === 1 && !(await confirmVanish(src, '옮기면'))) return
+  const at = src.ids.indexOf(from.photoId)
+  if (at < 0) return
 
   src.ids.splice(at, 1)
   if (src.coverId === from.photoId) src.coverId = null
@@ -304,7 +318,7 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
   resort()
 }
 
-function onRemovePhoto(id: number) {
+async function onRemovePhoto(id: number) {
   const d = pointDrafts.value.find((x) => x.ids.includes(id))
   if (!d) return
   if (d.ids.length === 1) {
@@ -313,7 +327,8 @@ function onRemovePhoto(id: number) {
       errorMessage.value = '기록의 마지막 사진은 지울 수 없습니다'
       return
     }
-    if (!confirmVanish(d, '지우면')) return
+    if (!(await confirmVanish(d, '지우면'))) return
+    if (!d.ids.includes(id)) return
   }
   d.ids = d.ids.filter((x) => x !== id)
   if (d.coverId === id) d.coverId = null
@@ -368,10 +383,15 @@ function removeTag(tag: string) {
   if (d) d.tags = d.tags.filter((t) => t !== tag)
 }
 
-function revert() {
+async function revert() {
   if (!changes.value) return
-  if (!window.confirm(`저장하지 않은 변경 ${changes.value}건을 되돌릴까요?`)) return
-  hydrate()
+  const ok = await askConfirm({
+    title: '변경을 되돌릴까요?',
+    body: `저장하지 않은 변경 ${changes.value}건이 서버에 저장된 상태로 돌아갑니다.`,
+    confirmLabel: '되돌리기',
+    danger: true,
+  })
+  if (ok) hydrate()
 }
 
 /**
@@ -391,6 +411,29 @@ async function recluster(radius: number) {
     errorMessage.value = reason(e)
   } finally {
     reclustering.value = false
+  }
+}
+
+/** 기록 삭제 — 포인트·사진까지 통째로. 확인을 받고 목록으로 나간다. */
+async function removePost() {
+  const p = post.value
+  if (!p || deleting.value) return
+  const ok = await askConfirm({
+    title: `「${p.title}」을 삭제할까요?`,
+    body: `포인트 ${p.point_count}개와 사진 ${p.photo_count}장이 함께 지워집니다. 되돌릴 수 없습니다.`,
+    confirmLabel: '삭제',
+    danger: true,
+  })
+  if (!ok) return
+
+  deleting.value = true
+  errorMessage.value = null
+  try {
+    await $fetch(`/api/posts/${slug.value}`, { method: 'DELETE' })
+    await navigateTo('/editor')
+  } catch (e) {
+    deleting.value = false
+    errorMessage.value = reason(e)
   }
 }
 
@@ -613,8 +656,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         v-model:ended-at="draftEnd"
         :post="post"
         :dirty="changes > 0"
-        :busy="reclustering"
+        :busy="reclustering || deleting"
         @recluster="recluster"
+        @remove="removePost"
       />
 
       <!-- 2단계 — 사진 전체를 포인트별 그룹으로 -->
@@ -784,6 +828,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     -->
     <BusyOverlay v-if="saving" label="저장 중" />
     <BusyOverlay v-else-if="reclustering" label="포인트를 다시 묶는 중" />
+    <BusyOverlay v-else-if="deleting" label="기록을 지우는 중" />
   </div>
 </template>
 

@@ -8,7 +8,7 @@ import BottomCta from '~/components/BottomCta.vue'
  */
 import type { PostDetail } from '#shared/types/db'
 import { formatDate, formatTime, localIso } from '#shared/utils/format'
-import { summarizeSkipped } from '~/utils/exif'
+import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
 
 definePageMeta({ layout: 'editor' })
 
@@ -98,12 +98,23 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       </button>
     </BottomCta>
 
+    <!-- 조치가 따라붙는 제외(상한 초과 · 이미 올라간 사진)는 한 줄로 따로 말한다 -->
+    <p v-if="flow.stage.value === 'preview' && skipNotice(flow.skipped.value)" class="mono notice">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
+      {{ skipNotice(flow.skipped.value) }}
+    </p>
+
     <!-- 파일 선택 -->
     <section v-if="flow.stage.value === 'idle'" class="empty">
       <h3>추가할 사진을 선택하세요</h3>
       <p>기존 포인트 중심에서 반경 안이면 그 포인트에 합류하고, 밖이면 새 포인트가 만들어집니다.</p>
       <button type="button" class="btn primary mono big" @click="fileInput?.click()">사진 선택</button>
       <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
+      <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
+      <p class="mono pick-hint">
+        한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
+        고른 뒤 화면이 잠시 조용해도 기다려 주세요.
+      </p>
     </section>
 
     <section v-else-if="flow.stage.value === 'scanning'" class="empty">
@@ -437,6 +448,22 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .t-row.on { background: rgba(146, 178, 169, 0.1); border-color: rgba(146, 178, 169, 0.4); }
 .t-label { width: 42px; font-size: 12px; color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
+/* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
+.notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 22px;
+  background: rgba(214, 178, 106, 0.1);
+  border-bottom: 1px solid rgba(214, 178, 106, 0.28);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--route);
+}
+.notice svg { flex: none; }
+.pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+
 .t-bar { flex: 1; display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: rgba(177, 199, 193, 0.1); }
 .t-fill { display: block; height: 100%; }
 .t-fill.join { background: rgba(146, 178, 169, 0.35); }

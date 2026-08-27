@@ -30,7 +30,7 @@ const isPublic = defineModel<boolean>('isPublic', { required: true })
 const startedAt = defineModel<string>('startedAt', { required: true })
 const endedAt = defineModel<string>('endedAt', { required: true })
 
-const emit = defineEmits<{ recluster: [radius: number] }>()
+const emit = defineEmits<{ recluster: [radius: number]; remove: [] }>()
 
 /** 미리보기는 서버를 부르지 않는다 — 사진마다 lat/lng/shot_at 이 이미 내려와 있고
     업로드 화면과 같은 clusterAt 을 쓰므로 결과가 서버 계산과 일치한다. */
@@ -191,6 +191,22 @@ function confirmRecluster() {
       </p>
     </section>
 
+    <!--
+      되돌릴 수 없는 것은 맨 아래, 다른 설정과 선을 그어 둔다 — 반경 슬라이더 옆에
+      나란히 두면 「설정 중 하나」로 읽힌다.
+    -->
+    <section class="block danger-zone">
+      <h2 class="mono blabel danger-label">기록 삭제</h2>
+      <p class="mono hint">
+        이 기록의 포인트 {{ post.point_count }}개와 사진 {{ post.photo_count }}장이 함께 지워집니다.
+        되돌릴 수 없습니다.
+      </p>
+      <button type="button" class="btn danger mono self-start" :disabled="busy" @click="emit('remove')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+        이 기록 삭제
+      </button>
+    </section>
+
     <AlertDialogRoot v-model:open="dialogOpen">
       <AlertDialogPortal>
         <AlertDialogOverlay class="ovl" />
@@ -256,6 +272,10 @@ function confirmRecluster() {
 }
 .revert:hover { background: rgba(146, 178, 169, 0.1); }
 .warn { font-size: 10.5px; color: var(--danger); }
+
+.danger-zone { padding-top: 18px; border-top: 1px solid rgba(255, 128, 128, 0.22); }
+.danger-label { color: var(--danger); }
+.self-start { align-self: flex-start; }
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .blabel { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
 .bnow { font-size: 11px; color: var(--deep); }

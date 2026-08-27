@@ -27,8 +27,19 @@ export interface ScannedPhoto {
 
 export interface SkippedPhoto {
   name: string
-  reason: 'no-gps' | 'exif-error' | 'duplicate' | 'already-in-post'
+  reason: 'no-gps' | 'exif-error' | 'duplicate' | 'already-in-post' | 'over-limit'
 }
+
+/**
+ * 한 번에 처리할 사진 수 상한.
+ *
+ * 브라우저가 File 목록을 넘겨주기 «전»까지는 페이지가 아무것도 알 수 없다.
+ * 아이폰 사진첩에서 200장을 고르면 Safari 가 그걸 전부 복사·변환하는 동안 화면은
+ * 완전히 조용하고, 사용자는 되고 있는 건지조차 알 수 없다 — 실제로 196장에서 그랬다.
+ * 우리가 그 구간에 진행률을 그릴 방법은 없으므로, 대신 그 구간을 짧게 만든다.
+ * 남은 사진은 저장한 뒤 「사진 추가」로 이어서 올린다.
+ */
+export const MAX_PER_SELECTION = 50
 
 /** 제외 사유 표시명 — 요약줄과 목록이 같은 말을 쓰도록 여기 하나만 둔다 */
 export const SKIP_REASONS: Record<SkippedPhoto['reason'], string> = {
@@ -36,6 +47,26 @@ export const SKIP_REASONS: Record<SkippedPhoto['reason'], string> = {
   'exif-error': 'EXIF 읽기 실패',
   'duplicate': '같은 사진 중복',
   'already-in-post': '이 기록에 이미 있음',
+  'over-limit': `한 번에 ${MAX_PER_SELECTION}장까지`,
+}
+
+function countBy(files: readonly SkippedPhoto[], reason: SkippedPhoto['reason']) {
+  return files.reduce((n, f) => (f.reason === reason ? n + 1 : n), 0)
+}
+
+/**
+ * 사용자가 «다음에 무엇을 해야 하는지»까지 말해주는 한 줄.
+ * 사유별 개수(summarizeSkipped)는 그 자체로 사실이지만, 상한과 중복은 조치가 따라붙는다.
+ */
+export function skipNotice(files: readonly SkippedPhoto[]): string | null {
+  const notes: string[] = []
+  const over = countBy(files, 'over-limit')
+  if (over) {
+    notes.push(`한 번에 ${MAX_PER_SELECTION}장까지 처리합니다 — 나머지 ${over}장은 저장한 뒤 「사진 추가」로 이어서 올리세요`)
+  }
+  const dup = countBy(files, 'already-in-post')
+  if (dup) notes.push(`이미 올라간 사진 ${dup}장은 제외했습니다`)
+  return notes.join(' · ') || null
 }
 
 /**
@@ -146,9 +177,14 @@ export async function scanFiles(
   /** 이번 선택 안에서 이미 통과한 키 — 같은 파일을 두 번 고른 경우를 여기서 잡는다 */
   const seen = new Set<string>()
 
-  for (let i = 0; i < files.length; i++) {
-    const r = await scanOne(files[i]!, i)
-    onProgress?.(i + 1, files.length)
+  // 상한을 넘는 몫은 EXIF 를 읽기도 «전»에 잘라낸다 — 읽어봐야 어차피 안 쓴다
+  const take = files.slice(0, MAX_PER_SELECTION)
+  for (const f of files.slice(MAX_PER_SELECTION)) skipped.push({ name: f.name, reason: 'over-limit' })
+  onProgress?.(0, take.length)
+
+  for (let i = 0; i < take.length; i++) {
+    const r = await scanOne(take[i]!, i)
+    onProgress?.(i + 1, take.length)
     if (isSkipped(r)) {
       skipped.push(r)
       continue
