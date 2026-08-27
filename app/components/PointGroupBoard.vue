@@ -4,7 +4,10 @@ import { vSk } from '~/utils/img'
  * 편집 2단계 「포인트 편집」 — 이 기록의 사진 전부를 포인트별 그룹으로 늘어놓는다.
  *
  * 여기서 하는 것: 사진을 다른 포인트로 옮기기 · 포인트 안 순서 바꾸기 ·
- * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제.
+ * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제 · 기록 커버 지정.
+ *
+ * 🔴 여기서 고르는 「커버」는 «기록» 커버다 (목록 카드에 뜨는 한 장).
+ *    포인트마다의 대표 썸네일(지도 마커에 뜨는 것)은 3단계가 따로 고른다 — 다른 값이다.
  * 포인트 이름·태그·본문은 3단계 몫이라 여기서는 이름을 읽기만 한다.
  *
  * 포인트를 지우는 «버튼»은 없다. 마지막 사진이 빠져나가면 포인트도 같이 사라지므로
@@ -30,7 +33,7 @@ export interface BoardGroup {
 
 const props = defineProps<{
   groups: BoardGroup[]
-  /** 기록 커버 — 「첫 포인트의 첫 사진」이라 이 보드에서 끌면 커버도 따라 움직인다 */
+  /** 지금 기록 커버인 사진 id */
   coverId: number | null
 }>()
 
@@ -38,10 +41,33 @@ const emit = defineEmits<{
   /** 사진 한 장이 어디에서 어디로 — 새 포인트면 over.groupId 가 null 이다 */
   drop: [from: DragFrom, over: DragOver]
   removePhoto: [id: number]
+  pickCover: [id: number]
   add: []
 }>()
 
 const drag = useTileDrag((from, over) => emit('drop', from, over))
+
+/**
+ * 커버 고르는 중.
+ *
+ * 모드를 두는 이유: 칸을 그냥 누르는 것은 평소에 아무 일도 안 해야 한다. 상시로
+ * 「클릭 = 커버」면 드래그하려다 손이 미끄러진 순간 커버가 바뀌고, 그걸 되돌릴
+ * 방법도 눈에 안 보인다. 「지정」을 누른 동안만 칸이 고를 수 있는 것이 된다.
+ */
+const picking = ref(false)
+
+function onTileClick(photoId: number) {
+  if (!picking.value) return
+  picking.value = false
+  emit('pickCover', photoId)
+}
+
+/** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 */
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') picking.value = false
+}
+onMounted(() => window.addEventListener('keydown', onEsc))
+onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 
 const totalPhotos = computed(() => props.groups.reduce((n, g) => n + g.photos.length, 0))
 
@@ -107,16 +133,29 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
         포인트 {{ groups.length }} · 사진 {{ totalPhotos }}장
       </span>
       <span class="mono hint">
-        끌어서 다른 포인트로 · 터치는 꾹 눌러서
+        <template v-if="picking">커버로 쓸 사진을 고르세요 · Esc 로 취소</template>
+        <template v-else>끌어서 다른 포인트로 · 터치는 꾹 눌러서</template>
       </span>
-      <button type="button" class="addbtn mono" @click="emit('add')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-        사진 추가
-      </button>
+      <div class="acts">
+        <button
+          type="button"
+          class="addbtn mono"
+          :class="{ armed: picking }"
+          :aria-pressed="picking"
+          @click="picking = !picking"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+          {{ picking ? '고르는 중…' : '커버 지정' }}
+        </button>
+        <button type="button" class="addbtn mono" @click="emit('add')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+          사진 추가
+        </button>
+      </div>
     </div>
 
     <!-- touchmove 는 여기서 받는다 — 드래그 중일 때만 브라우저 스크롤을 막는다 -->
-    <div class="scroll-y board" @touchmove="drag.onTouchMove">
+    <div class="scroll-y board" :class="{ picking }" @touchmove="drag.onTouchMove">
       <section
         v-for="(g, gi) in groups"
         :key="g.id"
@@ -144,6 +183,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
               @pointermove="drag.onPointerMove"
               @pointerup="drag.onPointerUp"
               @pointercancel="drag.cancel"
+              @click="onTileClick(ph.id)"
             >
               <img v-sk class="thumb sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
               <span class="mono ord">{{ String(i + 1).padStart(2, '0') }}</span>
@@ -221,6 +261,10 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   cursor: pointer;
 }
 .addbtn:hover { background: rgba(146, 178, 169, 0.1); }
+/* 고르는 중 — 다음에 누를 것이 「이 버튼」이 아니라 「사진」이라는 걸 색으로 말한다 */
+.addbtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
+/* 두 버튼은 한 덩어리다 — space-between 에 낱개로 두면 둘 사이가 벌어져 남남처럼 보인다 */
+.acts { display: flex; align-items: center; gap: 8px; flex: none; }
 
 .board { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
 
@@ -300,6 +344,13 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   cursor: grab;
 }
 .tile.src { opacity: 0.35; }
+
+/* 커버 고르는 중: 칸이 고를 수 있는 것이 된다 */
+.board.picking .tile { cursor: pointer; }
+.board.picking .tile:hover { box-shadow: inset 0 0 0 2px var(--acc); }
+/* 지금 커버는 이미 고른 것이라 다시 고를 일이 없다 — 표식만 유지한다 */
+.board.picking .tile .kill,
+.board.picking .tile .handle { opacity: 0.25; pointer-events: none; }
 
 .thumb {
   display: block;
@@ -395,6 +446,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 
 @media (max-width: 900px) {
   .hint { display: none; }
+  /* 나란히 놓인 두 버튼이라 32px 은 좁다 */
+  .addbtn { min-height: 40px; }
   /* 3열 — 여백을 빼고 나눈다 */
   .tile { width: calc((100% - 16px) / 3); }
   .thumb { height: 66px; }

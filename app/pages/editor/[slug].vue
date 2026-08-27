@@ -55,6 +55,8 @@ const draftPublic = ref(false)
 /** 기간은 날짜만 고른다 (YYYY-MM-DD) — 화면 어디에도 시각까지 쓰는 자리가 없다 */
 const draftStart = ref('')
 const draftEnd = ref('')
+/** 기록 커버 — 2단계 「커버 지정」이 고른 사진. 포인트 대표 썸네일과는 다른 값이다. */
+const draftCoverId = ref<number | null>(null)
 const pointDrafts = ref<PointDraft[]>([])
 /** 삭제 예약. 저장 전까지는 DB 도 디스크도 건드리지 않는다. */
 const removedPhotoIds = ref<number[]>([])
@@ -90,10 +92,13 @@ const boardGroups = computed<BoardGroup[]>(() =>
 )
 
 /**
- * 커버는 「첫 포인트의 대표 썸네일, 지정이 없으면 그 포인트의 첫 사진」이다 —
- * 서버 syncPostCover() 와 같은 문장이라 저장 뒤에도 화면이 그대로 유지된다.
+ * 지금 기록 커버. 고른 사진이 살아 있으면 그것이고, 아니면 서버 syncPostCover() 와
+ * 같은 문장으로 되돌아간다 — 「첫 포인트의 대표 썸네일 → 그 포인트의 첫 사진」.
+ * 두 곳이 다른 규칙을 쓰면 저장 직후 화면의 「커버」 배지가 옮겨 다닌다.
  */
 const coverId = computed(() => {
+  const chosen = draftCoverId.value
+  if (chosen !== null && pointDrafts.value.some((d) => d.ids.includes(chosen))) return chosen
   const head = pointDrafts.value.find((d) => d.ids.length)
   if (!head) return null
   return head.coverId !== null && head.ids.includes(head.coverId) ? head.coverId : head.ids[0] ?? null
@@ -127,6 +132,7 @@ const changes = computed(() => {
   if (draftSummary.value.trim() !== (p.summary ?? '')) n++
   if (draftPublic.value !== p.is_public) n++
   if (draftStart.value !== dateOf(p.started_at) || draftEnd.value !== dateOf(p.ended_at)) n++
+  if (coverId.value !== p.cover_photo_id) n++
   for (const d of pointDrafts.value) {
     const base = basePoint(d.id)
     if (!base) continue
@@ -165,6 +171,7 @@ function hydrate() {
   draftPublic.value = p.is_public
   draftStart.value = dateOf(p.started_at)
   draftEnd.value = dateOf(p.ended_at)
+  draftCoverId.value = p.cover_photo_id
   pointDrafts.value = p.points.map((pt) => ({
     id: pt.id,
     title: pt.title ?? '',
@@ -310,6 +317,8 @@ function onRemovePhoto(id: number) {
   }
   d.ids = d.ids.filter((x) => x !== id)
   if (d.coverId === id) d.coverId = null
+  // 지운 사진이 기록 커버였으면 지정을 푼다 — 아래 coverId 가 규칙대로 다시 고른다
+  if (draftCoverId.value === id) draftCoverId.value = null
   if (!removedPhotoIds.value.includes(id)) removedPhotoIds.value.push(id)
   if (!d.ids.length) dropDraft(d.id)
   resort()
@@ -320,7 +329,12 @@ function onAddPhotos() {
   void router.push(`/editor/add/${slug.value}`)
 }
 
-/** 3단계 — 대표 썸네일 지정. 이미 대표인 사진을 다시 누르면 「지정 없음」으로 돌아간다. */
+/** 2단계 — 기록 커버 지정 (목록 카드에 뜨는 한 장) */
+function onPickCover(id: number) {
+  draftCoverId.value = id
+}
+
+/** 3단계 — 그 «포인트»의 대표 썸네일. 이미 대표인 사진을 다시 누르면 「지정 없음」으로 돌아간다. */
 function pickThumb(photoId: number) {
   const d = activeDraft.value
   if (!d) return
@@ -445,7 +459,7 @@ async function save() {
       })
     }
 
-    // 3) 포스트가 마지막이다 — 커버는 구성이 확정돼야 정해진다 (서버가 스스로 세운다)
+    // 3) 포스트가 마지막이다 — 커버는 구성이 확정된 뒤라야 「그 사진이 아직 있는지」가 맞는다
     await $fetch(`/api/posts/${slug.value}`, {
       method: 'PATCH',
       body: {
@@ -454,6 +468,7 @@ async function save() {
         is_public: draftPublic.value,
         started_at: periodOut(draftStart.value, p.started_at, false),
         ended_at: periodOut(draftEnd.value, p.ended_at, true),
+        cover_photo_id: coverId.value,
       },
     })
 
@@ -609,6 +624,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           :cover-id="coverId"
           @drop="onBoardDrop"
           @remove-photo="onRemovePhoto"
+          @pick-cover="onPickCover"
           @add="onAddPhotos"
         />
       </div>
