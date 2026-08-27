@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MapSkeleton from '~/components/MapSkeleton.vue'
 /**
  * 아트보드 1b 지도 — 번호 마커 + 촬영 시각 순 파선 동선.
  *
@@ -148,6 +149,9 @@ onBeforeUnmount(clearMarkers)
 <template>
   <div class="wrap">
     <div ref="container" class="map" />
+
+    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
+    <MapSkeleton v-if="status === 'loading'" />
 
     <MapFallback
       v-if="status === 'failed'"

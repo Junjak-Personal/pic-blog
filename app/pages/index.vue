@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { vSk } from '~/utils/img'
 import BrandMark from '~/components/BrandMark.vue'
+import MapSkeleton from '~/components/MapSkeleton.vue'
 import SiteFooter from '~/components/SiteFooter.vue'
 /** 포스트 목록 — 아트보드 1a. 공개 경로라 절대 잠기지 않는다. */
 import type { PostSummary } from '#shared/types/db'
@@ -7,7 +9,7 @@ import { formatKm, formatRange } from '#shared/utils/format'
 
 type Sort = 'recent' | 'range' | 'points'
 
-const { data: posts } = await useFetch<PostSummary[]>('/api/posts', { default: () => [] })
+const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { loggedIn } = useUserSession()
 
 const sort = ref<Sort>('recent')
@@ -107,8 +109,32 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
       </div>
     </header>
 
+    <!--
+      불러오는 중 — 오는 것의 «모양»을 그대로 잡아둔다.
+      default: () => [] 라 pending 중에도 posts 는 빈 배열이다. 이 갈래가 먼저 와야
+      「아직 기록이 없습니다」가 잠깐 스쳤다 사라지는 일이 없다.
+    -->
+    <template v-if="status === 'pending'">
+      <div class="map-strip">
+        <MapSkeleton />
+      </div>
+      <div class="grid" role="status" aria-label="기록을 불러오는 중">
+        <div v-for="i in 2" :key="i" class="card sk-card" aria-hidden="true">
+          <div class="sk sk-cover" />
+          <div class="body">
+            <span class="sk line lg" />
+            <span class="sk line" />
+          </div>
+          <div class="foot">
+            <span class="sk line sm" />
+            <span class="sk line sm" />
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- 아트보드 1c ① 기록 0 -->
-    <section v-if="!posts.length" class="empty">
+    <section v-else-if="!posts.length" class="empty">
       <span class="empty-icon">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
       </span>
@@ -128,7 +154,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
       <div class="grid">
         <NuxtLink v-for="post in sorted" :key="post.slug" :to="`/p/${post.slug}`" class="card">
           <div class="cover">
-            <img v-if="post.cover_thumb" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
+            <img v-if="post.cover_thumb" v-sk class="sk" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
             <span v-else class="mono cover-empty">커버 사진 없음</span>
             <span v-if="!post.is_public" class="private mono">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>
@@ -241,7 +267,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   padding: 0 13px;
 }
 
-.map-strip { height: 236px; flex: none; border-bottom: 1px solid var(--hair); }
+.map-strip { position: relative; height: 236px; flex: none; border-bottom: 1px solid var(--hair); }
 
 .grid {
   flex: 1;
@@ -296,6 +322,17 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 }
 
 .body { padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 7px; }
+
+/*
+ * 자리표시 카드 — 실제 카드(.card)의 상자를 그대로 쓰고 내용만 띠로 바꾼다.
+ * 커버는 .cover 를 재사용하지 않는다. .cover 의 `background:` 단축 선언이
+ * .sk 의 배경색·훑기 그라디언트를 통째로 덮어 투명해진다 — 실제로 안 보였다.
+ */
+.sk-card { pointer-events: none; }
+.sk-cover { height: 196px; border-radius: 0; }
+.line { display: block; height: 11px; border-radius: 4px; }
+.line.lg { height: 20px; width: 64%; }
+.line.sm { height: 9px; width: 32%; }
 .title { font-size: 24px; letter-spacing: -0.02em; line-height: 1.18; color: var(--ink); }
 .summary { font-size: 14px; line-height: 1.6; color: var(--mid); opacity: 0.82; text-wrap: pretty; }
 

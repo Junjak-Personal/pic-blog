@@ -3,13 +3,14 @@
  * 포스트 뷰 — 아트보드 1b. 공개 경로라 절대 잠기지 않는다.
  * 지도 + 목록 → 마커 선택 → 스캐터 상세 → 사진 확대, 네 층이 한 화면에서 겹친다.
  */
+import MapSkeleton from '~/components/MapSkeleton.vue'
 import type { PostDetail } from '#shared/types/db'
 import { formatKm, formatOf, formatRange } from '#shared/utils/format'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-const { data: post, error } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
+const { data: post, error, status } = useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
 
 const activeId = ref<number | null>(null)
 const detailOpen = ref(false)
@@ -106,8 +107,37 @@ useHead(() => ({
 </script>
 
 <template>
+  <!--
+    불러오는 중. 목록에서 이 화면으로 넘어오는 사이를 덮는다 — lazy 라 라우팅이 막히지
+    않으므로 그 «사이»가 실제로 보인다. 지도·레일 두 칸을 미리 잡아두면 도착했을 때
+    레이아웃이 튀지 않는다. (서버 렌더에는 이미 데이터가 실려 있어 이 갈래를 안 탄다.)
+  -->
+  <main v-if="status === 'pending'" class="page">
+    <header class="topbar">
+      <div class="left">
+        <NuxtLink to="/" class="back">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" /></svg>
+          <span class="mono">기록</span>
+        </NuxtLink>
+        <span class="sk sk-title" aria-hidden="true" />
+      </div>
+    </header>
+
+    <div class="stage" role="status" aria-label="기록을 불러오는 중">
+      <div class="mapslot">
+        <MapSkeleton />
+      </div>
+      <div class="rail sk-rail" aria-hidden="true">
+        <span v-for="i in 7" :key="i" class="sk-line-row">
+          <span class="sk sk-num" />
+          <span class="sk sk-bar" />
+        </span>
+      </div>
+    </div>
+  </main>
+
   <!-- 비공개 기록 (아트보드 1c) -->
-  <main v-if="privateInfo" class="state">
+  <main v-else-if="privateInfo" class="state">
     <span class="state-icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></svg>
     </span>
@@ -275,6 +305,15 @@ useHead(() => ({
 .stat svg { color: var(--faint); flex: none; }
 
 .stage { flex: 1; position: relative; min-height: 0; display: grid; grid-template-columns: 1fr 348px; }
+
+/* 자리표시 — 실제 화면과 같은 .stage / .rail 을 쓰므로 모바일 규칙이 그대로 적용된다.
+   MapSkeleton 은 inset: 0 이라 .stage 가 아니라 «지도 칸»을 기준 삼게 한 겹 둔다. */
+.mapslot { position: relative; min-width: 0; }
+.sk-rail { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-left: 1px solid var(--hair); }
+.sk-line-row { display: flex; align-items: center; gap: 12px; }
+.sk-num { width: 30px; height: 30px; border-radius: 50%; flex: none; }
+.sk-bar { flex: 1; height: 12px; border-radius: 4px; }
+.sk-title { display: block; width: 190px; height: 20px; border-radius: 5px; }
 
 .rail { position: relative; z-index: 3; min-height: 0; overflow: hidden; }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vSk } from '~/utils/img'
 import AppBack from '~/components/AppBack.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
@@ -9,7 +10,7 @@ import { formatKm, formatRange } from '#shared/utils/format'
 
 definePageMeta({ layout: 'editor' })
 
-const { data: posts } = await useFetch<PostSummary[]>('/api/posts', { default: () => [] })
+const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { fetch: refreshSession } = useUserSession()
 
 const error = ref<string | null>(null)
@@ -76,8 +77,20 @@ function reasonOf(e: unknown) {
 
     <p v-if="error" class="mono error" role="alert">{{ error }}</p>
 
+    <!-- 불러오는 중 — 행의 «모양»을 잡아둔다. pending 에도 posts 는 [] 라 이 갈래가 먼저다. -->
+    <ul v-if="status === 'pending'" class="list safe-bottom" role="status" aria-label="기록을 불러오는 중">
+      <li v-for="i in 3" :key="i" class="row sk-row" aria-hidden="true">
+        <span class="sk sk-cover" />
+        <div class="main">
+          <span class="sk line lg" />
+          <span class="sk line" />
+          <span class="sk line sm" />
+        </div>
+      </li>
+    </ul>
+
     <!-- 아트보드 1c ① 기록 0 -->
-    <section v-if="!posts.length" class="empty">
+    <section v-else-if="!posts.length" class="empty">
       <span class="empty-icon">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
       </span>
@@ -92,7 +105,7 @@ function reasonOf(e: unknown) {
     <ul v-else class="list safe-bottom">
       <li v-for="post in posts" :key="post.slug" class="row">
         <span class="cover">
-          <img v-if="post.cover_thumb" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
+          <img v-if="post.cover_thumb" v-sk class="sk" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
           <span v-else class="mono cover-empty">커버 없음</span>
         </span>
 
@@ -209,6 +222,18 @@ function reasonOf(e: unknown) {
   transition: border-color 0.14s;
 }
 .row { position: relative; cursor: pointer; }
+
+/*
+ * 자리표시 행 — 실제 행(.row)의 격자를 그대로 쓰고 내용만 띠로 바꾼다.
+ * 커버는 .cover 를 재사용하지 않는다. .cover 의 `background:` 단축 선언이
+ * .sk 의 배경을 통째로 덮어 투명해진다.
+ */
+.sk-row { pointer-events: none; }
+.sk-cover { display: block; width: 88px; height: 62px; border-radius: 6px; }
+.sk-row .main { display: flex; flex-direction: column; gap: 8px; }
+.line { display: block; height: 11px; border-radius: 4px; }
+.line.lg { height: 17px; width: 46%; }
+.line.sm { height: 9px; width: 62%; }
 .row:hover { border-color: rgba(146, 178, 169, 0.45); }
 
 .cover {

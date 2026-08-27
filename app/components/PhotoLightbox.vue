@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vSk } from '~/utils/img'
 /**
  * 갤러리 층 2 — 라이트박스가 캐러셀이다 (아트보드 1b).
  * 헤더: 파일명 · 8 / 14 · 포인트명 · 시각 · 닫기
@@ -123,7 +124,7 @@ watch(() => props.index, (i) => {
             <SwiperSlide v-for="(ph, i) in props.photos" :key="ph.id">
               <!-- swiper-zoom-container 안이어야 핀치·더블탭 확대가 걸린다 -->
               <div class="swiper-zoom-container">
-                <img :src="ph.display_path" :alt="`${props.pointName} 사진 ${i + 1}`">
+                <img v-sk class="sk" :src="ph.display_path" :alt="`${props.pointName} 사진 ${i + 1}`">
               </div>
               <figcaption v-if="ph.w" class="mono cap">{{ ph.w }} × {{ ph.h }} {{ formatOf(ph.display_path) }}</figcaption>
             </SwiperSlide>

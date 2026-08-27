@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MapSkeleton from '~/components/MapSkeleton.vue'
 /**
  * 1f 사진 추가 미리보기 지도.
  * 점 = 추가한 사진, 파선 테두리 번호 마커 = 합류하는 기존 포인트, `+` 마커 = 새로 생기는 포인트.
@@ -106,6 +107,9 @@ onBeforeUnmount(clearMarkers)
 <template>
   <div class="wrap">
     <div ref="container" class="map" />
+
+    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
+    <MapSkeleton v-if="status === 'loading'" />
 
     <MapFallback
       v-if="status === 'failed'"

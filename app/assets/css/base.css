@@ -153,3 +153,52 @@ select:focus-visible {
   overscroll-behavior-y: contain;
 }
 .scroll-y::-webkit-scrollbar { width: 0; height: 0; }
+
+/*
+ * ── 로딩 표현 두 갈래 ───────────────────────────────────────────────
+ *   .sk    자리를 «미리» 잡는다 — 목록·상세·이미지·지도. 오는 것의 «모양»을 보여준다.
+ *   .spin  이미 있는 것을 «막는다» — 저장·재클러스터링 같은 동작. BusyOverlay 가 쓴다.
+ * 둘을 섞지 않는다. 아직 없는 것에 스피너를 돌리면 무엇을 기다리는지 안 보이고,
+ * 이미 있는 것을 스켈레톤으로 덮으면 내용이 사라진 것처럼 보인다.
+ */
+.sk {
+  /*
+   * --s3 다. --s2 로 두면 카드·행(.card/.row 도 --s2)과 «같은 색»이라 자리표시가
+   * 통째로 안 보인다 — 실제로 편집 목록에서 빈 상자 세 개로만 보였다.
+   * 자리표시는 자기가 앉은 표면보다 한 단 밝아야 한다.
+   */
+  background-color: var(--s3);
+  /* 훑고 지나가는 빛. 색은 --mid 계열이라 표면과 같은 온도를 유지한다. */
+  background-image: linear-gradient(90deg, transparent 0%, rgba(177, 199, 193, 0.1) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: 200% 0;
+  animation: sk-sweep 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+@keyframes sk-sweep {
+  to { background-position: -200% 0; }
+}
+
+/*
+ * 이미지는 자기 자신이 스켈레톤이다 — 감싸는 상자를 따로 두면 레이아웃이 한 겹 늘어난다.
+ * 다 받으면 그림이 배경을 덮으므로 .sk 를 떼서 애니메이션을 멈춘다 (onImgLoad).
+ */
+img.sk { border-radius: 0; }
+
+.spin {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(177, 199, 193, 0.22);
+  border-top-color: var(--acc);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 움직임을 줄이는 설정에서는 색만 남긴다 — 회전·훑기 둘 다 끈다 */
+@media (prefers-reduced-motion: reduce) {
+  .sk, .spin { animation: none; }
+}

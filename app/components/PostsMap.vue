@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MapSkeleton from '~/components/MapSkeleton.vue'
 /**
  * 아트보드 1a 상단 지도 띠 — 기록마다 마커 하나. 동선은 그리지 않는다.
  * 마커를 누르면 그 기록으로 간다.
@@ -61,6 +62,9 @@ const latRange = computed(() => {
 <template>
   <div class="wrap">
     <div ref="container" class="map" />
+
+    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
+    <MapSkeleton v-if="status === 'loading'" />
 
     <MapFallback
       v-if="status === 'failed'"

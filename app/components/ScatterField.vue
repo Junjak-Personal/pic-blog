@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vSk } from '~/utils/img'
 /**
  * 갤러리 층 1 — 스캐터 필드. 가로 스트립이 아니라 흩뿌려진 필드다.
  * 배치는 시드 기반이라 새로고침해도 흔들리지 않는다 (Math.random 금지).
@@ -39,7 +40,7 @@ const cards = computed(() => scatter(props.photos.length, 9301 + props.pointId *
       :aria-label="`사진 ${i + 1} 확대`"
       @click="emit('open', i)"
     >
-      <img :src="photo.thumb_path" alt="" loading="lazy" decoding="async">
+      <img v-sk class="sk" :src="photo.thumb_path" alt="" loading="lazy" decoding="async">
       <span class="mono idx">{{ i + 1 }}</span>
     </button>
 

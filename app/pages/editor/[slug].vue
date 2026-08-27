@@ -3,6 +3,7 @@ import AppBack from '~/components/AppBack.vue'
 import PostSettings from '~/components/PostSettings.vue'
 import OverflowMenu from '~/components/OverflowMenu.vue'
 import BottomCta from '~/components/BottomCta.vue'
+import BusyOverlay from '~/components/BusyOverlay.vue'
 /**
  * 포스트 편집 — 아트보드 1e. 업로드 플로우의 마지막 단계이기도 하다 (설계문서 §7.1).
  * 측량값(좌표 · 촬영 시각 · 포인트 순서)은 읽기 전용으로만 보여준다 (§7.2).
@@ -505,11 +506,19 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         {{ saving ? '저장 중…' : '저장' }}
       </button>
     </BottomCta>
+
+    <!--
+      동작 중에는 화면을 막는다. 저장이 도는 동안 사진 순서를 계속 끌 수 있으면
+      서버로 나간 초안과 화면이 갈린다. 재클러스터링은 포인트 자체를 갈아치우므로 더 그렇다.
+    -->
+    <BusyOverlay v-if="saving" label="저장 중" />
+    <BusyOverlay v-else-if="reclustering" label="포인트를 다시 묶는 중" />
   </div>
 </template>
 
 <style scoped>
-.page { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* position — BusyOverlay(inset: 0)의 기준 */
+.page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
 /* 상단바 */
 .topbar {

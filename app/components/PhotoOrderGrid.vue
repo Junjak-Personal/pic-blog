@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vSk } from '~/utils/img'
 /**
  * 사진 순서 그리드 — 아트보드 1e. 5열, 첫 칸이 커버다.
  *
@@ -104,7 +105,7 @@ function move(from: number, to: number) {
         @pointerup="onPointerUp"
         @pointercancel="onDragEnd"
       >
-        <img class="thumb" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
+        <img v-sk class="thumb sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
 
         <span class="mono ord">{{ String(i + 1).padStart(2, '0') }}</span>
 

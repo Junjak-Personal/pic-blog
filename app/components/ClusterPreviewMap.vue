@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MapSkeleton from '~/components/MapSkeleton.vue'
 /**
  * 1g 클러스터 미리보기 지도.
  * 점 = 사진 1장, 번호 마커 = 잠정 포인트, 실선 = 거리로 끊긴 경계, 점선 = 시간 공백으로 끊김.
@@ -177,6 +178,9 @@ onBeforeUnmount(clearMarkers)
 <template>
   <div class="wrap">
     <div ref="container" class="map" />
+
+    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
+    <MapSkeleton v-if="status === 'loading'" />
 
     <!-- 지도 로드 실패 → 좌표 목록으로 대체 (아트보드 1c) -->
     <MapFallback
