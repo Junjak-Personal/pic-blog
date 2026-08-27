@@ -13,11 +13,14 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
+import type { PointBadge } from '#shared/utils/days'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers } from '~/utils/route-style'
 
 const props = defineProps<{
   points: Point[]
+  /** 포인트 id → 번호·색·이름. 번호는 날짜마다 01 로 되돌아간다 (shared/utils/days.ts) */
+  badges: Map<number, PointBadge>
   activeId: number | null
   /** 상세 시트가 지도 하단을 덮는 높이(px). 0 이면 시트가 닫힌 상태다. */
   bottomInset?: number
@@ -52,13 +55,17 @@ function routeData(): FeatureCollection {
   }
 }
 
-function markerEl(p: Point, index: number) {
+function markerEl(p: Point) {
+  const b = props.badges.get(p.id)
   const el = document.createElement('button')
   el.type = 'button'
   el.className = 'map-marker'
   el.dataset.id = String(p.id)
-  el.setAttribute('aria-label', `${index + 1} ${p.title ?? '포인트'} · 사진 ${p.photos.length}장`)
-  el.innerHTML = `<span class="body">${String(index + 1).padStart(2, '0')}</span><span class="tail"></span>`
+  // 날짜 색. map.css 의 .map-marker 가 이 변수를 읽는다 (마커 DOM 은 scoped 스타일 밖이다)
+  if (b) el.style.setProperty('--day', b.color)
+  el.setAttribute('aria-label', `${b?.label ?? ''} ${b?.name ?? '포인트'} · 사진 ${p.photos.length}장`)
+  // innerHTML 에는 우리가 만든 번호만 들어간다 — 이름·제목은 setAttribute 로만 나간다
+  el.innerHTML = `<span class="body">${b?.label ?? ''}</span><span class="tail"></span>`
   el.addEventListener('click', (e) => {
     e.stopPropagation()
     emit('select', p.id)
@@ -85,9 +92,9 @@ function render() {
   }
 
   clearMarkers()
-  props.points.forEach((p, i) => {
+  props.points.forEach((p) => {
     markers.push(
-      new mapboxgl.Marker({ element: markerEl(p, i), anchor: 'bottom' })
+      new mapboxgl.Marker({ element: markerEl(p), anchor: 'bottom' })
         .setLngLat(toLngLat(p))
         .addTo(m),
     )
@@ -155,9 +162,9 @@ onBeforeUnmount(clearMarkers)
 
     <MapFallback
       v-if="status === 'failed'"
-      :items="props.points.map((p, i) => ({
-        num: String(i + 1).padStart(2, '0'),
-        name: p.title ?? `포인트 ${i + 1}`,
+      :items="props.points.map((p) => ({
+        num: props.badges.get(p.id)?.label ?? '',
+        name: props.badges.get(p.id)?.name ?? '포인트',
         lat: p.lat,
         lng: p.lng,
       }))"

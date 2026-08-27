@@ -6,16 +6,21 @@
  *           모여 있고 .side 는 감춘다 — 세로가 부족해 스크롤로 흩어놓으면 못 읽는다.
  */
 import type { Point } from '#shared/types/db'
+import type { PointBadge } from '#shared/utils/days'
 import { formatDate, formatExifLine, formatOf, formatTime } from '#shared/utils/format'
 import { formatCoord } from '#shared/utils/geo'
 
 const props = defineProps<{
   point: Point
-  index: number
+  /** 번호·색·이름. 번호는 날짜마다 01 로 되돌아간다 (shared/utils/days.ts) */
+  badge: PointBadge
+  /** 앞뒤 포인트 이름. null 이면 그 방향 버튼을 아예 그리지 않는다 — 죽은 버튼을 두지 않는다 */
+  prevName: string | null
+  nextName: string | null
   mobile?: boolean
 }>()
 
-const emit = defineEmits<{ close: []; openPhoto: [index: number] }>()
+const emit = defineEmits<{ close: []; openPhoto: [index: number]; step: [dir: -1 | 1] }>()
 
 /*
  * 모바일 시트 — 아래로 쓸어서 닫기 (아트보드 1b).
@@ -59,7 +64,7 @@ function onGripUp() {
   if (far) emit('close')
 }
 
-const name = computed(() => props.point.title ?? `포인트 ${props.index + 1}`)
+const name = computed(() => props.badge.name)
 
 /** 본문은 빈 줄 기준으로 문단을 나눈다 */
 const paragraphs = computed(() =>
@@ -84,7 +89,7 @@ const deviceLine = computed(() => {
   <section
     class="sheet"
     :class="{ mobile: props.mobile, dragging }"
-    :style="dragY ? { transform: `translateY(${dragY}px)` } : undefined"
+    :style="{ '--day': props.badge.color, ...(dragY ? { transform: `translateY(${dragY}px)` } : {}) }"
   >
     <!-- 모바일 손잡이. 여기와 헤더에서만 쓸어 닫기가 시작된다 -->
     <div
@@ -104,7 +109,7 @@ const deviceLine = computed(() => {
       @pointerup="onGripUp"
       @pointercancel="onGripUp"
     >
-      <span class="mono badge">{{ String(props.index + 1).padStart(2, '0') }}</span>
+      <span class="mono badge">{{ props.badge.label }}</span>
       <h2 class="name">{{ name }}</h2>
       <span class="meta wide-only">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 7v5l3 3" /></svg>
@@ -164,12 +169,38 @@ const deviceLine = computed(() => {
       </div>
 
       <div class="scatter-slot">
+        <!--
+          앞뒤 포인트로. 라이트박스의 ‹ › 와 같은 자리·같은 모양이라 두 층에서 같은 조작으로 읽힌다.
+          없는 방향은 그리지 않는다 — 눌리지 않는 버튼이 남아 있으면 조용한 실패로 보인다.
+        -->
+        <button
+          v-if="props.prevName"
+          type="button"
+          class="pnav prev"
+          :aria-label="`이전 포인트 ${props.prevName}`"
+          :title="props.prevName"
+          @click="emit('step', -1)"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
+        </button>
+
         <ScatterField
           :photos="props.point.photos"
           :point-id="props.point.id"
           :mobile="props.mobile"
           @open="emit('openPhoto', $event)"
         />
+
+        <button
+          v-if="props.nextName"
+          type="button"
+          class="pnav next"
+          :aria-label="`다음 포인트 ${props.nextName}`"
+          :title="props.nextName"
+          @click="emit('step', 1)"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
+        </button>
       </div>
 
       <div class="side scroll-y">
@@ -214,6 +245,7 @@ const deviceLine = computed(() => {
   padding: 16px 24px 14px;
   border-bottom: 1px solid rgba(177, 199, 193, 0.1);
 }
+/* 번호는 날짜마다 01 로 되돌아간다 — 며칠차인지는 이 색이 말한다 (레일 날짜 탭이 범례) */
 .badge {
   display: grid;
   place-items: center;
@@ -221,7 +253,7 @@ const deviceLine = computed(() => {
   height: 30px;
   flex: none;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--day, var(--ink));
   color: var(--s0);
   font-size: 12px;
   font-weight: 600;
@@ -252,6 +284,27 @@ const deviceLine = computed(() => {
 
 .body { flex: 1; display: grid; grid-template-columns: 1fr 352px; min-height: 0; }
 .scatter-slot { position: relative; min-width: 0; overflow: hidden; }
+
+/* 앞뒤 포인트 이동 — ⓘ 판(z 30)보다 아래에 둔다. 판이 떠 있을 땐 판이 주인공이다 */
+.pnav {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: 50%;
+  background: rgba(6, 7, 10, 0.82);
+  backdrop-filter: blur(6px);
+  color: var(--mid);
+  cursor: pointer;
+}
+.pnav:hover { background: rgba(146, 178, 169, 0.2); color: var(--ink); }
+.pnav.prev { left: 12px; }
+.pnav.next { right: 12px; }
 
 /* ⓘ 토글 — 데스크탑에는 없다 (v-if) */
 .info {
@@ -350,6 +403,10 @@ const deviceLine = computed(() => {
   /* 본문은 스캐터만. 태그·본문·EXIF 는 전부 ⓘ 판에 모였다 — 흩어놓지 않는다. */
   .body { position: relative; grid-template-columns: 1fr; grid-template-rows: 1fr; }
   .side { display: none; }
+  /* 헤더 밖 조작 요소는 44px — 한 손으로 앞뒤 포인트를 넘기는 주 조작이다 */
+  .pnav { width: 44px; height: 44px; }
+  .pnav.prev { left: 8px; }
+  .pnav.next { right: 8px; }
   .meta { padding-top: 0; }
   .para { font-size: 15px; line-height: 1.8; }
 }

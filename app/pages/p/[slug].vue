@@ -4,7 +4,11 @@
  * 지도 + 목록 → 마커 선택 → 스캐터 상세 → 사진 확대, 네 층이 한 화면에서 겹친다.
  */
 import MapSkeleton from '~/components/MapSkeleton.vue'
+// 날짜 탭이 지도를 그 날짜 범위로 다시 담아야 해서 fit() 을 직접 부른다 — 타입 때문에 명시적 임포트
+import TripMap from '~/components/TripMap.vue'
 import type { PostDetail } from '#shared/types/db'
+// 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
+import { badgesOf, groupByDay } from '#shared/utils/days'
 import { formatKm, formatOf, formatRange } from '#shared/utils/format'
 
 const route = useRoute()
@@ -15,6 +19,7 @@ const { data: post, error, status } = useFetch<PostDetail>(() => `/api/posts/${s
 const activeId = ref<number | null>(null)
 const detailOpen = ref(false)
 const stageEl = useTemplateRef<HTMLElement>('stageEl')
+const mapEl = useTemplateRef<InstanceType<typeof TripMap>>('mapEl')
 const stageHeight = ref(0)
 
 /**
@@ -29,8 +34,31 @@ const photoIndex = ref<number | null>(null)
 const isMobile = ref(false)
 
 const points = computed(() => post.value?.points ?? [])
-const activePoint = computed(() => points.value.find((p) => p.id === activeId.value) ?? null)
-const activeIndex = computed(() => points.value.findIndex((p) => p.id === activeId.value))
+
+/**
+ * 날짜 층 — 포인트를 촬영 날짜로 나눈다 (shared/utils/days.ts).
+ * 탭이 곧 필터다: 고른 날짜의 포인트만 지도·레일·앞뒤 이동에 남는다.
+ * 번호는 날짜마다 01 로 되돌아가고 색이 며칠차인지를 말한다 — 배지는 한 곳(badges)에서만 만든다.
+ */
+const dayGroups = computed(() => groupByDay(points.value))
+const badges = computed(() => badgesOf(dayGroups.value))
+/** null = 전체 */
+const activeDay = ref<string | null>(null)
+const visiblePoints = computed(() =>
+  activeDay.value === null
+    ? points.value
+    : dayGroups.value.find((g) => g.date === activeDay.value)?.points ?? points.value,
+)
+
+const activePoint = computed(() => visiblePoints.value.find((p) => p.id === activeId.value) ?? null)
+const activeBadge = computed(() => (activeId.value === null ? null : badges.value.get(activeId.value) ?? null))
+
+/** 앞뒤 포인트 — 보이는 목록 기준이라 날짜 탭이 이동 범위도 정한다 */
+const stepIndex = computed(() => visiblePoints.value.findIndex((p) => p.id === activeId.value))
+const prevPoint = computed(() => (stepIndex.value > 0 ? visiblePoints.value[stepIndex.value - 1] ?? null : null))
+const nextPoint = computed(() => (stepIndex.value < 0 ? null : visiblePoints.value[stepIndex.value + 1] ?? null))
+const prevName = computed(() => (prevPoint.value ? badges.value.get(prevPoint.value.id)?.name ?? null : null))
+const nextName = computed(() => (nextPoint.value ? badges.value.get(nextPoint.value.id)?.name ?? null : null))
 
 /** 대표 촬영 기기 — 레일 하단 표기 (아트보드 1b) */
 const lead = computed(() => points.value[0]?.photos[0] ?? null)
@@ -99,6 +127,33 @@ function open(id: number) {
 function closeDetail() {
   detailOpen.value = false
   photoIndex.value = null
+}
+
+/**
+ * 날짜 탭. 고른 날짜 밖에 있던 선택은 놓는다 — 안 보이는 포인트가 선택된 채로 남으면
+ * 상세 시트와 지도가 서로 다른 날짜를 가리킨다. 선택을 놓은 다음 그 날짜 전체를 다시 담는다.
+ */
+async function pickDay(date: string | null) {
+  activeDay.value = date
+  if (!visiblePoints.value.some((p) => p.id === activeId.value)) {
+    activeId.value = null
+    closeDetail()
+  }
+  await nextTick()
+  if (activeId.value === null) mapEl.value?.fit(true)
+}
+
+/**
+ * 앞뒤 포인트로. 상세 시트의 ‹ › 와 라이트박스 끝에서의 스와이프가 같이 쓴다 —
+ * 사진 확대 중이었다면 새 포인트에서도 확대를 유지하고, 넘어온 방향의 «첫» 사진에 선다.
+ */
+function stepPoint(dir: -1 | 1) {
+  const next = dir === 1 ? nextPoint.value : prevPoint.value
+  if (!next) return
+  activeId.value = next.id
+  if (photoIndex.value !== null) {
+    photoIndex.value = dir === 1 ? 0 : Math.max(0, next.photos.length - 1)
+  }
 }
 
 useHead(() => ({
@@ -203,7 +258,9 @@ useHead(() => ({
 
     <div ref="stageEl" class="stage">
       <TripMap
-        :points="points"
+        ref="mapEl"
+        :points="visiblePoints"
+        :badges="badges"
         :active-id="activeId"
         :bottom-inset="detailOpen ? sheetHeight : 0"
         @select="onMarker"
@@ -211,36 +268,45 @@ useHead(() => ({
 
       <PointRail
         class="rail safe-bottom"
-        :points="points"
+        :groups="dayGroups"
+        :badges="badges"
+        :active-day="activeDay"
         :active-id="activeId"
         :camera="cameraLabel"
         :format="formatLabel"
         :mobile="isMobile"
         @select="select"
         @open="open"
+        @pick-day="pickDay"
       />
 
       <Transition name="sheet">
         <PointDetail
-          v-if="detailOpen && activePoint"
+          v-if="detailOpen && activePoint && activeBadge"
           class="detail"
           :style="!isMobile && sheetHeight ? { height: `${sheetHeight}px` } : undefined"
           :point="activePoint"
-          :index="activeIndex"
+          :badge="activeBadge"
+          :prev-name="prevName"
+          :next-name="nextName"
           :mobile="isMobile"
           @close="closeDetail"
           @open-photo="photoIndex = $event"
+          @step="stepPoint"
         />
       </Transition>
     </div>
 
     <PhotoLightbox
-      v-if="activePoint"
+      v-if="activePoint && activeBadge"
       :photos="activePoint.photos"
-      :point-name="activePoint.title ?? `포인트 ${activeIndex + 1}`"
+      :point-name="activeBadge.name"
       :index="photoIndex"
+      :prev-name="prevName"
+      :next-name="nextName"
       @close="photoIndex = null"
       @move="photoIndex = $event"
+      @step="stepPoint"
     />
   </main>
 </template>

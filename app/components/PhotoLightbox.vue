@@ -20,9 +20,12 @@ const props = defineProps<{
   pointName: string
   /** null 이면 닫힘 */
   index: number | null
+  /** 앞뒤 포인트 이름. null 이면 그 방향으로는 더 갈 곳이 없다 */
+  prevName: string | null
+  nextName: string | null
 }>()
 
-const emit = defineEmits<{ close: []; move: [index: number] }>()
+const emit = defineEmits<{ close: []; move: [index: number]; step: [dir: -1 | 1] }>()
 
 const open = computed({
   get: () => props.index !== null,
@@ -36,10 +39,31 @@ const current = computed(() => (props.index === null ? null : props.photos[props
 /** 파일명은 저장 경로에서 뽑는다 — 원본 파일명은 보관하지 않는다 */
 const fileName = computed(() => current.value?.display_path.split('/').pop() ?? '')
 
-function move(step: number) {
+/*
+ * 사진의 끝에서 한 번 더 넘기면 «앞뒤 포인트»로 이어진다.
+ * 예전에는 여기서 한 바퀴 돌았는데(모듈로), 그러면 14장짜리 포인트의 마지막에서
+ * 다시 1장으로 돌아와 기록 전체를 사진으로 훑을 방법이 없었다.
+ * 갈 곳이 없으면 버튼을 비활성으로 둔다 — 눌리는데 아무 일도 없으면 조용한 실패다.
+ */
+const atStart = computed(() => props.index === 0)
+const atEnd = computed(() => props.index !== null && props.index === props.photos.length - 1)
+const canPrev = computed(() => props.index !== null && (!atStart.value || props.prevName !== null))
+const canNext = computed(() => props.index !== null && (!atEnd.value || props.nextName !== null))
+const prevLabel = computed(() =>
+  atStart.value && props.prevName ? `이전 포인트 ${props.prevName}` : '이전 사진',
+)
+const nextLabel = computed(() =>
+  atEnd.value && props.nextName ? `다음 포인트 ${props.nextName}` : '다음 사진',
+)
+
+function move(step: -1 | 1) {
   if (props.index === null || !props.photos.length) return
-  const next = (props.index + step + props.photos.length) % props.photos.length
-  emit('move', next)
+  const next = props.index + step
+  if (next >= 0 && next < props.photos.length) {
+    emit('move', next)
+    return
+  }
+  if (step === 1 ? props.nextName : props.prevName) emit('step', step)
 }
 
 /*
@@ -57,6 +81,23 @@ function onSwiper(sw: SwiperClass) {
 /** 슬라이드가 바뀌면 부모의 index 와 맞춘다 (헤더의 「3 / 5」와 파일명이 따라간다) */
 function onSlideChange(sw: SwiperClass) {
   if (props.index !== null && sw.activeIndex !== props.index) emit('move', sw.activeIndex)
+}
+
+/**
+ * 끝에서 한 번 더 쓸면 앞뒤 포인트로.
+ *
+ * Swiper 는 마지막 슬라이드에서 더 쓸어도 slideChange 를 내지 않는다 (끝이라 넘길 게 없다).
+ * 그래서 touchEnd 에서 「끝에 있었는가 + 그 방향으로 얼마나 끌었는가」를 직접 본다.
+ * touches.diff 는 시작점 대비 이동량이라 왼쪽으로 끌면 음수다.
+ * 확대 중에는 그 제스처가 사진 «팬»이므로 건드리지 않는다.
+ */
+const EDGE_SWIPE_PX = 60
+
+function onTouchEnd(sw: SwiperClass) {
+  if (sw.zoom?.scale > 1) return
+  const d = sw.touches.diff
+  if (sw.isEnd && d < -EDGE_SWIPE_PX && props.nextName) emit('step', 1)
+  else if (sw.isBeginning && d > EDGE_SWIPE_PX && props.prevName) emit('step', -1)
 }
 
 /**
@@ -87,6 +128,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 watch(() => props.index, (i) => {
   if (i !== null && swiper.value && swiper.value.activeIndex !== i) swiper.value.slideTo(i, 0)
 })
+
+/*
+ * 포인트가 바뀌면 슬라이드 «목록» 자체가 갈린다. index 만 보고 있으면 놓치는 경우가 있다 —
+ * 5장짜리의 마지막(4)에서 이전 포인트의 마지막(역시 4)으로 가면 index 가 안 바뀐다.
+ * 목록이 갈릴 때 Swiper 에 알리고 자리를 다시 잡아준다.
+ */
+watch(() => props.photos, async () => {
+  await nextTick()
+  const sw = swiper.value
+  if (!sw || props.index === null) return
+  sw.update()
+  sw.slideTo(props.index, 0)
+})
 </script>
 
 <template>
@@ -107,7 +161,7 @@ watch(() => props.index, (i) => {
         </header>
 
         <div class="stage">
-          <button type="button" class="nav" aria-label="이전 사진" @click="move(-1)">
+          <button type="button" class="nav" :aria-label="prevLabel" :title="prevLabel" :disabled="!canPrev" @click="move(-1)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
           </button>
 
@@ -120,6 +174,7 @@ watch(() => props.index, (i) => {
             :space-between="24"
             @swiper="onSwiper"
             @slide-change="onSlideChange"
+            @touch-end="onTouchEnd"
             @wheel="onWheel"
           >
             <SwiperSlide v-for="(ph, i) in props.photos" :key="ph.id">
@@ -131,17 +186,20 @@ watch(() => props.index, (i) => {
             </SwiperSlide>
           </Swiper>
 
-          <button type="button" class="nav" aria-label="다음 사진" @click="move(1)">
+          <button type="button" class="nav" :aria-label="nextLabel" :title="nextLabel" :disabled="!canNext" @click="move(1)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
           </button>
         </div>
 
         <footer class="foot">
-          <button type="button" class="nav sm" aria-label="이전 사진" @click="move(-1)">
+          <button type="button" class="nav sm" :aria-label="prevLabel" :disabled="!canPrev" @click="move(-1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
           </button>
-          <span class="mono swipe">쓸어서 이동 · 두 손가락/더블탭으로 확대</span>
-          <button type="button" class="nav sm" aria-label="다음 사진" @click="move(1)">
+          <!-- 경계에서는 다음 «포인트»가 어디인지 이름으로 말한다 — 말없이 넘어가면 어디로 간 건지 모른다 -->
+          <span v-if="atEnd && props.nextName" class="mono swipe edge">쓸어서 다음 포인트 ▸ {{ props.nextName }}</span>
+          <span v-else-if="atStart && props.prevName" class="mono swipe edge">◂ 쓸어서 이전 포인트 {{ props.prevName }}</span>
+          <span v-else class="mono swipe">쓸어서 이동 · 두 손가락/더블탭으로 확대</span>
+          <button type="button" class="nav sm" :aria-label="nextLabel" :disabled="!canNext" @click="move(1)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
           </button>
         </footer>
@@ -257,7 +315,9 @@ watch(() => props.index, (i) => {
   color: var(--mid);
   cursor: pointer;
 }
-.nav:hover { background: rgba(146, 178, 169, 0.14); }
+.nav:hover:not(:disabled) { background: rgba(146, 178, 169, 0.14); }
+/* 갈 곳이 없을 때 — 눌리는데 아무 일도 없는 것보다 낫다 */
+.nav:disabled { opacity: 0.3; cursor: default; }
 
 .foot { display: none; }
 
@@ -275,6 +335,7 @@ watch(() => props.index, (i) => {
   }
   /* 헤더 밖 조작 요소는 44px — 하단 바의 이전/다음이 34px 이었다 */
   .nav.sm { width: 44px; height: 44px; }
-  .swipe { font-size: 10px; color: var(--faint); }
+  .swipe { font-size: 10px; color: var(--faint); text-align: center; }
+  .swipe.edge { color: var(--mid); }
 }
 </style>

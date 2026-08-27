@@ -24,8 +24,14 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   background: rgba(19, 28, 24, 0.94);
-  color: #B1C7C1;
-  border: 1.5px solid rgba(146, 178, 169, 0.55);
+  /*
+   * --day 는 촬영 «날짜» 색이다 (shared/utils/days.ts). TripMap 이 마커마다 인라인으로 심는다.
+   * 번호가 날짜마다 01 로 되돌아가므로 며칠차인지는 색이 말한다 — 레일의 날짜 탭이
+   * 같은 색 점을 달고 있어 범례 노릇을 한다. 날짜를 모르는 화면(PostsMap)은
+   * 변수를 심지 않으므로 폴백 값 그대로다.
+   */
+  color: var(--day, #B1C7C1);
+  border: 1.5px solid var(--day, rgba(146, 178, 169, 0.55));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
   transition: transform 0.12s, background 0.12s, color 0.12s;
 }
@@ -37,7 +43,7 @@
   margin-top: -1px;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 7px solid rgba(146, 178, 169, 0.62);
+  border-top: 7px solid var(--day, rgba(146, 178, 169, 0.62));
 }
 
 .map-marker:hover { filter: brightness(1.12); }
@@ -52,12 +58,13 @@
 }
 .map-marker.on .tail { border-top-color: #E8EBE9; }
 
-/* 축소 시 dot 12px */
+/* 축소 시 dot 12px — 번호가 접히면 날짜 색만 남으므로 테두리가 아니라 점 자체를 칠한다 */
 .map-marker.dot .body {
   width: 12px;
   height: 12px;
   font-size: 0;
   border-width: 1.5px;
+  background: var(--day, rgba(19, 28, 24, 0.94));
 }
 .map-marker.dot .tail { display: none; }
 
