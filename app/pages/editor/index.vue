@@ -107,7 +107,7 @@ async function logout() {
 </template>
 
 <style scoped>
-.page { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .topbar {
   height: 60px;
@@ -159,8 +159,13 @@ async function logout() {
 .btn.ghost:hover { border-color: rgba(146, 178, 169, 0.45); color: var(--ink); }
 .btn.big { padding: 12px 20px; font-size: 12px; }
 
+/* 이 화면에서 굴러가는 유일한 칸 (레이아웃 셸 주석 참고) */
 .list {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -169,6 +174,7 @@ async function logout() {
   list-style: none;
   align-content: start;
 }
+.list::-webkit-scrollbar { width: 0; }
 
 .row {
   display: grid;
@@ -277,6 +283,9 @@ async function logout() {
   gap: 14px;
   padding: 40px;
   text-align: center;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
 }
 .empty-icon {
   display: grid;

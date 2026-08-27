@@ -1,13 +1,8 @@
 <script setup lang="ts">
 /** 제외된 파일명 목록 (아트보드 1c). 조용히 무시하지 않는다는 약속을 지키는 컴포넌트다. */
-import type { SkippedPhoto } from '~/utils/exif'
+import { SKIP_REASONS, type SkippedPhoto } from '~/utils/exif'
 
 const props = defineProps<{ files: SkippedPhoto[] }>()
-
-const REASONS: Record<SkippedPhoto['reason'], string> = {
-  'no-gps': '위치 정보 없음',
-  'exif-error': 'EXIF 읽기 실패',
-}
 </script>
 
 <template>
@@ -18,7 +13,7 @@ const REASONS: Record<SkippedPhoto['reason'], string> = {
     <ul class="scroll-y list">
       <li v-for="(f, i) in props.files" :key="`${f.name}-${i}`">
         <span class="mono name">{{ f.name }}</span>
-        <span class="mono why">{{ REASONS[f.reason] }}</span>
+        <span class="mono why">{{ SKIP_REASONS[f.reason] }}</span>
       </li>
     </ul>
   </div>

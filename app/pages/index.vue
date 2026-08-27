@@ -184,7 +184,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 </template>
 
 <style scoped>
-.page { flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+.page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .topbar {
   height: 68px;
@@ -270,14 +270,24 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 
 .map-strip { position: relative; height: 236px; flex: none; border-bottom: 1px solid var(--hair); }
 
+/* 이 화면에서 굴러가는 유일한 칸 (레이아웃 셸 주석 참고) */
 .grid {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  /* 🔴 auto 행은 「최소 크기」까지 눌린다. 카드가 overflow: hidden 이라 최소 크기가
+     0 이고, 높이가 확정된 격자 안에서 카드가 찌부러져 커버가 잘렸다.
+     행은 내용 높이 그대로 두고, 넘치는 만큼 격자가 스크롤한다. */
+  grid-auto-rows: max-content;
   gap: 24px;
-  padding: 26px 32px 0;
+  padding: 26px 32px;
   align-content: start;
 }
+.grid::-webkit-scrollbar { width: 0; }
 
 .card {
   display: flex;
@@ -371,6 +381,9 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   gap: 14px;
   padding: 40px;
   text-align: center;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
 }
 .empty-icon {
   display: grid;
@@ -400,16 +413,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
-  /*
-   * 스크롤은 목록에만 둔다. 문서가 통째로 스크롤되면 상단 지도 스트립까지 같이 밀려
-   * 올라가 「지도가 있는 화면」이 아니라 「긴 문서」가 된다 — 상세 화면(p/[slug])과
-   * 같은 구조로 맞춘다: 페이지는 뷰포트에 고정, 안쪽 목록만 굴린다.
-   *
-   * touch-action: none 은 iOS 의 고무줄 당김을 막는다. 헤더처럼 스크롤 대상이 아닌
-   * 곳을 끌면 화면 전체가 딸려 내려와 상단에 검은 띠가 생긴다 (overscroll-behavior 는
-   * 「스크롤 오버플로가 없으면 무효」라 Safari 에서 듣지 않는다 — WebKit #243452).
-   * 목록은 아래에서 pan-y 로 다시 연다.
-   */
   /* 🔴 flex: none 이 있어야 한다. 세로 flex 아이템의 높이는 flex 알고리즘이 정하므로
      flex-grow 가 살아 있으면 height: 100dvh 가 그냥 무시된다 (.shell 이 min-height 라
      내용만큼 자란다) — 실제로 문서가 1676px 이었다. */

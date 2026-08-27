@@ -7,6 +7,7 @@ import RadiusSlider from '~/components/RadiusSlider.vue'
  * 1 사진 선택 → 2 검사 결과 → 3 클러스터 미리보기 + 반경 → 4 확정 → /editor/[slug]
  */
 import { formatDate, formatGap, formatTime, localIso } from '#shared/utils/format'
+import { summarizeSkipped } from '~/utils/exif'
 
 definePageMeta({ layout: 'editor' })
 
@@ -159,16 +160,16 @@ async function skip() {
           <span class="rule" />
           <span class="skip">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8.5l.5 -.5" /><path d="M14.121 14.111a3 3 0 1 0 -4.242 -4.24" /><path d="M9.13 9.13a8.28 8.28 0 0 0 -1.13 1.87c1.4 2.3 3.4 4 6 4a5.6 5.6 0 0 0 2.13 -.4" /><path d="M3 3l18 18" /></svg>
-            {{ flow.skipped.value.length }}장 제외 — 위치 정보가 없습니다
+            {{ flow.skipped.value.length }}장 제외 — {{ summarizeSkipped(flow.skipped.value) }}
           </span>
         </template>
         <span class="scanbar-note mono">스크린샷·메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다</span>
       </div>
 
-      <!-- 전부 좌표 없음 -->
+      <!-- 통과한 사진이 하나도 없다 — 사유는 아래 목록이 한 장씩 말한다 -->
       <section v-if="!flow.scanned.value.length" class="empty">
-        <h3>선택한 사진에 위치 정보가 없습니다</h3>
-        <p>스크린샷이나 메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다. 원본 파일을 다시 올리면 포인트가 생성됩니다.</p>
+        <h3>올릴 수 있는 사진이 없습니다</h3>
+        <p>스크린샷이나 메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다. 같은 사진이 두 번 들어간 경우도 한 장만 남깁니다.</p>
         <SkippedList :files="flow.skipped.value" />
         <button type="button" class="btn primary mono" @click="flow.reset(); fileInput?.click()">
           원본으로 다시 선택
@@ -314,7 +315,7 @@ async function skip() {
 
 
 <style scoped>
-.page { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 /* 상단 단계바 */
 .topbar {
@@ -580,6 +581,9 @@ async function skip() {
   gap: 14px;
   padding: 40px;
   text-align: center;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
 }
 .empty-icon {
   display: grid;
@@ -644,8 +648,8 @@ async function skip() {
   .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: 12.5px; }
   .scanbar-note { display: none; }
 
-  /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */
-  .preview { display: block; min-height: 0; }
+  /* 격자를 풀고 이 칸 하나가 굴러가게 둔다. 지도는 명시적 높이가 필요하다 — 1fr 은 0 으로 눌린다 */
+  .preview { display: block; min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
   /* 45dvh 면 반경 패널이 지도를 거의 다 덮는다 — 패널 위로 지도가 남게 잡는다 */
   .map-area { height: 56dvh; }
   .side { border-left: 0; border-top: 1px solid var(--hair); max-height: 45dvh; }

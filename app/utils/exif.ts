@@ -3,6 +3,10 @@
  * 전부 클라이언트에서 돈다. 서버는 바이트를 디스크에 쓰기만 한다 (설계문서 §5).
  */
 import exifr from 'exifr'
+// 판정 키는 shared 가 SSOT 다 — 여기서 다시 내보내 스캔 쪽 임포트를 한 곳으로 모은다
+import { photoKey } from '#shared/utils/photo'
+
+export { photoKey }
 
 export interface ScannedPhoto {
   /** 업로드 세션 내 고유 키 — 파일명은 중복될 수 있다 */
@@ -23,13 +27,34 @@ export interface ScannedPhoto {
 
 export interface SkippedPhoto {
   name: string
-  reason: 'no-gps' | 'exif-error'
+  reason: 'no-gps' | 'exif-error' | 'duplicate' | 'already-in-post'
+}
+
+/** 제외 사유 표시명 — 요약줄과 목록이 같은 말을 쓰도록 여기 하나만 둔다 */
+export const SKIP_REASONS: Record<SkippedPhoto['reason'], string> = {
+  'no-gps': '위치 정보 없음',
+  'exif-error': 'EXIF 읽기 실패',
+  'duplicate': '같은 사진 중복',
+  'already-in-post': '이 기록에 이미 있음',
+}
+
+/**
+ * 「위치 정보 없음 2 · 같은 사진 중복 1」
+ *
+ * 제외 사유가 하나였을 땐 요약줄이 그 이유를 단정해도 됐지만, 이제 넷이다.
+ * 숫자만 보여주고 사유를 감추면 「왜 빠졌는지 모르는 N장」이 된다 (설계문서 §8).
+ */
+export function summarizeSkipped(files: readonly SkippedPhoto[]) {
+  const n = new Map<SkippedPhoto['reason'], number>()
+  for (const f of files) n.set(f.reason, (n.get(f.reason) ?? 0) + 1)
+  return [...n].map(([reason, count]) => `${SKIP_REASONS[reason]} ${count}`).join(' · ')
 }
 
 export interface ScanResult {
   passed: ScannedPhoto[]
   skipped: SkippedPhoto[]
 }
+
 
 /** exifr 은 외부 라이브러리라 반환 타입이 통제 밖이다 — 경계에서 즉시 좁힌다. */
 interface RawExif {
@@ -107,20 +132,38 @@ function isSkipped(r: ScannedPhoto | SkippedPhoto): r is SkippedPhoto {
 
 /**
  * 파일 목록을 훑어 통과/제외로 가른다.
- * 좌표 없는 사진을 조용히 버리지 않는다 — 제외 파일명이 그대로 UI 에 뜬다 (설계문서 §8).
+ * 좌표 없는 사진도, 중복도 조용히 버리지 않는다 — 제외 파일명이 그대로 UI 에 뜬다 (설계문서 §8).
+ *
+ * @param existingKeys 이미 이 기록에 들어 있는 사진들의 photoKey. 여기 걸리면 'already-in-post'.
  */
 export async function scanFiles(
   files: readonly File[],
   onProgress?: (done: number, total: number) => void,
+  existingKeys?: ReadonlySet<string>,
 ): Promise<ScanResult> {
   const passed: ScannedPhoto[] = []
   const skipped: SkippedPhoto[] = []
+  /** 이번 선택 안에서 이미 통과한 키 — 같은 파일을 두 번 고른 경우를 여기서 잡는다 */
+  const seen = new Set<string>()
 
   for (let i = 0; i < files.length; i++) {
     const r = await scanOne(files[i]!, i)
-    if (isSkipped(r)) skipped.push(r)
-    else passed.push(r)
     onProgress?.(i + 1, files.length)
+    if (isSkipped(r)) {
+      skipped.push(r)
+      continue
+    }
+    const key = photoKey(r)
+    if (existingKeys?.has(key)) {
+      skipped.push({ name: r.name, reason: 'already-in-post' })
+      continue
+    }
+    if (seen.has(key)) {
+      skipped.push({ name: r.name, reason: 'duplicate' })
+      continue
+    }
+    seen.add(key)
+    passed.push(r)
   }
 
   passed.sort((a, b) => a.t - b.t)

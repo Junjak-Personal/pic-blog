@@ -7,6 +7,7 @@ import { clusterAt, assignTo, GAP_MINUTES, type ClusterInput } from './cluster.t
 import { scatter } from './scatter.ts'
 import { distanceM, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
+import { photoKey } from './photo.ts'
 import { badgesOf, DAY_COLORS, groupByDay } from './days.ts'
 
 // ── 좌표 순서 — 놓치면 마커가 지구 반대편에 찍힌다 ────────────────────────
@@ -115,4 +116,27 @@ const week = groupByDay(
 )
 assert.equal(week[6]!.color, week[0]!.color)
 
-console.log('✓ cluster · scatter · geo · format · days checks passed')
+// ── 중복 사진 판정 키 ────────────────────────────────────────────────────
+const shotA = { shotAt: '2026-08-22T10:14:48', lat: 37.763847, lng: 128.899886 }
+assert.equal(
+  photoKey(shotA),
+  photoKey({ ...shotA }),
+  '같은 촬영 시각·좌표는 같은 키여야 한다 — 파일명이 달라도 같은 사진이다',
+)
+assert.notEqual(
+  photoKey(shotA),
+  photoKey({ ...shotA, shotAt: '2026-08-22T10:14:49' }),
+  '1초만 달라도 다른 사진이다',
+)
+assert.notEqual(
+  photoKey(shotA),
+  photoKey({ ...shotA, lat: 37.763848 }),
+  '6자리 안쪽에서 갈리면 다른 사진이다',
+)
+assert.equal(
+  photoKey(shotA),
+  photoKey({ ...shotA, lat: 37.7638470000001 }),
+  '7자리 이하의 흔들림은 같은 사진으로 본다 (서버를 거쳐 온 값과 비교하므로)',
+)
+
+console.log('✓ cluster · scatter · geo · format · days · photo checks passed')

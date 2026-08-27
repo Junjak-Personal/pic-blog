@@ -772,8 +772,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 </template>
 
 <style scoped>
-/* position — BusyOverlay(inset: 0)의 기준 */
-.page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* position — BusyOverlay(inset: 0)의 기준. overflow — 굴러가는 건 안쪽 한 칸뿐이다 */
+.page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 /* 상단바 */
 .topbar {
@@ -1214,6 +1214,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 10px;
   padding: 40px;
   text-align: center;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
 }
 .blank h3 { font-size: 22px; color: var(--ink); }
 .blank p { font-size: 11px; color: var(--faint); }
@@ -1245,8 +1248,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 보드는 좌우 여백만 줄인다 — 세로 스크롤은 보드가 스스로 갖는다 */
   .boardpane { padding: 10px 12px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
-  /* 본문: 격자와 내부 높이 제약을 풀고 페이지가 통째로 스크롤하게 둔다 */
-  .body { display: block; min-height: 0; }
+  /* 본문: 격자를 풀고 이 칸 하나가 굴러가게 둔다 (문서는 스크롤하지 않는다) */
+  .body { display: block; min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
   /* 좁은 화면에서 46px 썸네일까지 넣으면 이름이 두 글자만 남는다 — 썸네일을 줄인다 */
   .prow { grid-template-columns: 24px 38px 1fr auto; padding: 10px 12px 10px 14px; }
   .pthumb { width: 38px; height: 30px; }
@@ -1261,7 +1264,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .editor, .split { display: block; min-height: 0; }
   .ehead { flex-wrap: wrap; padding: 12px 16px; }
   .grid-col { min-height: 0; padding: 14px 16px; }
-  .side { min-height: 0; padding: 14px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
+  /* 굴러가는 칸은 .body 하나다 — 여기서 또 스크롤하면 중첩이라 어느 쪽이 움직일지 모른다 */
+  .side { min-height: 0; overflow: visible; padding: 14px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   /* 태그 칩도 터치 타깃이다 — 입력이 16px 로 커지므로 칩도 같이 키운다 */
   .tags { gap: 8px; }

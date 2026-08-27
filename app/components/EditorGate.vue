@@ -93,7 +93,15 @@ async function submit() {
 </template>
 
 <style scoped>
-.gate { flex: 1; display: grid; place-items: center; padding: 24px; }
+.gate {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
+}
 
 .card {
   width: min(640px, 100%);

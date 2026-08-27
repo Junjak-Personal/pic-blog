@@ -8,6 +8,7 @@ import BottomCta from '~/components/BottomCta.vue'
  */
 import type { PostDetail } from '#shared/types/db'
 import { formatDate, formatTime, localIso } from '#shared/utils/format'
+import { summarizeSkipped } from '~/utils/exif'
 
 definePageMeta({ layout: 'editor' })
 
@@ -71,7 +72,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       <div class="right">
         <span v-if="flow.skipped.value.length" class="mono skipped">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8.5l.5 -.5" /><path d="M14.121 14.111a3 3 0 1 0 -4.242 -4.24" /><path d="M3 3l18 18" /></svg>
-          좌표 없음 {{ flow.skipped.value.length }}장 제외
+          {{ flow.skipped.value.length }}장 제외 — {{ summarizeSkipped(flow.skipped.value) }}
         </span>
         <button type="button" class="btn ghost mono" @click="back">취소</button>
         <button
@@ -248,7 +249,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 </template>
 
 <style scoped>
-.page { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+/* 셸이 이미 뷰포트에 고정돼 있다 — 여기서는 남는 높이를 받아 채우기만 한다 */
+.page { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 .topbar {
   height: 60px;
@@ -476,6 +478,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   gap: 14px;
   padding: 40px;
   text-align: center;
+  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
+     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
+  overflow-y: auto;
 }
 .empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
 .empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
@@ -523,7 +528,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */
-  .preview { display: block; min-height: 0; }
+  /* 격자를 풀고 이 칸 하나가 굴러가게 둔다 (문서는 스크롤하지 않는다) */
+  .preview { display: block; min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
   /* 45dvh 면 반경 패널이 지도를 거의 다 덮는다 — 패널 위로 지도가 남게 잡는다 */
   .map-area { height: 56dvh; }
   .side { border-left: 0; border-top: 1px solid var(--hair); max-height: 45dvh; }

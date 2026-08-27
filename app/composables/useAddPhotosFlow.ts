@@ -7,7 +7,7 @@ import type { AddPhotosInput, CreatePostResult, UploadPhotoInput } from '#shared
 import type { Point } from '#shared/types/db'
 import { assignTo, DEFAULT_RADIUS, RADII, type ClusterInput, type ExistingPoint } from '#shared/utils/cluster'
 import { outputExt, resizePhoto } from '~/utils/resize'
-import { scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
+import { photoKey, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
 
 export type AddStage = 'idle' | 'scanning' | 'preview' | 'uploading' | 'done'
 
@@ -68,9 +68,18 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
     reset()
     stage.value = 'scanning'
     scanProgress.value = { done: 0, total: files.length }
+    // 이 기록에 이미 들어 있는 사진들 — 같은 사진을 또 올리는 걸 여기서 막는다.
+    // 서버를 새로 부르지 않는다: 편집 화면이 이미 사진마다 shot_at·좌표를 들고 있다.
+    const existingKeys = new Set(
+      points.value.flatMap((pt) =>
+        pt.photos
+          .filter((ph) => ph.shot_at)
+          .map((ph) => photoKey({ shotAt: ph.shot_at!, lat: ph.lat, lng: ph.lng })),
+      ),
+    )
     const result = await scanFiles(files, (done, total) => {
       scanProgress.value = { done, total }
-    })
+    }, existingKeys)
     scanned.value = result.passed
     skipped.value = result.skipped
     stage.value = 'preview'
