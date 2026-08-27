@@ -21,6 +21,47 @@ function routeKm(points: ReadonlyArray<{ lat: number; lng: number }>) {
   return +total.toFixed(1)
 }
 
+/**
+ * 포스트 커버를 규칙대로 다시 세운다 — 「첫 포인트의 대표 썸네일, 지정이 없으면 그 포인트의 첫 사진」.
+ *
+ * 커버를 쓰는 곳이 넷(업로드 · 사진 추가 · 사진 삭제 · 포인트 재구성)이라 각자 고르게 두면
+ * 규칙이 갈린다. 실제로 3단계에서 첫 포인트의 대표를 바꿔도 목록 썸네일은 그대로였다.
+ * 커버를 건드릴 수 있는 모든 경로가 마지막에 이 함수 하나를 부른다.
+ *
+ * 🔴 호출하는 쪽 트랜잭션 «안»에서 부른다. post.cover_photo_id 는 FK 라
+ *    참조 중인 사진을 지우기 «전»에 먼저 피신시켜 두어야 한다 — 이 함수는 그 뒤를 정리한다.
+ */
+export function syncPostCover(postId: number) {
+  const db = useDb()
+  const first = db
+    .prepare<[number], { id: number; cover_photo_id: number | null }>(
+      `SELECT id, cover_photo_id FROM point WHERE post_id = ? ORDER BY order_index LIMIT 1`,
+    )
+    .get(postId)
+
+  let cover: number | null = null
+  if (first) {
+    // 지정이 지워진 사진을 가리키고 있을 수 있다 — 실재를 확인하고 아니면 첫 사진으로 내려간다
+    const picked = first.cover_photo_id == null
+      ? null
+      : db
+          .prepare<[number, number], { id: number }>(
+            `SELECT id FROM photo WHERE id = ? AND point_id = ?`,
+          )
+          .get(first.cover_photo_id, first.id)
+    cover = picked?.id
+      ?? db
+        .prepare<[number], { id: number }>(
+          `SELECT id FROM photo WHERE point_id = ? ORDER BY order_index LIMIT 1`,
+        )
+        .get(first.id)?.id
+      ?? null
+  }
+
+  db.prepare<[number | null, number]>(`UPDATE post SET cover_photo_id = ? WHERE id = ?`).run(cover, postId)
+  return cover
+}
+
 export function listPosts(includePrivate: boolean): PostSummary[] {
   const db = useDb()
   const posts = db

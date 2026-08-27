@@ -26,6 +26,8 @@ export interface PointRow {
   tags: string
   first_shot_at: string | null
   order_index: number
+  /** 대표 썸네일로 쓸 사진 id. NULL 이면 첫 사진. 지운 사진을 가리킬 수 있어 읽는 쪽이 되짚어야 한다. */
+  cover_photo_id: number | null
 }
 
 export interface PhotoRow {

@@ -42,6 +42,26 @@
 
 .map-marker:hover { filter: brightness(1.12); }
 
+/*
+ * 대표 썸네일 — 고른 포인트에만 뜬다.
+ * 평소에는 자리를 아예 차지하지 않아야 한다 (display:none). height:0 으로 접으면
+ * 마커의 세로 중심이 어긋나 번호 알약이 앵커 위에서 흔들린다.
+ */
+.map-marker .shot { display: none; }
+.map-marker.on .shot {
+  display: block;
+  width: 74px;
+  height: 54px;
+  margin-bottom: 5px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1.5px solid #E8EBE9;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  /* 이미지가 오기 전 빈 칸이 검은 구멍으로 보이지 않게 */
+  background: #131C18;
+}
+/* 축소 모드에서도 활성 마커는 dot 이 되지 않으므로 썸네일이 그대로 남는다 */
+
 /* 활성 — 1.15× · #E8EBE9 배경 · #040408 텍스트 */
 .map-marker.on { z-index: 80; }
 .map-marker.on .body {
@@ -60,6 +80,11 @@
   border-width: 1.5px;
 }
 .map-marker.dot .tail { display: none; }
+
+@media (max-width: 900px) {
+  /* 화면이 좁으면 썸네일이 지도를 덮는다 — 알아볼 만한 최소로 줄인다 */
+  .map-marker.on .shot { width: 62px; height: 46px; }
+}
 
 /* 시간 공백 표식 (클러스터 미리보기) */
 .map-marker .clock {

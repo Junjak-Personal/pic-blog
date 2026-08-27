@@ -15,6 +15,7 @@ import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers } from '~/utils/route-style'
+import { pointThumb } from '~/utils/img'
 
 const props = defineProps<{
   points: Point[]
@@ -58,7 +59,27 @@ function markerEl(p: Point, index: number) {
   el.className = 'map-marker'
   el.dataset.id = String(p.id)
   el.setAttribute('aria-label', `${index + 1} ${p.title ?? '포인트'} · 사진 ${p.photos.length}장`)
-  el.innerHTML = `<span class="body">${String(index + 1).padStart(2, '0')}</span><span class="tail"></span>`
+
+  // 대표 썸네일 — 고른 포인트 위에 뜬다. 3단계에서 지정한 사진이고, 지정이 없으면 첫 사진이다.
+  // 🔴 src 는 지금 넣지 않는다. 포인트가 60개인 기록이면 열자마자 썸네일 60장을 받게 되는데,
+  //    실제로 보이는 건 고른 하나뿐이다 — paintActive 가 켜지는 순간에 채운다.
+  const thumb = pointThumb(p)
+  if (thumb) {
+    const img = document.createElement('img')
+    img.className = 'shot'
+    img.alt = ''
+    img.decoding = 'async'
+    img.dataset.src = thumb.thumb_path
+    el.appendChild(img)
+  }
+
+  const body = document.createElement('span')
+  body.className = 'body'
+  body.textContent = String(index + 1).padStart(2, '0')
+  const tail = document.createElement('span')
+  tail.className = 'tail'
+  el.append(body, tail)
+
   el.addEventListener('click', (e) => {
     e.stopPropagation()
     emit('select', p.id)
@@ -106,6 +127,9 @@ function paintActive() {
     el.classList.toggle('on', on)
     // 활성 마커는 축소돼도 번호를 유지한다 — 어디가 선택됐는지 보여야 한다
     el.classList.toggle('dot', zoomedOut && !on)
+    // 처음 켜질 때 한 번만 받는다. 이미 받았으면 그대로 둔다 (껐다 켤 때마다 다시 받지 않게)
+    const img = on ? el.querySelector<HTMLImageElement>('img.shot') : null
+    if (img && !img.src && img.dataset.src) img.src = img.dataset.src
   }
 }
 
@@ -118,7 +142,10 @@ function focusActive() {
   // 시트가 덮는 만큼 마커를 위로 민다. offset 은 "지도 컨테이너 중심으로부터의 픽셀 오프셋"이다.
   const inset = props.bottomInset ?? 0
   const h = m.getContainer().clientHeight
-  const offset: [number, number] = inset > 0 ? [0, (h - inset) / 2 - h / 2] : [0, 0]
+  // 활성 마커는 번호 위에 썸네일(54+5px)이 더 얹힌다. 앵커를 그냥 중앙에 두면
+  // 시트가 열려 좁아진 띠에서 썸네일이 지도 위쪽으로 잘려 나간다 — 그만큼 아래로 내린다.
+  const lift = pointThumb(p) ? 30 : 0
+  const offset: [number, number] = [0, (inset > 0 ? (h - inset) / 2 - h / 2 : 0) + lift]
 
   m.easeTo({
     center: toLngLat(p),

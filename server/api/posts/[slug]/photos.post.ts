@@ -98,7 +98,11 @@ export default defineEventHandler(async (event) => {
     const setOrder = db.prepare<[number, number]>(`UPDATE point SET order_index = ? WHERE id = ?`)
     all.forEach((p, i) => setOrder.run(i, p.id))
 
-    // 기간도 새 사진을 반영해 넓힌다 (촬영 시각 파생값이라 편집 대상이 아니다)
+    // 첫 포인트가 통째로 바뀔 수 있다(더 이른 사진이 들어온 경우) — 커버를 규칙대로 다시 세운다
+    syncPostCover(post.id)
+
+    // 🔴 기간은 새 사진을 반영해 다시 계산한다. 편집 1단계에서 손으로 고쳤더라도 여기서
+    //    EXIF 값으로 되돌아간다 — 편집 화면이 그 자리에서 그렇게 알린다 (조용한 덮어쓰기 금지).
     db.prepare<[number, number, string, number]>(
       `UPDATE post SET
          started_at = (SELECT MIN(ph.shot_at) FROM photo ph JOIN point pt ON pt.id = ph.point_id WHERE pt.post_id = ?),

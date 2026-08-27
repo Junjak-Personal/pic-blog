@@ -10,7 +10,7 @@ import { distanceM } from './geo.ts'
 /** 거리와 무관하게 이 이상 비면 클러스터를 끊는다. 없으면 같은 자리로 돌아온 다음 날이 한 포인트가 된다. */
 export const GAP_MINUTES = 90
 
-export const RADII = [20, 50, 100, 200] as const
+export const RADII = [20, 50, 100, 200, 500] as const
 export const DEFAULT_RADIUS = 50
 
 export interface ClusterInput {
@@ -38,7 +38,12 @@ export interface Cluster<T extends ClusterInput> {
   spread: number
 }
 
-function centroid<T extends ClusterInput>(shots: T[]) {
+/**
+ * 좌표 평균. 클러스터 중심이자, 수동으로 새로 만든 포인트의 앵커이기도 하다
+ * (regroup 엔드포인트가 같은 함수를 쓴다 — 두 곳이 다른 식으로 중심을 잡으면
+ * 같은 사진 묶음이 화면마다 다른 자리에 찍힌다).
+ */
+export function centroid(shots: readonly { lat: number; lng: number }[]) {
   let lat = 0
   let lng = 0
   for (const s of shots) {
