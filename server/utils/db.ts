@@ -30,7 +30,14 @@ CREATE TABLE IF NOT EXISTS point (
   body          TEXT,
   tags          TEXT NOT NULL DEFAULT '[]',
   first_shot_at TEXT,
-  order_index   INTEGER NOT NULL
+  order_index   INTEGER NOT NULL,
+  -- 이 포인트의 대표 썸네일(지도 마커 · 편집 목록). NULL 이면 첫 사진을 쓴다.
+  -- 🔴 일부러 REFERENCES 를 걸지 않았다. FK 를 걸면 사진을 지울 때마다 세 곳에서
+  --    「먼저 대표를 옮기고 나서 지운다」 순서를 지켜야 하고, 한 곳만 놓쳐도
+  --    트랜잭션 전체가 FOREIGN KEY constraint 로 죽는다 (post.cover_photo_id 가 실제로 그랬다).
+  --    지운 사진을 가리키게 되어도 화면은 첫 사진으로 되돌아갈 뿐이고,
+  --    regroup·photos DELETE 가 그 자리에서 NULL 로 되돌린다.
+  cover_photo_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS photo (
@@ -86,6 +93,7 @@ export function useDb() {
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
   addColumnIfMissing(db, 'post', 'cluster_radius', 'INTEGER')
+  addColumnIfMissing(db, 'point', 'cover_photo_id', 'INTEGER')
 
   handle = db
   return db

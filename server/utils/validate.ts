@@ -5,8 +5,8 @@
 import type { AddPhotosInput, CreatePostInput, UploadPhotoInput, UploadPointInput } from '#shared/types/upload'
 
 const EXTS = new Set(['webp', 'jpeg'])
-/** 클러스터 반경은 UI 가 주는 네 값 중 하나만 받는다 — 임의 값은 재현이 안 된다. */
-export const ALLOWED_RADII = new Set([20, 50, 100, 200])
+/** 클러스터 반경은 UI 슬라이더의 눈금 값만 받는다 (RADII 와 같은 집합) — 임의 값은 재현이 안 된다. */
+export const ALLOWED_RADII = new Set([20, 50, 100, 200, 500])
 const MAX_POINTS = 2000
 const MAX_PHOTOS_PER_POINT = 2000
 

@@ -47,7 +47,7 @@ assert.equal(drifted.length, 1, '사슬은 하나로 이어진다')
 assert.ok(drifted[0]!.spread > 50, `퍼짐 ${drifted[0]!.spread}m — R=50 을 넘는 것이 정상`)
 
 // ── 반경을 키우면 포인트 수가 줄어든다 (단조성) ──────────────────────────
-const counts = [20, 50, 100, 200].map((r) => clusterAt(chain, r).length)
+const counts = [20, 50, 100, 200, 500].map((r) => clusterAt(chain, r).length)
 assert.deepEqual(
   counts,
   [...counts].sort((a, b) => b - a),

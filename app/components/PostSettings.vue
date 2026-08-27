@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
- * 편집 1단계 「기록 설정」.
+ * 편집 1단계 「기본 정보」 — 타이틀 · 요약 · 공개 · 기간 · 포인트 범위.
  *
- * 타이틀·요약·공개는 다른 편집과 같이 초안에 쌓였다가 「저장」에서 나간다.
+ * 타이틀·요약·공개·기간은 다른 편집과 같이 초안에 쌓였다가 「저장」에서 나간다.
  * 반경만 성격이 다르다 — 즉시 서버에 반영되고 되돌릴 수 없다. 2단계가 편집할
  * 포인트 자체를 갈아치우기 때문에 초안에 담아둘 수가 없다.
  * 그래서 반경만 별도 확인 절차를 갖고, 사라질 포인트를 이름까지 나열해 보여준다.
@@ -26,6 +26,9 @@ const props = defineProps<{
 const title = defineModel<string>('title', { required: true })
 const summary = defineModel<string>('summary', { required: true })
 const isPublic = defineModel<boolean>('isPublic', { required: true })
+/** YYYY-MM-DD. 화면 어디에도 시각까지 쓰는 자리가 없어 날짜만 고른다. */
+const startedAt = defineModel<string>('startedAt', { required: true })
+const endedAt = defineModel<string>('endedAt', { required: true })
 
 const emit = defineEmits<{ recluster: [radius: number] }>()
 
@@ -61,6 +64,21 @@ const atRisk = computed(() =>
  * 다이얼로그를 먼저 닫아 pending 을 null 로 만들고, 그 다음 우리 @click 이 돌면서
  * 「고른 값이 없다」고 판단해 조용히 아무것도 안 한다. 실제로 그렇게 실패했다.
  */
+/** 기간을 손으로 바꿨는가 — 「EXIF 값으로」 되돌리기 버튼을 띄울 조건 */
+const exifChanged = computed(
+  () => startedAt.value !== dateOf(props.post.started_at) || endedAt.value !== dateOf(props.post.ended_at),
+)
+const badRange = computed(() => !!startedAt.value && !!endedAt.value && startedAt.value > endedAt.value)
+
+function dateOf(iso: string | null) {
+  return iso ? iso.slice(0, 10) : ''
+}
+
+function restoreExif() {
+  startedAt.value = dateOf(props.post.started_at)
+  endedAt.value = dateOf(props.post.ended_at)
+}
+
 const dialogOpen = ref(false)
 const pending = ref<number | null>(null)
 
@@ -110,12 +128,36 @@ function confirmRecluster() {
     </section>
 
     <section class="block">
-      <h2 class="mono blabel">기간 · 촬영 시각</h2>
-      <div class="lockbox">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
-        <span class="mono lock-value">{{ formatRange(post.started_at, post.ended_at) || '기간 없음' }}</span>
-        <span class="mono lock-note">EXIF 원본 · 편집 불가</span>
+      <div class="bhead">
+        <h2 class="mono blabel">기간</h2>
+        <span class="mono bnow">EXIF 원본 {{ formatRange(post.started_at, post.ended_at) || '없음' }}</span>
       </div>
+
+      <div class="period">
+        <label class="field">
+          <span class="mono flabel">시작</span>
+          <input v-model="startedAt" type="date" class="input mono" data-testid="settings-start-input">
+        </label>
+        <span class="mono dash">–</span>
+        <label class="field">
+          <span class="mono flabel">종료</span>
+          <input v-model="endedAt" type="date" class="input mono" data-testid="settings-end-input">
+        </label>
+        <button
+          v-if="exifChanged"
+          type="button"
+          class="revert mono"
+          @click="restoreExif"
+        >
+          EXIF 값으로
+        </button>
+      </div>
+
+      <p v-if="badRange" class="mono warn">시작이 종료보다 늦습니다</p>
+      <!-- 조용한 덮어쓰기를 만들지 않는다 — 사진 추가가 이 값을 실제로 되돌린다 -->
+      <p class="mono hint">
+        사진을 추가하면 이 기간은 새 사진까지 포함한 EXIF 촬영 시각으로 다시 계산됩니다.
+      </p>
     </section>
 
     <section class="block">
@@ -198,6 +240,22 @@ function confirmRecluster() {
 <style scoped>
 .settings { flex: 1; min-height: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 22px; }
 .block { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+
+/* 기간 — 두 날짜 입력이 한 줄. 좁아지면 「EXIF 값으로」가 아래로 내려간다 */
+.period { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
+.period .field { flex: 0 1 190px; display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+.dash { padding-bottom: 12px; color: var(--faint); }
+.revert {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: var(--radius);
+  font-size: 11px;
+  color: var(--mid);
+  cursor: pointer;
+}
+.revert:hover { background: rgba(146, 178, 169, 0.1); }
+.warn { font-size: 10.5px; color: var(--danger); }
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .blabel { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
 .bnow { font-size: 11px; color: var(--deep); }
@@ -229,19 +287,6 @@ function confirmRecluster() {
 .switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
 .switch-text { font-size: 13px; color: var(--mid); }
 
-.lockbox {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: rgba(11, 14, 18, 0.7);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 11px 14px;
-  color: var(--faint);
-}
-.lock-value { font-size: 12.5px; color: var(--mid); }
-.lock-note { margin-left: auto; font-size: 9.5px; color: var(--faint); }
 
 .rwrap {
   background: rgba(11, 14, 18, 0.7);
@@ -292,7 +337,12 @@ function confirmRecluster() {
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
   .input.title { font-size: 18px; }
-  .lock-note { margin-left: 0; }
+  /* 두 날짜가 한 줄에 들어가면 각 190px 은 못 잡는다 — 세로로 쌓고 대시는 지운다 */
+  .period .field { flex: 1 1 100%; }
+  .dash { display: none; }
+  /* date 입력은 iOS 에서 16px 미만이면 초점을 잡을 때 화면이 확대된다 */
+  .period .input { min-height: 44px; font-size: 16px; }
+  .revert { min-height: 44px; }
   .dlg-actions .btn { flex: 1; min-height: 44px; }
 }
 </style>

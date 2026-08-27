@@ -202,3 +202,25 @@ img.sk { border-radius: 0; }
 @media (prefers-reduced-motion: reduce) {
   .sk, .spin { animation: none; }
 }
+
+/*
+ * 드래그 고스트 — useTileDrag 가 body 로 붙이는 사진 칸의 복제본이라 전역이어야 한다
+ * (scoped 스타일은 여기 닿지 않는다). 손끝을 따라다니는 것이 유일한 일이므로
+ * 이벤트는 통과시킨다 — 안 그러면 elementFromPoint 가 늘 고스트를 집어 드롭 위치를 못 찾는다.
+ */
+.tile-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--s2);
+  opacity: 0.85;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  transform: translate(-9999px, -9999px);
+}
+/* 복제본 안의 버튼·배지는 잡음이다 — 사진만 남긴다 */
+.tile-ghost button,
+.tile-ghost .bar { display: none; }

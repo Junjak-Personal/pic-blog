@@ -1,0 +1,228 @@
+/**
+ * 사진 칸 드래그 엔진 — 편집 2단계 보드가 쓴다.
+ *
+ * Pointer Events 한 벌로 마우스·터치·펜을 모두 처리한다. HTML5 네이티브 드래그앤드롭은
+ * 터치 기기에서 아예 동작하지 않아 예전에 한 번 갈아탔고, 여기서도 되돌리지 않는다.
+ * dragdroptouch 같은 폴리필은 「네이티브 DnD 로 되돌아가는」 선택이라 쓰지 않고,
+ * 그 라이브러리가 잘 하는 «세 가지 행동»만 가져왔다:
+ *
+ *   1. 터치는 롱프레스(400ms)로 시작한다 — 이동 임계만 쓰면 세로 스크롤과 싸운다.
+ *      실제로 그룹을 넘나드는 이동이 스크롤에 계속 먹혔다. 마우스는 즉시 잡는다.
+ *   2. 손가락을 따라다니는 반투명 고스트 — 원본 칸만 흐려지면 뭘 끌고 있는지 안 보인다.
+ *   3. 가장자리 자동 스크롤 — 이게 없으면 화면 밖 포인트로는 옮길 방법이 없다.
+ *
+ * 🔴 터치 스크롤 차단은 touch-action 이 아니라 touchmove.preventDefault() 로 한다.
+ *    칸에 touch-action: none 을 걸면 사진 위에서는 목록을 스크롤할 수 없게 되는데,
+ *    보드는 화면 대부분이 사진이라 그건 목록을 통째로 못 굴리는 것과 같다.
+ *    롱프레스가 끝날 때까지 손가락이 멈춰 있었으므로 브라우저도 아직 스크롤을 시작하지
+ *    않았고, 그 다음 첫 touchmove 는 취소 가능하다 — 거기서 막으면 정확히 맞는다.
+ */
+
+/** 드래그 중인 사진이 어디서 왔는지 */
+export interface DragFrom {
+  /** 출발 그룹의 초안 id */
+  groupId: number
+  photoId: number
+}
+
+/** 지금 손끝이 가리키는 자리 */
+export interface DragOver {
+  /** 도착 그룹의 초안 id. null 이면 「새 포인트로 분리」 영역 */
+  groupId: number | null
+  /** 그룹 안에서 끼어들 위치. 그룹 끝이면 사진 수와 같다 */
+  index: number
+}
+
+const LONG_PRESS_MS = 400
+/** 롱프레스가 익는 동안 이만큼 넘게 움직이면 스크롤로 본다 */
+const LONG_PRESS_SLOP = 10
+/** 마우스·펜은 기다리지 않는다 — 이만큼 움직이면 곧바로 드래그 */
+const MOUSE_SLOP = 5
+/** 이 안쪽으로 들어오면 목록이 저절로 굴러간다 */
+const EDGE_PX = 72
+const EDGE_SPEED = 14
+
+export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
+  const from = ref<DragFrom | null>(null)
+  const over = ref<DragOver | null>(null)
+  /** true = 실제로 끌고 있는 중. from 만 있고 이게 false 면 아직 롱프레스를 기다리는 상태다 */
+  const dragging = ref(false)
+
+  let ghost: HTMLElement | null = null
+  /** 자동 스크롤 대상. null 이면 «문서 자체»를 굴린다 — 아래 scrollTargetOf 참고. */
+  let scroller: HTMLElement | null = null
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let raf = 0
+  let startX = 0
+  let startY = 0
+  let lastY = 0
+  let pointerType = 'mouse'
+
+  function makeGhost(tile: HTMLElement, x: number, y: number) {
+    const rect = tile.getBoundingClientRect()
+    const el = tile.cloneNode(true) as HTMLElement
+    el.className = 'tile-ghost'
+    el.style.width = `${rect.width}px`
+    el.style.height = `${rect.height}px`
+    el.dataset.dx = String(rect.left - x)
+    el.dataset.dy = String(rect.top - y)
+    document.body.appendChild(el)
+    ghost = el
+    moveGhost(x, y)
+  }
+
+  function moveGhost(x: number, y: number) {
+    if (!ghost) return
+    const dx = Number(ghost.dataset.dx ?? 0)
+    const dy = Number(ghost.dataset.dy ?? 0)
+    ghost.style.transform = `translate(${x + dx}px, ${y + dy}px)`
+  }
+
+  /**
+   * 실제로 굴러가는 조상을 찾는다. 없으면 null — 그때는 문서를 굴린다.
+   *
+   * 🔴 `.scroll-y` 를 그냥 집으면 안 된다. 편집 화면의 셸은 min-height: 100dvh 라
+   *    보드가 내용만큼 자라고(문서가 대신 스크롤된다), 그 상태의 보드는 overflow-y: auto 여도
+   *    scrollHeight == clientHeight 라 scrollTop 을 아무리 밀어도 꿈쩍하지 않는다.
+   *    실제로 그래서 자동 스크롤이 조용히 아무 일도 안 했다.
+   */
+  function scrollTargetOf(el: HTMLElement): HTMLElement | null {
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const oy = getComputedStyle(n).overflowY
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n
+    }
+    return null
+  }
+
+  /** 가장자리 자동 스크롤 — 손끝이 위/아래 끝에 머무는 동안만 돈다 */
+  function edgeScroll() {
+    raf = 0
+    if (!dragging.value) return
+    const top = scroller ? scroller.getBoundingClientRect().top : 0
+    const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight
+    const by = (dy: number) => {
+      if (scroller) scroller.scrollTop += dy
+      else window.scrollBy(0, dy)
+    }
+    if (lastY < top + EDGE_PX) by(-EDGE_SPEED)
+    else if (lastY > bottom - EDGE_PX) by(EDGE_SPEED)
+    else return
+    // 굴러간 만큼 손끝 아래의 칸이 바뀐다 — 다시 훑어야 드롭 위치가 따라온다
+    resolveOver(Number(ghost?.dataset.px ?? 0), lastY)
+    raf = requestAnimationFrame(edgeScroll)
+  }
+
+  /** 손끝 좌표 → 드롭 자리. 포인터가 잡혀 있어 e.target 은 늘 출발 칸이라 좌표로 찾는다. */
+  function resolveOver(x: number, y: number) {
+    const el = document.elementFromPoint(x, y)
+    if (!el) return
+
+    const zone = el.closest<HTMLElement>('[data-newzone]')
+    if (zone) {
+      over.value = { groupId: null, index: 0 }
+      return
+    }
+
+    const group = el.closest<HTMLElement>('[data-group]')
+    if (!group) {
+      over.value = null
+      return
+    }
+    const groupId = Number(group.dataset.group)
+
+    const tile = el.closest<HTMLElement>('[data-tile]')
+    if (!tile) {
+      // 그룹의 빈 여백 — 맨 뒤에 붙인다
+      over.value = { groupId, index: Number(group.dataset.count) }
+      return
+    }
+    // 칸의 왼쪽 절반이면 그 앞, 오른쪽 절반이면 그 뒤
+    const r = tile.getBoundingClientRect()
+    const i = Number(tile.dataset.tile)
+    over.value = { groupId, index: x > r.left + r.width / 2 ? i + 1 : i }
+  }
+
+  function begin(tile: HTMLElement, x: number, y: number) {
+    dragging.value = true
+    scroller = scrollTargetOf(tile)
+    makeGhost(tile, x, y)
+    resolveOver(x, y)
+  }
+
+  function onPointerDown(e: PointerEvent, source: DragFrom) {
+    // 왼쪽 버튼만. 칸 안의 버튼(삭제 · 메뉴)을 누른 것이면 드래그가 아니다 —
+    // setPointerCapture 를 걸면 그 뒤의 click 이 캡처한 요소로 재타깃돼 버튼이 죽는다.
+    if (e.button !== 0) return
+    if ((e.target as HTMLElement).closest('button')) return
+
+    const tile = (e.currentTarget as HTMLElement)
+    pointerType = e.pointerType
+    from.value = source
+    startX = e.clientX
+    startY = e.clientY
+    lastY = e.clientY
+    tile.setPointerCapture(e.pointerId)
+
+    if (pointerType === 'touch') {
+      timer = setTimeout(() => {
+        timer = null
+        if (from.value) begin(tile, startX, startY)
+      }, LONG_PRESS_MS)
+    }
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (!from.value) return
+    lastY = e.clientY
+
+    if (!dragging.value) {
+      const moved = Math.hypot(e.clientX - startX, e.clientY - startY)
+      if (pointerType === 'touch') {
+        // 롱프레스가 익기 전에 움직였다 = 스크롤하려는 것이다. 조용히 물러난다.
+        if (moved > LONG_PRESS_SLOP) cancel()
+        return
+      }
+      if (moved < MOUSE_SLOP) return
+      begin(e.currentTarget as HTMLElement, e.clientX, e.clientY)
+    }
+
+    if (ghost) ghost.dataset.px = String(e.clientX)
+    moveGhost(e.clientX, e.clientY)
+    resolveOver(e.clientX, e.clientY)
+    if (!raf) raf = requestAnimationFrame(edgeScroll)
+  }
+
+  function onPointerUp() {
+    const f = from.value
+    const o = over.value
+    const was = dragging.value
+    cancel()
+    if (was && f && o) onDrop(f, o)
+  }
+
+  function cancel() {
+    if (timer) clearTimeout(timer)
+    timer = null
+    if (raf) cancelAnimationFrame(raf)
+    raf = 0
+    ghost?.remove()
+    ghost = null
+    scroller = null
+    from.value = null
+    over.value = null
+    dragging.value = false
+  }
+
+  /**
+   * 드래그 중에만 브라우저 스크롤을 막는다. 보드 루트에 non-passive 로 붙여야 하고
+   * (Vue 의 기본 리스너가 그렇다), 드래그 중이 아니면 손대지 않는다 — 안 그러면
+   * 사진 위에서 목록을 굴릴 수 없게 된다.
+   */
+  function onTouchMove(e: TouchEvent) {
+    if (dragging.value && e.cancelable) e.preventDefault()
+  }
+
+  onBeforeUnmount(cancel)
+
+  return { from, over, dragging, onPointerDown, onPointerMove, onPointerUp, onTouchMove, cancel }
+}

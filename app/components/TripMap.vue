@@ -16,6 +16,7 @@ import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers } from '~/utils/route-style'
+import { pointThumb } from '~/utils/img'
 
 const props = defineProps<{
   points: Point[]
@@ -64,8 +65,28 @@ function markerEl(p: Point) {
   // 날짜 색. map.css 의 .map-marker 가 이 변수를 읽는다 (마커 DOM 은 scoped 스타일 밖이다)
   if (b) el.style.setProperty('--day', b.color)
   el.setAttribute('aria-label', `${b?.label ?? ''} ${b?.name ?? '포인트'} · 사진 ${p.photos.length}장`)
-  // innerHTML 에는 우리가 만든 번호만 들어간다 — 이름·제목은 setAttribute 로만 나간다
-  el.innerHTML = `<span class="body">${b?.label ?? ''}</span><span class="tail"></span>`
+
+  // 대표 썸네일 — 고른 포인트 위에 뜬다. 3단계에서 지정한 사진이고, 지정이 없으면 첫 사진이다.
+  // 🔴 src 는 지금 넣지 않는다. 포인트가 60개인 기록이면 열자마자 썸네일 60장을 받게 되는데,
+  //    실제로 보이는 건 고른 하나뿐이다 — paintActive 가 켜지는 순간에 채운다.
+  const thumb = pointThumb(p)
+  if (thumb) {
+    const img = document.createElement('img')
+    img.className = 'shot'
+    img.alt = ''
+    img.decoding = 'async'
+    img.dataset.src = thumb.thumb_path
+    el.appendChild(img)
+  }
+
+  const body = document.createElement('span')
+  body.className = 'body'
+  // 번호는 날짜마다 01 로 되돌아간다 — 며칠차인지는 위의 --day 색이 말한다
+  body.textContent = b?.label ?? ''
+  const tail = document.createElement('span')
+  tail.className = 'tail'
+  el.append(body, tail)
+
   el.addEventListener('click', (e) => {
     e.stopPropagation()
     emit('select', p.id)
@@ -113,6 +134,9 @@ function paintActive() {
     el.classList.toggle('on', on)
     // 활성 마커는 축소돼도 번호를 유지한다 — 어디가 선택됐는지 보여야 한다
     el.classList.toggle('dot', zoomedOut && !on)
+    // 처음 켜질 때 한 번만 받는다. 이미 받았으면 그대로 둔다 (껐다 켤 때마다 다시 받지 않게)
+    const img = on ? el.querySelector<HTMLImageElement>('img.shot') : null
+    if (img && !img.src && img.dataset.src) img.src = img.dataset.src
   }
 }
 
@@ -125,7 +149,10 @@ function focusActive() {
   // 시트가 덮는 만큼 마커를 위로 민다. offset 은 "지도 컨테이너 중심으로부터의 픽셀 오프셋"이다.
   const inset = props.bottomInset ?? 0
   const h = m.getContainer().clientHeight
-  const offset: [number, number] = inset > 0 ? [0, (h - inset) / 2 - h / 2] : [0, 0]
+  // 활성 마커는 번호 위에 썸네일(54+5px)이 더 얹힌다. 앵커를 그냥 중앙에 두면
+  // 시트가 열려 좁아진 띠에서 썸네일이 지도 위쪽으로 잘려 나간다 — 그만큼 아래로 내린다.
+  const lift = pointThumb(p) ? 30 : 0
+  const offset: [number, number] = [0, (inset > 0 ? (h - inset) / 2 - h / 2 : 0) + lift]
 
   m.easeTo({
     center: toLngLat(p),
