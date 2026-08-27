@@ -4,8 +4,12 @@ import { vSk } from '~/utils/img'
  * 편집 2단계 「포인트 편집」 — 이 기록의 사진 전부를 포인트별 그룹으로 늘어놓는다.
  *
  * 여기서 하는 것: 사진을 다른 포인트로 옮기기 · 포인트 안 순서 바꾸기 ·
- * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제 · 포인트 제거(사진째).
+ * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제.
  * 포인트 이름·태그·본문은 3단계 몫이라 여기서는 이름을 읽기만 한다.
+ *
+ * 포인트를 지우는 «버튼»은 없다. 마지막 사진이 빠져나가면 포인트도 같이 사라지므로
+ * 삭제 경로가 이미 하나 있고, 버튼을 따로 두면 같은 일을 하는 길이 둘이 된다.
+ * 대신 사라지는 순간을 반드시 확인받는다 (부모의 confirmVanish).
  *
  * 상태는 이 컴포넌트가 갖지 않는다 — 부모의 초안이 SSOT 이고 여기서는 «무엇을 어디로»만
  * 올려보낸다. 보드가 자기 배열을 따로 들면 저장 직전에 둘이 갈린다.
@@ -34,7 +38,6 @@ const emit = defineEmits<{
   /** 사진 한 장이 어디에서 어디로 — 새 포인트면 over.groupId 가 null 이다 */
   drop: [from: DragFrom, over: DragOver]
   removePhoto: [id: number]
-  removeGroup: [id: number]
   add: []
 }>()
 
@@ -61,11 +64,6 @@ function isCaret(groupId: number, index: number) {
   if (!f || f.groupId !== groupId) return true
   const at = props.groups.find((g) => g.id === groupId)?.photos.findIndex((p) => p.id === f.photoId) ?? -1
   return index !== at && index !== at + 1
-}
-
-function removeGroup(g: BoardGroup) {
-  if (!window.confirm(`「${g.title}」 포인트를 제거합니다. 안에 있는 사진 ${g.photos.length}장도 함께 삭제됩니다.`)) return
-  emit('removeGroup', g.id)
 }
 
 /**
@@ -133,14 +131,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <span class="gname">{{ g.title }}</span>
           <span v-if="g.id < 0" class="mono badge-new">새 포인트</span>
           <span class="mono gmeta">{{ g.photos.length }}장 · {{ headTime(g) }}</span>
-          <button
-            type="button"
-            class="gkill"
-            :aria-label="`${g.title} 포인트 제거 — 사진 ${g.photos.length}장도 함께 삭제`"
-            @click="removeGroup(g)"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
-          </button>
         </header>
 
         <div class="tiles">
@@ -170,10 +160,15 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 
               <span class="bar">
                 <span class="mono shot">{{ formatTime(ph.shot_at) || '시각 없음' }}</span>
+                <!--
+                  data-handle — 여기서 시작한 포인터는 롱프레스를 기다리지 않는다.
+                  「끌라고 있는 손잡이」를 잡고도 1초를 기다려야 하면 고장난 것으로 읽힌다.
+                -->
                 <button
                   type="button"
                   class="handle"
-                  :aria-label="`${i + 1}번 사진 — 좌우 방향키로 순서, Alt+위아래로 다른 포인트`"
+                  data-handle
+                  :aria-label="`${i + 1}번 사진 — 끌어서 옮기기, 좌우 방향키로 순서, Alt+위아래로 다른 포인트`"
                   @keydown="onKey($event, gi, i)"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
@@ -272,17 +267,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 }
 .badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgba(214, 178, 106, 0.16); color: var(--route); }
 .gmeta { flex: none; font-size: 10px; color: var(--faint); }
-.gkill {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius);
-  color: var(--deep);
-  cursor: pointer;
-}
-.gkill:hover { background: rgba(255, 128, 128, 0.12); color: var(--danger); }
 
 /* grid 가 아니라 flex-wrap 이다 — 끼어들 자리 표식(.caret)이 칸 사이에 실제로 끼어야 한다 */
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; align-items: flex-start; }
@@ -310,11 +294,23 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
+  /* 🔴 이게 없으면 iOS 에서 사진을 꾹 누르는 순간 「사진 저장 / 복사」 시트가 떠서
+     롱프레스 드래그가 아예 시작되지 못한다 — 실기기에서 드래그가 안 되던 원인이다. */
+  -webkit-touch-callout: none;
   cursor: grab;
 }
 .tile.src { opacity: 0.35; }
 
-.thumb { display: block; width: 100%; height: 74px; object-fit: cover; }
+.thumb {
+  display: block;
+  width: 100%;
+  height: 74px;
+  object-fit: cover;
+  /* 이미지 자신에게도 걸어야 한다 — 콜아웃은 <img> 를 보고 뜬다 */
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
 
 .ord {
   position: absolute;
@@ -369,6 +365,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border-radius: 4px;
   color: var(--deep);
   cursor: grab;
+  /* 손잡이 위에서는 브라우저 스크롤을 아예 넘겨받는다 — 여기서 시작하면 곧바로 드래그다 */
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 .handle:hover { color: var(--mid); background: rgba(146, 178, 169, 0.14); }
 
@@ -400,8 +399,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   .tile { width: calc((100% - 16px) / 3); }
   .thumb { height: 66px; }
   .caret { min-height: 66px; }
-  /* 헤더 밖 조작 요소는 44px */
-  .gkill { width: 44px; height: 44px; }
   .kill { width: 26px; height: 26px; }
   /* 손가락이 자주 빗나가는 자리라 보이지 않는 여유를 준다 (칸이 좁아 44px 정사각은 못 넣는다) */
   .kill::after { content: ''; position: absolute; top: -4px; right: -4px; width: 38px; height: 38px; }

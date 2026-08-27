@@ -35,6 +35,12 @@ export interface UseMapboxOptions {
   projection?: 'globe' | 'mercator'
   /** fitBounds 상한. 좁은 띠에서는 낮춰 잡아야 마커가 뭉치지 않는다. */
   maxZoom?: number
+  /**
+   * 컨테이너 크기가 바뀔 때마다 다시 fit 한다.
+   * 개요용 지도(목록 상단 띠)는 늘 「전부 보이는」 상태가 맞다. 상세 지도처럼 사용자가
+   * 직접 확대·이동하는 화면에서는 켜면 안 된다 — 조작한 시야를 도로 되돌려 버린다.
+   */
+  refitOnResize?: boolean
 }
 
 /** AJAX 실패는 status 를 달고 온다. 라이브러리 타입 밖이라 경계에서 좁힌다. */
@@ -128,7 +134,11 @@ export function useMapbox(options: UseMapboxOptions) {
       })
 
       // 컨테이너가 리사이즈되면 Mapbox 가 캔버스를 다시 잡도록 알린다
-      observer = new ResizeObserver(() => m.resize())
+      observer = new ResizeObserver(() => {
+        m.resize()
+        // 크기가 바뀌면 예전 크기로 계산한 시야는 더 이상 「전부 보이는」 시야가 아니다
+        if (options.refitOnResize && status.value === 'ready') fit(false)
+      })
       observer.observe(el)
 
       m.on('error', (e) => {

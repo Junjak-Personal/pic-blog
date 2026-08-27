@@ -8,6 +8,7 @@
  *
  *   1. 터치는 롱프레스(400ms)로 시작한다 — 이동 임계만 쓰면 세로 스크롤과 싸운다.
  *      실제로 그룹을 넘나드는 이동이 스크롤에 계속 먹혔다. 마우스는 즉시 잡는다.
+ *      예외는 손잡이(data-handle)다 — 그건 끌라고 있는 것이라 누르는 즉시 시작한다.
  *   2. 손가락을 따라다니는 반투명 고스트 — 원본 칸만 흐려지면 뭘 끌고 있는지 안 보인다.
  *   3. 가장자리 자동 스크롤 — 이게 없으면 화면 밖 포인트로는 옮길 방법이 없다.
  *
@@ -150,10 +151,15 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
   }
 
   function onPointerDown(e: PointerEvent, source: DragFrom) {
-    // 왼쪽 버튼만. 칸 안의 버튼(삭제 · 메뉴)을 누른 것이면 드래그가 아니다 —
-    // setPointerCapture 를 걸면 그 뒤의 click 이 캡처한 요소로 재타깃돼 버튼이 죽는다.
     if (e.button !== 0) return
-    if ((e.target as HTMLElement).closest('button')) return
+
+    const target = e.target as HTMLElement
+    // 손잡이는 「끌라고 있는 것」이라 기다리지 않는다. 이걸 잡고도 1초를 기다려야 하면
+    // 고장난 것으로 읽힌다 — 실제로 손잡이가 아무 반응이 없다는 지적을 받았다.
+    const onHandle = !!target.closest('[data-handle]')
+    // 칸 안의 다른 버튼(삭제)을 누른 것이면 드래그가 아니다 — setPointerCapture 를 걸면
+    // 그 뒤의 click 이 캡처한 요소로 재타깃돼 버튼이 영영 안 눌린다.
+    if (!onHandle && target.closest('button')) return
 
     const tile = (e.currentTarget as HTMLElement)
     pointerType = e.pointerType
@@ -163,6 +169,10 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     lastY = e.clientY
     tile.setPointerCapture(e.pointerId)
 
+    if (onHandle) {
+      begin(tile, e.clientX, e.clientY)
+      return
+    }
     if (pointerType === 'touch') {
       timer = setTimeout(() => {
         timer = null

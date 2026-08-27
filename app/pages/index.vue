@@ -171,9 +171,9 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
               <span class="mono">{{ formatRange(post.started_at, post.ended_at) }}</span>
             </span>
-            <span class="mono stat">
-              {{ post.point_count }} 포인트 · {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km
-            </span>
+            <span class="mono stat">{{ post.point_count }} 포인트</span>
+            <!-- 좁은 화면에서는 접는다 — 한 줄에 다 넣으면 행이 접혀 높이가 들쭉날쭉해진다 -->
+            <span class="mono stat extra">· {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km</span>
           </div>
         </NuxtLink>
       </div>
@@ -358,6 +358,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 }
 .range { display: flex; align-items: center; gap: 6px; color: var(--faint); }
 .range .mono, .stat { font-size: 10.5px; color: var(--deep); }
+.stat.extra { margin-left: 4px; }
 
 
 /* 1c ① 기록 0 */
@@ -430,12 +431,49 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
   .wordmark { display: none; }
   .kicker, .sorts { display: none; }
-  .map-strip { height: 166px; }
-  .grid { grid-template-columns: 1fr; gap: 16px; padding: 16px 16px 16px; }
-  .cover { height: 150px; }
-  .body { padding: 13px 14px 11px; gap: 5px; }
-  .title { font-size: 20px; }
-  .summary { font-size: 13px; }
-  .foot { padding: 10px 14px; }
+  /* 지도가 이 화면의 주인공이다. 카드가 커서 지도가 눌려 보인다는 지적을 받아 띠를 키웠다 */
+  .map-strip { height: 246px; }
+
+  /*
+   * 카드를 「기록 관리 목록」과 같은 행으로 접는다.
+   * 커버를 크게 깔면 한 화면에 한 기록 반쯤만 들어가고, 그만큼 지도가 밀린다.
+   * 훑어보는 목록에서 세로는 비싸다 — 썸네일 · 제목 한 줄 · 메타 한 줄이면 충분하다.
+   */
+  .grid { grid-template-columns: 1fr; gap: 10px; padding: 12px 12px 16px; }
+  .card {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 12px;
+    align-items: center;
+  }
+  .card:hover { transform: none; }
+  .cover { grid-row: 1 / 3; width: 64px; height: 48px; border-radius: 6px; overflow: hidden; }
+  /* 64px 칸에 상자를 두르면 커버가 안 보인다 — 글자만 남긴다 */
+  .private { right: 2px; top: 2px; gap: 0; padding: 1px 3px; font-size: 8px; letter-spacing: 0; }
+  .private svg { display: none; }
+  .cover-empty { font-size: 8px; }
+
+  .body { grid-column: 2; padding: 0; gap: 0; min-width: 0; }
+  .title { font-size: 15px; line-height: 1.3; }
+  .summary { display: none; }
+
+  .foot {
+    grid-column: 2;
+    margin-top: 0;
+    padding: 0;
+    border-top: 0;
+    justify-content: flex-start;
+    gap: 5px;
+    min-width: 0;
+  }
+  .range .mono, .stat { font-size: 10px; }
+  .range svg { display: none; }
+  .stat.extra { display: none; }
+
+  /* 자리표시는 실제 행과 같은 상자를 쓴다 — 도착했을 때 레이아웃이 튀지 않게 */
+  .sk-cover { width: 64px; height: 48px; border-radius: 6px; }
+  .line.lg { height: 15px; }
 }
 </style>

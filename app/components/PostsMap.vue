@@ -2,7 +2,11 @@
 import MapSkeleton from '~/components/MapSkeleton.vue'
 /**
  * 아트보드 1a 상단 지도 띠 — 기록마다 마커 하나. 동선은 그리지 않는다.
- * 마커를 누르면 그 기록으로 간다.
+ * 마커를 누르면 그 기록으로 간다. 마커 위에는 그 기록의 커버 썸네일이 붙는다.
+ *
+ * 🔴 fitBounds 는 «좌표»만 본다. 마커는 bottom 앵커라 그 지점에서 위로
+ *    썸네일+번호+꼬리만큼 뻗는데, 그만큼 위쪽 패딩을 주지 않으면 지도 밖으로 잘린다 —
+ *    실제로 운영에서 기록 하나의 마커가 띠 위로 완전히 빠져나가 있었다.
  */
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -17,13 +21,18 @@ const container = ref<HTMLElement | null>(null)
 const located = computed(() => props.posts.filter((p): p is PostSummary & { center: [number, number] } => !!p.center))
 const bounds = computed(() => boundsOf(located.value.map((p) => ({ lng: p.center[0], lat: p.center[1] }))))
 
-const { map, status, retry } = useMapbox({
+/** 마커가 앵커에서 위로 뻗는 높이 — 썸네일 40 + 간격 4 + 번호 26 + 꼬리 7 */
+const MARKER_UP = 77
+
+const { map, status, retry, fit } = useMapbox({
   container,
   bounds,
-  // 236px 짜리 띠라 세로 여백을 크게 잡으면 fit 이 과하게 축소된다
-  padding: { top: 20, right: 48, bottom: 20, left: 48 },
+  // 위쪽은 마커 높이를 넘겨야 한다 (위 주석). 좌우는 띠가 낮아 과하게 잡으면 fit 이 축소된다.
+  padding: { top: MARKER_UP + 12, right: 52, bottom: 24, left: 52 },
   controlPosition: 'bottom-right',
   projection: 'mercator',
+  // 목록 지도는 늘 「전부 보이는」 상태가 맞다 — 띠 높이가 바뀌면 다시 맞춘다
+  refitOnResize: true,
 })
 
 let markers: mapboxgl.Marker[] = []
@@ -34,13 +43,32 @@ function render() {
   for (const mk of markers) mk.remove()
   markers = located.value.map((post, i) => {
     const el = document.createElement('a')
-    el.className = 'map-marker'
+    el.className = 'map-marker shown'
     el.setAttribute('href', `/p/${post.slug}`)
     el.setAttribute('aria-label', `${post.title} · 포인트 ${post.point_count}`)
-    el.innerHTML = `<span class="body">${i + 1}</span><span class="tail"></span>`
+
+    // 커버 썸네일. 상세 지도와 달리 «항상» 띄운다 — 여기는 고르는 화면이 아니라
+    // 훑는 화면이고, 기록당 마커가 하나뿐이라 겹칠 일이 적다.
+    if (post.cover_thumb) {
+      const img = document.createElement('img')
+      img.className = 'shot'
+      img.alt = ''
+      img.decoding = 'async'
+      img.src = post.cover_thumb
+      el.appendChild(img)
+    }
+
+    const body = document.createElement('span')
+    body.className = 'body'
+    body.textContent = String(i + 1)
+    const tail = document.createElement('span')
+    tail.className = 'tail'
+    el.append(body, tail)
     // 🔴 center 는 [lng, lat] 로 저장돼 있다 — 그대로 넘긴다
     return new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat(post.center).addTo(m)
   })
+  // 마커가 다시 그려졌다는 건 기록 목록이 바뀌었다는 뜻이다 — 시야도 새로 맞춘다
+  fit(false)
 }
 
 watch(status, (s) => {

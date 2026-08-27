@@ -68,6 +68,23 @@
 }
 /* 축소 모드에서도 활성 마커는 dot 이 되지 않으므로 썸네일이 그대로 남는다 */
 
+/*
+ * 목록 지도(1a)의 마커는 고르는 대상이 아니라 훑는 대상이라 썸네일이 «항상» 떠 있다.
+ * 상세 지도의 .on 보다 작다 — 기록이 늘면 겹치므로 알아볼 만한 최소로 잡는다.
+ * 크기를 바꾸면 PostsMap 의 MARKER_UP 도 같이 고쳐야 fitBounds 가 어긋나지 않는다.
+ */
+.map-marker.shown .shot {
+  display: block;
+  width: 56px;
+  height: 40px;
+  margin-bottom: 4px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1.5px solid #E8EBE9;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.55);
+  background: #131C18;
+}
+
 /* 활성 — 1.15× · #E8EBE9 배경 · #040408 텍스트 */
 .map-marker.on { z-index: 80; }
 .map-marker.on .body {

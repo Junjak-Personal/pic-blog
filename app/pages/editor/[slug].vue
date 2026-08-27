@@ -229,11 +229,22 @@ function resort() {
   })
 }
 
-/** 마지막 사진이 빠져나가 사라질 포인트 — 이름·태그·본문이 있으면 조용히 버리지 않는다 */
-function confirmVanish(d: PointDraft) {
-  if (!d.title.trim() && !d.body.trim() && !d.tags.length) return true
+/**
+ * 마지막 사진이 빠져나가면 포인트도 함께 사라진다 — 그 순간은 «언제나» 물어본다.
+ *
+ * 예전엔 이름·태그·본문이 있을 때만 물었는데, 아무것도 안 적힌 포인트라도 사라지는 건
+ * 사라지는 것이다. 사진 한 장을 옮기거나 지웠을 뿐인데 지도에서 포인트가 통째로
+ * 없어지면 그건 예고 없는 결과다 (설계문서 §8 — 조용한 실패 금지).
+ */
+function confirmVanish(d: PointDraft, how: '옮기면' | '지우면') {
+  const name = d.title.trim() || '이름 없는 포인트'
+  const lost: string[] = []
+  if (d.title.trim()) lost.push('이름')
+  if (d.tags.length) lost.push(`태그 ${d.tags.length}개`)
+  if (d.body.trim()) lost.push(`본문 ${d.body.trim().length}자`)
+  const tail = lost.length ? ` 적어둔 ${lost.join(' · ')} 도 함께 없어집니다.` : ''
   return window.confirm(
-    `「${d.title.trim() || '이름 없는 포인트'}」의 마지막 사진입니다. 포인트가 사라지면서 이름·태그·본문도 함께 없어집니다. 계속할까요?`,
+    `「${name}」의 마지막 사진입니다. ${how} 이 포인트가 지도에서 사라집니다.${tail} 계속할까요?`,
   )
 }
 
@@ -277,7 +288,7 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
 
   const dst = pointDrafts.value.find((d) => d.id === over.groupId)
   if (!dst) return
-  if (src.ids.length === 1 && !confirmVanish(src)) return
+  if (src.ids.length === 1 && !confirmVanish(src, '옮기면')) return
 
   src.ids.splice(at, 1)
   if (src.coverId === from.photoId) src.coverId = null
@@ -295,27 +306,13 @@ function onRemovePhoto(id: number) {
       errorMessage.value = '기록의 마지막 사진은 지울 수 없습니다'
       return
     }
-    if (!confirmVanish(d)) return
+    if (!confirmVanish(d, '지우면')) return
   }
   d.ids = d.ids.filter((x) => x !== id)
   if (d.coverId === id) d.coverId = null
   if (!removedPhotoIds.value.includes(id)) removedPhotoIds.value.push(id)
   if (!d.ids.length) dropDraft(d.id)
   resort()
-}
-
-/** 포인트 제거 — 확인은 보드가 이미 받았다. 안에 있던 사진도 함께 삭제 예약된다. */
-function onRemoveGroup(id: number) {
-  if (pointDrafts.value.length === 1) {
-    errorMessage.value = '기록의 마지막 포인트는 제거할 수 없습니다'
-    return
-  }
-  const d = pointDrafts.value.find((x) => x.id === id)
-  if (!d) return
-  for (const photoId of d.ids) {
-    if (!removedPhotoIds.value.includes(photoId)) removedPhotoIds.value.push(photoId)
-  }
-  dropDraft(id)
 }
 
 function onAddPhotos() {
@@ -612,7 +609,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           :cover-id="coverId"
           @drop="onBoardDrop"
           @remove-photo="onRemovePhoto"
-          @remove-group="onRemoveGroup"
           @add="onAddPhotos"
         />
       </div>
