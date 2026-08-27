@@ -62,7 +62,7 @@ export function skipNotice(files: readonly SkippedPhoto[]): string | null {
   const notes: string[] = []
   const over = countBy(files, 'over-limit')
   if (over) {
-    notes.push(`한 번에 ${MAX_PER_SELECTION}장까지 처리합니다 — 나머지 ${over}장은 저장한 뒤 「사진 추가」로 이어서 올리세요`)
+    notes.push(`한 번에 ${MAX_PER_SELECTION}장까지 처리합니다 — 나머지 ${over}장은 이 묶음을 올린 뒤 이어서 올리면 됩니다`)
   }
   const dup = countBy(files, 'already-in-post')
   if (dup) notes.push(`이미 올라간 사진 ${dup}장은 제외했습니다`)

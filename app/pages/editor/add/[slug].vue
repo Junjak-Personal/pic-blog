@@ -16,7 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const slug = computed(() => String(route.params.slug))
 
-const { data: post } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
+const { data: post, refresh } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
 const points = computed(() => post.value?.points ?? [])
 
 const flow = useAddPhotosFlow(slug, points)
@@ -28,16 +28,35 @@ function onPick(e: Event) {
   void flow.selectFiles([...input.files])
 }
 
+/**
+ * 올리고 «머문다» — 완료 화면에서 이어서 올릴 수 있게.
+ *
+ * 🔴 끝나자마자 기록을 새로 받는다. 다음 선택의 중복 검사(이미 올라간 사진)와 포인트
+ *    배정이 이 데이터를 보기 때문이다 — 옛 데이터로 이어 올리면 방금 올린 50장을
+ *    모르는 채 같은 사진을 또 올리고, 옛 포인트 중심으로 배정한다.
+ *    「이어서 추가」를 누른 «뒤»가 아니라 여기서 미리 받는 이유는 그 버튼이 파일
+ *    선택기를 여는 사용자 제스처라서다 — 사이에 await 를 끼우면 사파리가 막을 수 있다.
+ */
 async function confirm() {
   await flow.confirm()
-  if (flow.stage.value === 'done' && !flow.failed.value.length) await back()
+  if (flow.stage.value === 'done') await refresh()
 }
 
+/** 완료 화면 → 다음 묶음. 위 주석대로 여기서는 기다리는 것이 없다. */
+function continueAdd() {
+  flow.reset()
+  fileInput.value?.click()
+}
+
+/** 재시도가 다 붙으면 완료 화면으로 — 빠진 사진이 없으니 result 의 숫자가 그대로 맞다 */
 async function retry() {
   await flow.retryFailed()
-  if (!flow.failed.value.length) await back()
 }
 
+/**
+ * 못 올린 사진을 포기한다 — 여기서는 완료 화면으로 가지 않는다.
+ * result 는 「올리려 한 장수」라 버린 몫만큼 사실과 어긋난다. 편집으로 돌려보낸다.
+ */
 async function skip() {
   await flow.skipFailed()
   await back()
@@ -46,6 +65,9 @@ async function skip() {
 function back() {
   return router.push(`/editor/${slug.value}`)
 }
+
+/** 방금 마친 추가의 결과. flow.result 는 업로드가 끝난 그 순간의 값이다 (composable 의 🔴). */
+const done = computed(() => flow.result.value)
 
 useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 </script>
@@ -56,6 +78,13 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   </div>
 
   <div v-else class="page">
+    <!--
+      🔴 단계와 무관하게 늘 DOM 에 있어야 한다. 예전엔 idle 구간 안에 있어서
+         다른 단계에서는 ref 가 null 이었고, 「원본으로 다시 선택」·「이어서 추가」가
+         reset() 으로 단계만 바꿔놓고 정작 선택기를 못 열었다 (다시 그리는 건 다음 틱이다).
+    -->
+    <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
+
     <header class="topbar">
       <div class="left">
         <AppBack :fallback="`/editor/${slug}`" label="편집으로" />
@@ -66,7 +95,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
         </span>
         <span class="mono ctx">
           {{ post.title }}
-          <template v-if="flow.scanned.value.length"> · {{ flow.scanned.value.length }}장 선택</template>
+          <template v-if="flow.scanned.value.length && flow.stage.value !== 'done'">
+            · {{ flow.scanned.value.length }}장 선택
+          </template>
         </span>
       </div>
       <div class="right">
@@ -109,7 +140,6 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       <h3>추가할 사진을 선택하세요</h3>
       <p>기존 포인트 중심에서 반경 안이면 그 포인트에 합류하고, 밖이면 새 포인트가 만들어집니다.</p>
       <button type="button" class="btn primary mono big" @click="fileInput?.click()">사진 선택</button>
-      <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
       <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
       <p class="mono pick-hint">
         한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
@@ -235,6 +265,37 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       </aside>
     </div>
 
+    <!--
+      다 올렸다 — 편집으로 되돌아가지 않고 여기 머문다. 50장 상한 때문에 한 기록을
+      채우려면 여러 번 올려야 하는데, 매번 편집 화면을 거쳐 「사진 추가」를 다시 찾는 건
+      같은 일을 네 번 하는 것이다.
+    -->
+    <section v-else-if="flow.stage.value === 'done' && !flow.failed.value.length && done" class="empty">
+      <span class="tick">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
+      </span>
+      <h3>사진 {{ done.photos }}장을 추가했습니다</h3>
+      <p class="mono done-detail">
+        <template v-if="done.joined">기존 포인트에 {{ done.joined }}장 합류</template>
+        <template v-if="done.joined && done.created"> · </template>
+        <template v-if="done.created">새 포인트 {{ done.created }}개</template>
+        <template v-if="!done.joined && !done.created">포인트 구성은 그대로입니다</template>
+      </p>
+
+      <!-- 상한에 걸려 남은 몫이 있으면 그 숫자를 말한다 — 「이어서」가 왜 있는지가 여기서 설명된다 -->
+      <p v-if="done.leftover" class="mono leftover">
+        한 번에 {{ MAX_PER_SELECTION }}장까지 처리합니다 — 나머지 {{ done.leftover }}장이 남아 있습니다
+      </p>
+
+      <div class="actions">
+        <button type="button" class="btn ghost mono" @click="back">편집으로</button>
+        <button type="button" class="btn primary mono" data-testid="add-continue" @click="continueAdd">
+          이어서 추가
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+        </button>
+      </div>
+    </section>
+
     <!-- 업로드 진행 · 부분 실패 -->
     <section v-else class="empty">
       <h3 v-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
@@ -315,6 +376,28 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .btn.primary { background: var(--mid); color: var(--s0); }
 .btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
 .btn.big { padding: 12px 20px; font-size: 12px; }
+
+/* 완료 화면 */
+.tick {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(146, 178, 169, 0.14);
+  border: 1px solid rgba(146, 178, 169, 0.4);
+  color: var(--acc);
+}
+.done-detail { font-size: 12px; color: var(--deep); }
+.leftover {
+  font-size: 11.5px;
+  color: var(--route);
+  border: 1px solid rgba(214, 178, 106, 0.34);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  max-width: 460px;
+  line-height: 1.7;
+}
 
 .preview { flex: 1; display: grid; grid-template-columns: 1fr 348px 340px; min-height: 0; }
 .map-area { position: relative; min-width: 0; }
@@ -553,6 +636,10 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     color: var(--ink);
   }
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
+
+  /* 완료·실패 화면의 버튼은 여기서만 누른다 (하단 CTA 가 없는 단계다) — 엄지 크기로 */
+  .actions { width: 100%; max-width: 340px; }
+  .actions .btn { flex: 1; min-height: 44px; font-size: 12.5px; }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */
   /* 격자를 풀고 이 칸 하나가 굴러가게 둔다 (문서는 스크롤하지 않는다) */
