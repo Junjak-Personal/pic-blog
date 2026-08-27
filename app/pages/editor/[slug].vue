@@ -5,6 +5,7 @@ import PointGroupBoard, { type BoardGroup } from '~/components/PointGroupBoard.v
 import OverflowMenu from '~/components/OverflowMenu.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import BusyOverlay from '~/components/BusyOverlay.vue'
+import CurrencySelect from '~/components/CurrencySelect.vue'
 /**
  * 포스트 편집 — 세 페이즈.
  *   1 기본 정보    타이틀 · 요약 · 공개 · 기간 · 포인트 범위
@@ -25,7 +26,7 @@ import type { Photo, Point, PostDetail } from '#shared/types/db'
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
 import {
-  cleanExpenses, cleanLinks, CURRENCIES, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
+  cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
   MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
   type CurrencyCode, type PointExpense, type PointLink,
 } from '#shared/utils/extras'
@@ -1003,14 +1004,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                     :aria-label="`${i + 1}번 금액`"
                     :data-testid="`editor-expense-amount-${i}`"
                   >
-                  <select
+                  <CurrencySelect
                     v-model="e.currency"
-                    class="input mini cur mono"
-                    :aria-label="`${i + 1}번 화폐`"
-                    @change="rememberCurrency(e.currency)"
-                  >
-                    <option v-for="c in CURRENCIES" :key="c.code" :value="c.code">{{ c.label }}</option>
-                  </select>
+                    :label="`${i + 1}번 화폐`"
+                    @update:model-value="rememberCurrency"
+                  />
                   <button
                     type="button"
                     class="xkill"
@@ -1508,12 +1506,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 352px 칸에 [품목][금액][화폐][✕] 가 한 줄로 들어가야 한다 — 합이 여백을 넘으면 ✕ 만 다음 줄로 떨어진다 */
 .xrow .input { flex: 1 1 84px; min-width: 0; }
 .xrow .input.amt { flex: 0 1 68px; text-align: right; }
-/*
- * 화폐 고르개는 네이티브 select 를 그대로 쓴다 (직접 그리면 목록 팝업까지 만들어야 한다).
- * color-scheme 은 이 요소에만 건다 — 이게 없으면 펼친 목록이 흰 바탕으로 뜬다.
- * :root 에 걸면 날짜 입력·스크롤바까지 앱 전체가 한꺼번에 바뀌므로 여기서 멈춘다.
- */
-.xrow .input.cur { flex: 0 0 84px; color-scheme: dark; }
 /* 숫자로 안 읽히는 금액 — 저장하면 0 이 되므로 미리 붉게 알린다 */
 .input.bad { border-color: rgba(255, 128, 128, 0.55); color: var(--danger); }
 
@@ -1623,7 +1615,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .xrow { gap: 8px; }
   .input.mini { padding: 10px 11px; }
   .xrow .input.amt { flex: 1 1 96px; }
-  .xrow .input.cur { flex: 1 1 104px; }
   .xkill { width: 40px; height: 40px; }
   .minibtn { min-height: 40px; font-size: 12px; padding: 0 12px; }
   .xnote { font-size: 11px; }
