@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { vSk } from '~/utils/img'
+import { vTip } from '~/utils/tip'
 import AppBack from '~/components/AppBack.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
@@ -78,7 +79,7 @@ async function logout() {
         </span>
 
         <div class="main">
-          <h3 class="title">
+          <h3 v-tip class="title">
             <!--
               행 전체가 상세로 가는 링크다. ::after 로 행을 덮되 제목이 링크의 이름이 되어
               스크린리더가 「무엇으로 가는 링크인지」 읽을 수 있다.
@@ -308,16 +309,13 @@ async function logout() {
 
   /* 커버 | 본문 | 연필 세 칸을 한 줄에 — 64+44+간격 을 빼고 남는 폭이 제목 몫이다 */
   .row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; align-items: start; }
-  /* 제목 칸이 186px 밖에 안 되어 한 줄 ellipsis 로는 「2026.04.14 – 04.15 …」 가 된다.
-     목록에서 세로는 싸고 가로는 비싸다 — 두 줄까지 흐르게 두고 그 다음에 자른다. */
-  .title {
-    font-size: 15px;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
+  /*
+   * 한 줄로 자른다. 예전엔 두 줄까지 흘려보냈는데 — 제목 칸이 186px 뿐이라 잘리면
+   * 「2026.04.14 – 04.15 …」 가 된다는 이유였다 — 제목이 긴 행만 81px 로 자라
+   * 목록이 들쭉날쭉해졌다. 이제 잘린 전체를 v-tip 이 보여주므로(꾹 누르기)
+   * 그 이유가 사라졌다. 행 높이가 고른 쪽이 목록으로서 더 낫다.
+   */
+  .title { font-size: 15px; }
   .summary { display: none; }
   .meta { font-size: 10px; line-height: 1.5; }
   .edit { align-self: center; width: 44px; height: 44px; }
