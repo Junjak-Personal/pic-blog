@@ -702,7 +702,9 @@ useHead(() => ({
   /* 넓은 화면 몫은 감추고, 판 안의 것만 남긴다 */
   .edit-link.wide-only { display: none; }
   .edit-link.narrow-only { display: flex; flex-basis: 100%; justify-content: center; min-height: 40px; margin-top: 2px; }
-  .stat svg { display: none; }
+  /* 아이콘은 좁은 화면에도 남긴다 — 예전엔 여기서 감췄는데, 그러면 「소비 금액」만
+     데스크탑에서 동전 아이콘을 달고 모바일에서는 글자만 남아 같은 칸이 두 모습이 됐다.
+     판은 폭이 넉넉하고 줄바꿈도 되므로 감출 이유가 없다. */
 
   .stage { grid-template-columns: 1fr; grid-template-rows: 46dvh 1fr; }
   .rail { min-height: 0; }
