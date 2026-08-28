@@ -235,7 +235,14 @@ useHead(() => ({
           모바일 롱프레스 툴팁을 안 쓰는 이유: 텍스트 위 롱프레스는 iOS 선택·확대경과 겹친다.
         -->
         <h1 class="title-h">
-          <button type="button" class="title" @click="titleDlg?.showModal()">{{ post.title }}</button>
+          <button type="button" class="title" @click="titleDlg?.showModal()">
+            <!--
+              🔴 자르는 것은 이 span 이다. button 에 text-overflow: ellipsis 를 걸면 «안 먹는다» —
+                 버튼 내용은 익명 상자라 말줄임표가 안 붙고, 글자가 양쪽으로 넘쳐 앞이 잘린다.
+                 (390px 에서 실측: 자연 폭 304 · 상자 265 인데 「…」 없이 앞머리가 사라졌다.)
+            -->
+            <span class="title-text">{{ post.title }}</span>
+          </button>
         </h1>
       </div>
 
@@ -396,15 +403,16 @@ useHead(() => ({
    inline-block 인 버튼을 h1 이 직접 자르면 말줄임표 없이 잘리기만 한다 */
 .title-h { display: flex; min-width: 0; }
 .title {
+  display: flex;
+  min-width: 0;
   font-size: 18px;
   letter-spacing: -0.02em;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-align: left;
   cursor: pointer;
 }
+/* 자르기는 버튼이 아니라 여기서 한다 (위 마크업 주석 참고) */
+.title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title:hover { color: var(--mid); }
 
 /* 제목 전체 판 — 네이티브 <dialog> (top layer · ::backdrop · ESC 는 브라우저 몫) */
@@ -538,6 +546,8 @@ useHead(() => ({
     right: 0;
     z-index: 6;
     flex-wrap: wrap;
+    /* 데스크탑 상단바에서는 오른쪽으로 몰지만, 여기서는 판이 화면 폭을 다 쓰므로 왼쪽부터 읽는다 */
+    justify-content: flex-start;
     gap: 8px 14px;
     padding: 10px 14px;
     background: var(--s0);
