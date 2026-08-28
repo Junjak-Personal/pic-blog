@@ -326,7 +326,7 @@ function confirmRecluster() {
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .btn { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 15px; border-radius: var(--radius); font-size: 12px; cursor: pointer; }
 .btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.danger { background: var(--danger); color: var(--s0); font-weight: 600; }
+.btn.danger { background: var(--danger-fill); color: var(--ink); font-weight: 600; }
 
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }

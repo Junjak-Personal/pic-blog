@@ -1138,7 +1138,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   :key="ph.id"
                   type="button"
                   class="pick phototile"
-                  :class="{ on: ph.id === activeThumbId }"
                   :aria-label="thumbPicking ? `${i + 1}번 사진을 대표로` : `${i + 1}번 사진 크게 보기`"
                   :data-testid="`editor-pick-${i}`"
                   @click="onPickClick(i, ph.id)"
@@ -1738,11 +1737,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 9px;
   align-content: start;
 }
-/* 상자의 겉모습은 .phototile 이 준다 — PhotoTile.vue (2단계 .tile 과 같은 것) */
+/* 겉모습(상자 · 사진 · 번호 · 배지 · 시각 줄)은 .phototile 과 PhotoTile 이 준다.
+   🔴 대표 사진을 감싸던 링은 뺐다. 2단계에는 없고 여기만 있어서 같은 칸이 두 단계에서
+      다르게 보였다 — 어느 것이 대표인지는 「대표」 배지가 이미 말한다. */
 .pick { display: block; padding: 0; border: 0; cursor: pointer; }
-/* 사진·번호·배지·시각 줄은 PhotoTile 이 그린다 — 여기 있는 것은 감싸는 상자뿐이다 */
-/* 테두리가 아니라 안쪽 그림자다 — border 를 켜면 고른 순간 칸 크기가 2px 흔들린다 */
-.pick.on { box-shadow: inset 0 0 0 2px var(--acc); }
 /* 설명 좌 · 버튼 우, 양 끝으로. 좁아지면 버튼이 아래로 내려간다 */
 .pick-foot { flex: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
 .pick-note { min-width: 0; font-size: 10px; color: var(--faint); }
@@ -1789,7 +1787,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   color: var(--deep);
   cursor: pointer;
 }
-.chip-x:hover { background: var(--danger); border-color: var(--danger); color: var(--s0); }
+.chip-x:hover { background: var(--danger-fill); border-color: var(--danger-fill); color: var(--ink); }
 /* 터치 타깃 44px — 칩 모양은 그대로 두고 보이지 않는 판만 넓힌다 */
 @media (max-width: 900px) {
   .chip-x { position: relative; }

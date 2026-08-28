@@ -36,13 +36,12 @@ const props = defineProps<{
   >
   <span class="mono ord">{{ String(props.num).padStart(2, '0') }}</span>
   <!--
-    기록 커버(목록 카드에 뜨는 한 장)와 포인트 대표(지도 마커)는 다른 값이라 한 사진에
-    둘 다 붙을 수 있다 — 겹치지 않게 한 줄로 늘어놓는다.
+    기록 커버(목록 카드에 뜨는 한 장)와 포인트 대표(지도 마커)는 «다른 값»이라 한 사진에
+    둘 다 붙을 수 있다. 한 줄로 붙여 놓으면 두 꼬리표가 한 덩어리로 읽히므로 양 끝으로
+    갈라 놓는다 — 왼쪽이 대표(이 포인트), 오른쪽이 커버(이 기록).
   -->
-  <span class="badges">
-    <span v-if="props.rep" class="mono rep">대표</span>
-    <span v-if="props.cover" class="mono cover">커버</span>
-  </span>
+  <span v-if="props.rep" class="mono rep">대표</span>
+  <span v-if="props.cover" class="mono cover">커버</span>
   <!-- 오른쪽 위 모서리 — 2단계의 삭제(✕). 3단계는 지울 수 없어 비어 있다. -->
   <slot name="corner" />
   <span class="bar">
@@ -79,13 +78,22 @@ const props = defineProps<{
 }
 
 /*
- * 배지 줄 — 사진 «아래쪽»에 붙인다. 위에 두면 번호(.ord)와 삭제(✕) 사이에 끼어
- * 좁은 화면(3열)에서 「커버」가 ✕ 에 잘렸다. 아래는 시각 줄(22px) 위라 비어 있다.
+ * 배지 — 사진 «아래쪽»에 붙인다. 위에 두면 번호(.ord)와 삭제(✕) 사이에 끼어
+ * 좁은 화면(3열)에서 「커버」가 ✕ 에 잘렸다. 아래는 시각 줄 위라 비어 있다.
  */
-.badges { position: absolute; left: 4px; bottom: 26px; display: flex; gap: 3px; }
-.rep, .cover { padding: 1px 5px; border-radius: 4px; font-size: 9px; }
-.rep { background: rgba(146, 178, 169, 0.9); color: var(--s0); }
-.cover { background: var(--ink); color: var(--s0); }
+.rep, .cover {
+  position: absolute;
+  bottom: calc(var(--tile-bar-h) + 4px);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+}
+/* 이 포인트의 대표 — 왼쪽.
+   🔴 예전엔 밝은 연두 바탕에 검정 글자였는데 사진 위에서 글자가 안 읽혔다.
+      바탕을 어둡게 내리고 글자를 밝게 올린다 (커버와 명암이 반대라 구분도 쉬워진다). */
+.rep { left: 4px; background: rgba(20, 51, 43, 0.94); color: var(--ink); }
+/* 이 기록의 커버 — 오른쪽. 한 장뿐이라 흰 알약으로 더 세게 말한다. */
+.cover { right: 4px; background: var(--ink); color: var(--s0); }
 
 /* 사진 + 이 줄 = 칸 높이. 두 단계가 같은 규격이라야 오가며 봐도 안 흔들린다. */
 .bar {
@@ -101,7 +109,7 @@ const props = defineProps<{
 
 <!--
   감싸는 상자의 «겉모습»은 여기가 정한다. 프래그먼트라 상자 자체는 부모가 만들지만,
-  .ord · .badges 가 absolute 라 position: relative 가 빠지면 배지가 조용히 화면 어딘가로
+  .ord · .rep · .cover 가 absolute 라 position: relative 가 빠지면 배지가 조용히 화면 어딘가로
   달아난다 — 그 계약을 부모 둘의 scoped CSS 에 나눠 적지 않는다.
   전역인 이유는 이 클래스가 «부모의» 요소에 붙기 때문이다 (scoped 는 닿지 않는다).
 -->

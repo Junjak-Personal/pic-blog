@@ -607,7 +607,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   color: var(--mid);
   cursor: pointer;
 }
-.kill:hover { background: var(--danger); color: #fff; }
+/* 흰 글자를 밝은 빨강에 얹으면 대비 2.2:1 이다 — 면을 어둡게 한다 (tokens.css) */
+.kill:hover { background: var(--danger-fill); color: var(--ink); }
 
 .handle {
   display: grid;

@@ -90,7 +90,8 @@ const { pending, open } = useConfirmState()
 }
 .btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
 .btn.primary { background: var(--mid); color: var(--s0); font-weight: 600; }
-.btn.danger { background: var(--danger); color: var(--s0); font-weight: 600; }
+/* 밝은 빨강 위의 검정은 잘 안 읽힌다 — 면은 어둡게, 글자는 밝게 (tokens.css) */
+.btn.danger { background: var(--danger-fill); color: var(--ink); font-weight: 600; }
 
 @media (max-width: 900px) {
   /* 엄지로 누른다 — 두 버튼이 폭을 나눠 갖고 44px */

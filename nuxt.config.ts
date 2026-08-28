@@ -52,7 +52,20 @@ export default defineNuxtConfig({
   runtimeConfig: {
     dataDir: './data',
     adminPasswordHash: '',
-    session: { name: 'pic-blog-session', password: '' },
+    session: {
+      name: 'pic-blog-session',
+      password: '',
+      /*
+       * 🔴 이 값이 없으면 쿠키에 Expires 가 안 붙어 «브라우저 세션 쿠키»가 된다.
+       *    봉인 자체는 ttl 0(무기한)이라 서버는 멀쩡하다고 보는 토큰을 브라우저가
+       *    버리고 있었다 — 폰에서 홈화면 앱이 메모리에서 내려갈 때마다 재로그인.
+       *
+       * h3 는 이 값 하나로 쿠키 Expires 와 봉인 ttl 을 «둘 다» 건다. 만료는 로그인
+       * 시각(session.createdAt) 기준 «절대» 시각이고 갱신이 없다 — 쓰는 중이어도
+       * 30일 뒤에 한 번 끊긴다. 쓰기 경로의 유일한 인증이라 무기한으로 두지 않는다.
+       */
+      maxAge: 60 * 60 * 24 * 30,
+    },
     public: {
       /*
        * 빌드마다 바뀌는 표식. 실행 중인 앱이 자기 값과 서버의 값을 비교해
