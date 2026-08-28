@@ -38,7 +38,6 @@ import {
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
 import { askConfirm } from '~/composables/useConfirm'
 import { skipNotice, summarizeSkipped } from '~/utils/exif'
-import { pickPhotos, type PhotoSource } from '~/utils/native'
 import { usePickMode } from '~/composables/usePickMode'
 
 /**
@@ -452,7 +451,10 @@ const pointAddFlow = useAddPhotosFlow(slug, computed(() => post.value?.points ??
 })
 const pointAddInput = useTemplateRef<HTMLInputElement>('pointAddInput')
 const pointAddBusy = computed(() =>
-  pointAddFlow.stage.value === 'scanning' || pointAddFlow.stage.value === 'uploading',
+  // loading = 껍데기가 사진첩에서 원본을 꺼내는 구간. 여기도 바쁜 상태다.
+  pointAddFlow.stage.value === 'loading'
+  || pointAddFlow.stage.value === 'scanning'
+  || pointAddFlow.stage.value === 'uploading',
 )
 
 /**
@@ -477,21 +479,23 @@ function onAddToPoint(groupId: number) {
   const d = pointDrafts.value.find((x) => x.id === groupId)
   if (!d || d.id < 0 || pointAddBlocked.value) return
   addTargetId.value = groupId
-  void onPointAdd(pickPhotos(pointAddInput.value, MAX_PER_POINT))
+  errorMessage.value = null
+  // flow.pick 이 고르기와 검사를 이어서 한다 — 그 안에서 진행률도 흐른다
+  void onPointAdd(pointAddFlow.pick(pointAddInput.value))
 }
 
-async function onPointAdd(picking: Promise<PhotoSource[]>) {
-  const sources = await picking
-  if (!sources.length) return
+async function onPointAdd(picking: Promise<void>) {
+  await picking
 
   const targetId = addTargetId.value
   const d = targetId === null ? null : pointDrafts.value.find((x) => x.id === targetId)
   if (!d) return
 
-  errorMessage.value = null
-  await pointAddFlow.selectFiles(sources)
   if (!pointAddFlow.scanned.value.length) {
-    errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
+    // 아무것도 안 고르고 닫았으면 조용히 끝낸다 — 고른 게 있었는데 전부 걸러졌을 때만 사유를 말한다
+    if (pointAddFlow.skipped.value.length) {
+      errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
+    }
     pointAddFlow.reset()
     return
   }

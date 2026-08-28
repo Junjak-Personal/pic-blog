@@ -12,7 +12,6 @@ import RadiusSlider from '~/components/RadiusSlider.vue'
  */
 import { formatDate, formatGap, formatTime, localIso } from '#shared/utils/format'
 import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
-import { pickPhotos } from '~/utils/native'
 
 definePageMeta({ layout: 'editor' })
 
@@ -31,7 +30,7 @@ const steps = [
 const currentStep = computed(() => {
   if (flow.stage.value === 'preview') return 2
   if (flow.stage.value === 'uploading' || flow.stage.value === 'done') return 3
-  return 1 // idle · scanning · picked — 전부 「고르는 중」이다
+  return 1 // idle · loading · scanning · picked — 전부 「고르는 중」이다
 })
 
 /** 시도가 아니라 실제 안착한 장수 기준. 2장 실패면 100%가 아니라 98.x% 로 보인다. */
@@ -46,29 +45,33 @@ function formatBytes(bytes: number) {
     : `${Math.round(bytes / 1024)} KB`
 }
 
-/** 껍데기면 PhotoKit, 아니면 파일 입력 — pickPhotos 가 가른다 */
-async function pick() {
-  const sources = await pickPhotos(fileInput.value, MAX_PER_SELECTION)
-  if (sources.length) await flow.selectFiles(sources)
+/** 껍데기면 PhotoKit, 아니면 파일 입력 — flow.pick 이 가르고 진행률까지 맡는다 */
+function pick() {
+  void flow.pick(fileInput.value)
 }
 
+/*
+ * 🔴 push 가 아니라 replace 다. 업로드가 끝나면 이 화면(/editor/new)은 «되돌아갈 곳»이
+ *    아니다 — 기록은 이미 만들어졌고, 여기로 돌아오면 빈 업로드 화면이 뜬다.
+ *    편집 화면에서 뒤로 가면 기록 목록으로 가야 한다.
+ */
 async function confirm() {
   await flow.confirm()
   if (flow.stage.value === 'done' && !flow.failed.value.length && flow.createdSlug.value) {
-    await router.push(`/editor/${flow.createdSlug.value}`)
+    await router.replace(`/editor/${flow.createdSlug.value}`)
   }
 }
 
 async function retry() {
   await flow.retryFailed()
   if (!flow.failed.value.length && flow.createdSlug.value) {
-    await router.push(`/editor/${flow.createdSlug.value}`)
+    await router.replace(`/editor/${flow.createdSlug.value}`)
   }
 }
 
 async function skip() {
   await flow.skipFailed()
-  if (flow.createdSlug.value) await router.push(`/editor/${flow.createdSlug.value}`)
+  if (flow.createdSlug.value) await router.replace(`/editor/${flow.createdSlug.value}`)
 }
 </script>
 
@@ -163,7 +166,25 @@ async function skip() {
       </p>
     </section>
 
-    <!-- 1단계 (계속) — 검사 진행. 몇 초짜리라 단계로 세지 않는다 -->
+    <!--
+      1단계 (계속) — 두 구간 다 진행률을 그린다.
+      가져오기는 껍데기가 사진첩에서 원본을 꺼내는 시간이고(500장이면 여러 초),
+      검사는 그 원본의 EXIF 를 읽는 시간이다. 둘 다 조용하면 멈춘 것처럼 보인다.
+    -->
+    <section v-else-if="flow.stage.value === 'loading'" class="empty">
+      <h3>사진을 가져오는 중</h3>
+      <p class="mono scan-count">
+        {{ flow.loadProgress.value.done }} / {{ flow.loadProgress.value.total }}
+      </p>
+      <div class="bar">
+        <span
+          class="bar-fill"
+          :style="{ width: `${(flow.loadProgress.value.done / Math.max(1, flow.loadProgress.value.total)) * 100}%` }"
+        />
+      </div>
+      <p class="hint mono">사진첩에서 원본을 꺼내고 있습니다</p>
+    </section>
+
     <section v-else-if="flow.stage.value === 'scanning'" class="empty">
       <h3>사진을 검사하는 중</h3>
       <p class="mono scan-count">

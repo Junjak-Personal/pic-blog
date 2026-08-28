@@ -75,11 +75,12 @@ useHead({ title: '기록 관리 — pic·blog' })
         <div class="main">
           <h3 v-tip class="title">
             <!--
-              행 전체가 상세로 가는 링크다. ::after 로 행을 덮되 제목이 링크의 이름이 되어
-              스크린리더가 「무엇으로 가는 링크인지」 읽을 수 있다.
-              편집 아이콘은 그 위에 떠 있다 (.edit 의 z-index).
+              행 전체가 «편집»으로 가는 링크다. 여기는 기록 «관리» 화면이라 행을 누르는
+              기본 행동이 편집이어야 한다 — 보기는 우측 아이콘이 맡는다.
+              ::after 로 행을 덮되 제목이 링크의 이름이 되어 스크린리더가 「무엇으로 가는
+              링크인지」 읽을 수 있다. 보기 아이콘은 그 위에 떠 있다 (.view 의 z-index).
             -->
-            <NuxtLink :to="`/p/${post.slug}`" class="stretch">{{ post.title }}</NuxtLink>
+            <NuxtLink :to="`/editor/${post.slug}`" class="stretch">{{ post.title }}</NuxtLink>
           </h3>
           <p v-if="post.summary" class="summary">{{ post.summary }}</p>
           <!-- 날짜 + 포인트 수만. 장수·km 까지 넣으면 좁은 화면에서 이 줄이 두 줄로 접혀
@@ -92,8 +93,8 @@ useHead({ title: '기록 관리 — pic·blog' })
         </div>
 
 
-        <NuxtLink :to="`/editor/${post.slug}`" class="edit" :aria-label="`${post.title} 편집`">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+        <NuxtLink :to="`/p/${post.slug}`" class="view" :aria-label="`${post.title} 보기`">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>
         </NuxtLink>
       </li>
     </ul>
@@ -234,12 +235,12 @@ useHead({ title: '기록 관리 — pic·blog' })
   color: var(--mid);
 }
 
-/* 행 전체를 덮는 투명 링크. 위에 떠야 하는 것(.edit)만 z-index 로 빠져나온다. */
+/* 행 전체를 덮는 투명 링크. 위에 떠야 하는 것(.view)만 z-index 로 빠져나온다. */
 .stretch { color: inherit; }
 .stretch::after { content: ''; position: absolute; inset: 0; z-index: 1; }
 
-/* 우측 끝 편집 — 아이콘 전용이라 상자를 두르지 않는다 */
-.edit {
+/* 우측 끝 보기 — 아이콘 전용이라 상자를 두르지 않는다 */
+.view {
   position: relative;
   z-index: 2;
   display: grid;
@@ -250,8 +251,8 @@ useHead({ title: '기록 관리 — pic·blog' })
   border-radius: var(--radius);
   color: var(--deep);
 }
-.edit:hover { color: var(--ink); background: rgb(var(--acc-rgb) / 0.12); }
-.edit:active { background: rgb(var(--acc-rgb) / 0.18); }
+.view:hover { color: var(--ink); background: rgb(var(--acc-rgb) / 0.12); }
+.view:active { background: rgb(var(--acc-rgb) / 0.18); }
 
 /* 아트보드 1c ① 기록 0 */
 .empty {
@@ -309,7 +310,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   .title { font-size: var(--fs-xl); }
   .summary { display: none; }
   .meta { font-size: var(--fs-2xs); line-height: 1.5; }
-  .edit { align-self: center; width: 44px; height: 44px; }
+  .view { align-self: center; width: 44px; height: 44px; }
   /*
    * 커버 높이 = 연필 버튼 높이(44px). 행 높이는 어차피 그 터치 타깃이 정하므로
    * 여기에 맞추면 위아래 여백이 같아진다 — 48px 이던 예전 값은 7px 길어서

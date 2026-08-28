@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import 'bridge.dart';
+import 'picker_theme.dart';
 
 /// 웹앱이 사는 곳. 이 껍데기는 «사진 고르기»만 가져가고 나머지는 전부 웹이 한다.
 ///
@@ -14,9 +16,6 @@ const kSite = String.fromEnvironment(
   'SITE',
   defaultValue: 'https://pic-blog.jun-devlog.win',
 );
-
-/// 사이트의 --s0. 상태바 뒤가 이 색이어야 웹뷰와 이어져 보인다.
-const kGround = Color(0xFF040408);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +75,18 @@ class _ShellState extends State<Shell> {
         onWebResourceError: (e) => debugPrint('[web] error ${e.errorCode} ${e.description}'),
       ))
       ..loadRequest(Uri.parse(kSite));
+
+    /*
+     * 가장자리 스와이프로 뒤로 가는 것을 끈다.
+     *
+     * 웹앱은 한 화면 안에서 단계를 오가고(사진 선택 → 포인트 경계 → 업로드) 편집 화면은
+     * 저장 안 된 초안을 들고 있다. 스와이프 한 번에 그게 통째로 날아가면 안 된다.
+     * 되돌아갈 길은 화면 좌측 상단의 ← 가 맡는다 — 그쪽은 단계를 알고 움직인다.
+     */
+    final platform = _web.platform;
+    if (platform is WebKitWebViewController) {
+      platform.setAllowsBackForwardNavigationGestures(false);
+    }
   }
 
   @override

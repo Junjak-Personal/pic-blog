@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 // photo_manager 의 것들은 wechat_assets_picker 가 다시 내보낸다
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
+import 'album_grid.dart';
+import 'picker_theme.dart';
+
 /// 페이지가 부르는 이름. 웹쪽 분기가 이 한 이름만 안다.
 const kChannel = 'PicBlogNative';
 
@@ -49,11 +52,16 @@ String bootstrapJs() => '''
   };
   window.picblogNative = {
     version: 1,
+    /* 고르고 나서 원본을 꺼내는 동안 네이티브가 부른다. 페이지가 채워 넣는다. */
+    onPickProgress: null,
     headerBytes: $kHeaderBytes,
     /* 고른 사진의 «목록»을 준다 — 바이트가 아니다 (위 🔴) */
     pick: (limit) => send('pick', { limit }).then((m) => m.photos),
-    /* limit 를 주면 앞부분만. 검사에는 헤더만 있으면 된다. */
-    readBlob: (token, limit) => send('read', { token, limit }).then((m) => toBlob(m.b64, m.type)),
+    /*
+     * limit  — 원본의 앞부분만 (검사: EXIF 는 헤더면 충분하다)
+     * render — PhotoKit 이 그 크기로 그린 JPEG (변환: 원본을 통째로 넘기면 브리지가 비싸다)
+     */
+    readBlob: (token, opts) => send('read', { token, ...(opts || {}) }).then((m) => toBlob(m.b64, m.type)),
     /* 다 쓴 사본을 지운다 — originFile 은 앱 캐시에 복사본을 남긴다 */
     release: (tokens) => send('release', { tokens }).then(() => undefined),
   };
@@ -68,9 +76,13 @@ class NativeBridge {
 
   final _rand = Random.secure();
 
-  /// 토큰 → 원본 사본. 토큰은 순번이 아니라 난수다 — 페이지에 노출되는 손잡이이므로
+  /// 토큰 → 고른 사진. 토큰은 순번이 아니라 난수다 — 페이지에 노출되는 손잡이이므로
   /// 세면 다른 사진을 짚을 수 있게 두지 않는다.
-  final Map<String, File> _files = {};
+  ///
+  /// 원본 사본(file)과 에셋(asset)을 둘 다 들고 있다. 검사는 «원본 헤더»에서 좌표·시각을
+  /// 읽어야 하고(렌더된 JPEG 은 그 정보를 잃을 수 있다), 변환은 PhotoKit 이 «렌더한»
+  /// 작은 것을 받아야 브리지가 싸다.
+  final Map<String, ({File file, AssetEntity asset})> _files = {};
 
   String _token() =>
       base64Url.encode(List<int>.generate(16, (_) => _rand.nextInt(256))).replaceAll('=', '');
@@ -111,39 +123,102 @@ class NativeBridge {
     if (!permission.hasAccess) throw Exception('사진 접근이 허용되지 않았습니다');
     if (!context.mounted) return const [];
 
-    final picked = await AssetPicker.pickAssets(
+    /*
+     * pickAssets 대신 델리게이트를 직접 넘긴다 — 앨범 고르개만 그리드로 갈아끼우기
+     * 위해서다 (album_grid.dart). 나머지(사진 그리드·끌어서 선택·미리보기)는 기본 것 그대로다.
+     */
+    final picked = await AssetPicker.pickAssetsWithDelegate<AssetEntity, AssetPathEntity,
+        DefaultAssetPickerProvider, DefaultAssetPickerBuilderDelegate>(
       context,
-      pickerConfig: AssetPickerConfig(
-        maxAssets: limit,
-        requestType: RequestType.image,
+      delegate: AlbumGridPickerDelegate(
+        provider: DefaultAssetPickerProvider(
+          maxAssets: limit,
+          requestType: RequestType.image,
+          /*
+           * 앨범 커버 크기. 기본값이 80px 정사각인데 우리 카드는 화면 반쪽(≈570px @3x)이라
+           * 뭉개져 보였다. 앨범 수만큼만 뽑는 것이라 400 이어도 비싸지 않다.
+           */
+          pathThumbnailSize: const ThumbnailSize.square(400),
+        ),
+        initialPermission: permission,
+        pickerTheme: pickerTheme(),
         textDelegate: const KoreanAssetPickerTextDelegate(),
+        /*
+         * 🔴 수백 장을 하나씩 탭하게 두면 안 된다. 기본값도 켜짐이지만(접근성 내비게이션이
+         *    켜져 있으면 꺼진다) 이 앱에서는 «고르는 것»이 곧 용도라 명시로 못 박는다.
+         */
+        dragToSelect: true,
       ),
     );
     if (picked == null || picked.isEmpty) return const [];
 
+    /*
+     * 여기가 예전에 통째로 조용하던 구간이다. 500장이면 원본 사본을 500번 만들고,
+     * 그동안 페이지는 아무것도 모른 채 기다렸다. 한 장 끝날 때마다 알려준다 —
+     * 「되고 있는 건지 모르겠다」가 이 앱을 만든 이유 중 하나였다.
+     */
     final out = <Map<String, Object?>>[];
-    for (final asset in picked) {
+    for (var i = 0; i < picked.length; i++) {
+      final asset = picked[i];
       /*
        * 🔴 originFile 이어야 한다. file 은 iOS 가 호환 포맷(JPEG)으로 바꿔서 줄 수 있고,
        *    그러면 이 앱을 만든 이유가 사라진다 — 웹뷰 파일 입력이 하던 그 변환이
        *    이름만 바꿔 돌아온다.
        */
       final file = await asset.originFile;
-      if (file == null) continue;
-      final token = _token();
-      _files[token] = file;
-      out.add({
-        'token': token,
-        'name': await asset.titleAsync,
-        'size': await file.length(),
-      });
+      if (file != null) {
+        final token = _token();
+        _files[token] = (file: file, asset: asset);
+        out.add({
+          'token': token,
+          'name': await asset.titleAsync,
+          'size': await file.length(),
+        });
+      }
+      await _pickProgress(i + 1, picked.length);
     }
     return out;
   }
 
+  /// 답이 아니라 «중간 보고»다 — id 없이 페이지의 훅을 직접 부른다.
+  Future<void> _pickProgress(int done, int total) =>
+      reply('window.picblogNative?.onPickProgress?.($done, $total)');
+
   Future<Map<String, Object?>> _read(Map<String, dynamic> msg) async {
-    final file = _files[msg['token'] as String? ?? ''];
-    if (file == null || !file.existsSync()) throw Exception('사진을 찾을 수 없습니다');
+    final entry = _files[msg['token'] as String? ?? ''];
+    if (entry == null) throw Exception('사진을 찾을 수 없습니다');
+
+    /*
+     * render 가 오면 PhotoKit 에 그 크기로 그려 달라고 한다.
+     *
+     * 🔴 크기를 여기서 정하지 않는다 — 웹의 DISPLAY_MAX 가 그대로 넘어온다. 앱이 자기
+     *    상수를 갖는 순간 「화면 크기」가 두 곳에 생기고, 한쪽만 바뀌는 날이 온다.
+     *
+     * 이게 이 앱에서 제일 큰 이득이다. 48MP 원본을 브리지로 넘기면 장당 519ms 인데
+     * (브리지 257 + 디코딩 213 + 캔버스 49), 2048px 로 그리면 147ms 다
+     * (브리지 100 + 디코딩 15 + 캔버스 31). 원본이 24MP 든 48MP 든 결과가 같아진다. 실측.
+     */
+    final render = (msg['render'] as num?)?.toInt();
+    if (render != null && render > 0) {
+      final data = await entry.asset.thumbnailDataWithOption(
+        ThumbnailOption.ios(
+          size: ThumbnailSize.square(render),
+          // fit = 긴 변 기준. 웹의 scaleTo 와 같은 규칙이라야 결과가 어긋나지 않는다.
+          resizeContentMode: ResizeContentMode.fit,
+          // 🔴 opportunistic 은 «저화질 임시본»을 먼저 줄 수 있다. 한 번만 받는 자리라 그러면 그게 최종본이 된다.
+          deliveryMode: DeliveryMode.highQualityFormat,
+          resizeMode: ResizeMode.exact,
+          // 웹이 다시 0.82 로 인코딩한다 — 그 앞단계는 손실이 거의 없어야 한다
+          quality: 95,
+        ),
+      );
+      if (data == null) throw Exception('사진을 그리지 못했습니다');
+      return {'b64': base64Encode(data), 'type': 'image/jpeg'};
+    }
+
+    // render 가 없으면 원본. 검사는 limit 만큼 앞부분만 읽는다.
+    final file = entry.file;
+    if (!file.existsSync()) throw Exception('사진을 찾을 수 없습니다');
     final limit = (msg['limit'] as num?)?.toInt();
     final total = await file.length();
     final end = limit == null || limit >= total ? total : limit;
@@ -151,21 +226,20 @@ class NativeBridge {
           BytesBuilder(copy: false),
           (b, chunk) => b..add(chunk),
         );
+    final path = file.path.toLowerCase();
     return {
       'b64': base64Encode(bytes.takeBytes()),
       // 확장자로 정한다 — 사진첩에 JPEG 로 저장된 것도 있다
-      'type': file.path.toLowerCase().endsWith('.heic') || file.path.toLowerCase().endsWith('.heif')
-          ? 'image/heic'
-          : 'image/jpeg',
+      'type': path.endsWith('.heic') || path.endsWith('.heif') ? 'image/heic' : 'image/jpeg',
     };
   }
 
   Future<void> _release(List<String> tokens) async {
     for (final t in tokens) {
-      final f = _files.remove(t);
-      if (f != null && f.existsSync()) {
+      final e = _files.remove(t);
+      if (e != null && e.file.existsSync()) {
         try {
-          await f.delete();
+          await e.file.delete();
         } catch (_) {}
       }
     }
@@ -174,40 +248,3 @@ class NativeBridge {
   Future<void> releaseAll() => _release(_files.keys.toList());
 }
 
-/// 기본 델리게이트가 영어·중국어뿐이라 필요한 문구만 한국어로 덮는다.
-class KoreanAssetPickerTextDelegate extends AssetPickerTextDelegate {
-  const KoreanAssetPickerTextDelegate();
-
-  @override
-  String get languageCode => 'ko';
-  @override
-  String get confirm => '확인';
-  @override
-  String get cancel => '취소';
-  @override
-  String get edit => '편집';
-  @override
-  String get gifIndicator => 'GIF';
-  @override
-  String get loadFailed => '불러오지 못했습니다';
-  @override
-  String get original => '원본';
-  @override
-  String get preview => '미리보기';
-  @override
-  String get select => '선택';
-  @override
-  String get emptyList => '사진이 없습니다';
-  @override
-  String get unSupportedAssetType => '지원하지 않는 형식입니다';
-  @override
-  String get accessAllTip => '앱이 일부 사진에만 접근할 수 있습니다. 설정에서 전체 접근을 허용해 주세요.';
-  @override
-  String get goToSystemSettings => '설정으로 가기';
-  @override
-  String get accessLimitedAssets => '선택한 사진만 계속 보기';
-  @override
-  String get viewingLimitedAssetsTip => '앱이 볼 수 있는 사진만 표시합니다.';
-  @override
-  String get changeAccessibleLimitedAssets => '접근 가능한 사진 변경';
-}

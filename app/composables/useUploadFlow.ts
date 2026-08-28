@@ -8,17 +8,22 @@ import type { CreatePostResult, UploadPhotoInput, UploadPointInput } from '#shar
 import { clusterAt, DEFAULT_RADIUS, RADII } from '#shared/utils/cluster'
 import { formatRange } from '#shared/utils/format'
 import { outputExt, resizePhoto } from '~/utils/resize'
-import { scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
+import { pickPhotos } from '~/utils/native'
+import { MAX_PER_SELECTION, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
 import { releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
 
 /**
- * idle → scanning → picked → (더 고르면 scanning 으로 되돌아감) → preview → uploading → done
+ * idle → loading → scanning → picked → (더 고르면 loading 으로 되돌아감) → preview → uploading → done
+ *
+ * loading 은 껍데기(app-ios)가 사진첩에서 원본을 꺼내는 구간이다. 500장이면 여러 초인데
+ * 예전에는 그동안 화면이 통째로 조용했다 — 「되고 있는 건지 모르겠다」가 이 앱을 만든
+ * 이유 중 하나였으므로, 그 구간도 진행률을 그린다. 브라우저 경로에는 이 단계가 없다.
  *
  * picked 가 1단계의 «머무는 자리»다. 사진첩이 한 번에 넘겨주는 양에 상한이 있어서
  * (exif.ts MAX_PER_SELECTION) 한 기록을 채우려면 여러 번 고르는 게 정상인데, 예전에는
  * 고를 때마다 앞의 것을 버리고 곧장 경계 지정으로 넘어가 그게 불가능했다.
  */
-export type UploadStage = 'idle' | 'scanning' | 'picked' | 'preview' | 'uploading' | 'done'
+export type UploadStage = 'idle' | 'loading' | 'scanning' | 'picked' | 'preview' | 'uploading' | 'done'
 
 export interface FailedPhoto {
   key: string
@@ -33,6 +38,8 @@ export function useUploadFlow() {
   const skipped = ref<SkippedPhoto[]>([])
   const radius = ref<number>(DEFAULT_RADIUS)
   const scanProgress = ref({ done: 0, total: 0 })
+  /** 껍데기가 원본을 꺼내는 동안의 진행 (loading 단계) */
+  const loadProgress = ref({ done: 0, total: 0 })
   /** 실제로 디스크에 안착한 사진 수. 진행률은 시도가 아니라 이 값으로 낸다 —
       시도 기준이면 전부 실패해도 100% 로 보고하는 거짓말이 된다 (설계문서 §8). */
   const uploaded = ref(0)
@@ -58,6 +65,26 @@ export function useUploadFlow() {
   const gapCount = computed(() => clusters.value.filter((c) => c.gap).length)
   /** 날짜가 바뀌어 끊긴 자리 — 90분 규칙과 «이유»가 다르므로 따로 센다 */
   const dayCount = computed(() => clusters.value.filter((c) => c.dayBreak).length)
+
+  /**
+   * 고르기부터 검사까지 한 번에.
+   *
+   * 🔴 pickPhotos 앞에 await 를 두면 안 된다 — 사용자 제스처 «안에서» 선택기가 열려야
+   *    사파리가 막지 않는다. 그래서 이 함수의 첫 문장이 pickPhotos 다.
+   */
+  async function pick(input: HTMLInputElement | null) {
+    const picking = pickPhotos(input, MAX_PER_SELECTION, (done, total) => {
+      stage.value = 'loading'
+      loadProgress.value = { done, total }
+    })
+    const sources = await picking
+    if (sources.length) {
+      await selectFiles(sources)
+      return
+    }
+    // 취소했다 — 고른 것이 있으면 그 자리로, 없으면 처음으로 되돌린다
+    if (stage.value === 'loading') stage.value = scanned.value.length ? 'picked' : 'idle'
+  }
 
   /** 한 묶음을 고른다 — 앞서 고른 것을 «버리지 않고 더한다». */
   async function selectFiles(sources: readonly PhotoSource[]) {
@@ -242,6 +269,7 @@ export function useUploadFlow() {
     gapCount,
     dayCount,
     scanProgress,
+    loadProgress,
     uploaded,
     totalPhotos,
     failed,
@@ -249,6 +277,7 @@ export function useUploadFlow() {
     photoIds,
     provisionalTitle,
     errorMessage,
+    pick,
     selectFiles,
     toBoundary,
     backToPick,

@@ -87,7 +87,7 @@ async function draw(bitmap: ImageBitmap, max: number) {
  * 메모리에 쌓인다 (설계문서: 107MB 로 iOS 탭이 죽은 적이 있다).
  */
 export async function resizePhoto(src: PhotoSource): Promise<ResizedPhoto> {
-  const bitmap = await createImageBitmap(await bytesOf(src), { imageOrientation: 'from-image' })
+  const bitmap = await createImageBitmap(await bytesOf(src, DISPLAY_MAX), { imageOrientation: 'from-image' })
   try {
     return {
       display: await draw(bitmap, DISPLAY_MAX),
