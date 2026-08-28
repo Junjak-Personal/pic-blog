@@ -4,7 +4,10 @@ import { vSk } from '~/utils/img'
  * 편집 2단계 「포인트 편집」 — 이 기록의 사진 전부를 포인트별 그룹으로 늘어놓는다.
  *
  * 여기서 하는 것: 사진을 다른 포인트로 옮기기 · 포인트 안 순서 바꾸기 ·
- * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제.
+ * 사진을 끌어내 새 포인트로 분리하기 · 사진 삭제 · 기록 커버 지정.
+ *
+ * 🔴 여기서 고르는 「커버」는 «기록» 커버다 (목록 카드에 뜨는 한 장).
+ *    포인트마다의 대표 썸네일(지도 마커에 뜨는 것)은 3단계가 따로 고른다 — 다른 값이다.
  * 포인트 이름·태그·본문은 3단계 몫이라 여기서는 이름을 읽기만 한다.
  *
  * 포인트를 지우는 «버튼»은 없다. 마지막 사진이 빠져나가면 포인트도 같이 사라지므로
@@ -17,8 +20,11 @@ import { vSk } from '~/utils/img'
  * 「빈 포인트」는 존재할 수 없다. 새 포인트는 사진을 끌어내야만 생기고, 마지막 한 장이
  * 빠져나간 그룹은 그 자리에서 사라진다 — 지도에 좌표만 남은 유령을 만들지 않기 위해서다.
  */
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import type { Photo } from '#shared/types/db'
 import { formatTime } from '#shared/utils/format'
+import { centroid } from '#shared/utils/cluster'
+import { distanceM } from '#shared/utils/geo'
 import { useTileDrag, type DragFrom, type DragOver } from '~/composables/useTileDrag'
 
 export interface BoardGroup {
@@ -26,11 +32,15 @@ export interface BoardGroup {
   id: number
   title: string
   photos: Photo[]
+  /** 지금 지도에 찍히는 자리. 아직 저장 안 된 새 포인트는 null — 저장할 때 사진 평균으로 잡힌다. */
+  anchor: { lat: number; lng: number } | null
+  /** 이 포인트의 대표 사진. null 이면 첫 사진 (지도 마커와 같은 규칙). */
+  coverPhotoId: number | null
 }
 
 const props = defineProps<{
   groups: BoardGroup[]
-  /** 기록 커버 — 「첫 포인트의 첫 사진」이라 이 보드에서 끌면 커버도 따라 움직인다 */
+  /** 지금 기록 커버인 사진 id */
   coverId: number | null
 }>()
 
@@ -38,18 +48,37 @@ const emit = defineEmits<{
   /** 사진 한 장이 어디에서 어디로 — 새 포인트면 over.groupId 가 null 이다 */
   drop: [from: DragFrom, over: DragOver]
   removePhoto: [id: number]
+  pickCover: [id: number]
+  /** 이 포인트를 어느 자리에 찍을지 */
+  setAnchor: [groupId: number, kind: 'centroid' | 'cover']
   add: []
 }>()
 
 const drag = useTileDrag((from, over) => emit('drop', from, over))
 
-const totalPhotos = computed(() => props.groups.reduce((n, g) => n + g.photos.length, 0))
+/**
+ * 커버 고르는 중.
+ *
+ * 모드를 두는 이유: 칸을 그냥 누르는 것은 평소에 아무 일도 안 해야 한다. 상시로
+ * 「클릭 = 커버」면 드래그하려다 손이 미끄러진 순간 커버가 바뀌고, 그걸 되돌릴
+ * 방법도 눈에 안 보인다. 「지정」을 누른 동안만 칸이 고를 수 있는 것이 된다.
+ */
+const picking = ref(false)
 
-/** 그룹의 대표 시각 — 서버의 first_shot_at 과 같은 규칙(가장 이른 촬영 시각)이다 */
-function headTime(g: BoardGroup) {
-  const times = g.photos.map((p) => p.shot_at).filter((t): t is string => t !== null).sort()
-  return times[0] ? formatTime(times[0]) : '시각 없음'
+function onTileClick(photoId: number) {
+  if (!picking.value) return
+  picking.value = false
+  emit('pickCover', photoId)
 }
+
+/** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 */
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') picking.value = false
+}
+onMounted(() => window.addEventListener('keydown', onEsc))
+onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
+
+const totalPhotos = computed(() => props.groups.reduce((n, g) => n + g.photos.length, 0))
 
 /** 끌고 있는 칸인지 — 원본은 흐려두고 고스트가 손끝을 따라간다 */
 function isSource(photoId: number) {
@@ -64,6 +93,51 @@ function isCaret(groupId: number, index: number) {
   if (!f || f.groupId !== groupId) return true
   const at = props.groups.find((g) => g.id === groupId)?.photos.findIndex((p) => p.id === f.photoId) ?? -1
   return index !== at && index !== at + 1
+}
+
+/* ── 포인트 자리 ───────────────────────────────────────────────────────────
+ * 기본은 사진 평균이다. 거리로 안 묶이는 것을 «맥락»으로 묶으면 (멀리 떨어진 두 곳을
+ * 한 포인트로) 평균이 아무도 안 간 중간에 찍히므로, 대표 사진 자리로 옮길 길을 둔다.
+ */
+type Spot = { lat: number; lng: number }
+
+/** 같은 자리로 볼 거리 — GPS 흔들림보다 작다 */
+const SAME_M = 0.5
+
+function centroidOf(g: BoardGroup): Spot | null {
+  return g.photos.length ? centroid(g.photos) : null
+}
+
+/** 대표 사진의 좌표. 지정이 없으면 첫 사진 — 지도 마커가 쓰는 규칙과 같다. */
+function coverOf(g: BoardGroup): Spot | null {
+  const p = g.photos.find((ph) => ph.id === g.coverPhotoId) ?? g.photos[0]
+  return p ? { lat: p.lat, lng: p.lng } : null
+}
+
+/** 지금 찍히는 자리. 저장 전 새 포인트는 앵커가 없으므로 저장될 값(평균)을 보여준다. */
+function anchorOf(g: BoardGroup): Spot | null {
+  return g.anchor ?? centroidOf(g)
+}
+
+function gapM(a: Spot | null, b: Spot | null) {
+  return a && b ? distanceM([a.lat, a.lng], [b.lat, b.lng]) : 0
+}
+
+function isAt(g: BoardGroup, target: Spot | null) {
+  return !!target && gapM(anchorOf(g), target) < SAME_M
+}
+
+/** 누르면 몇 m 움직이는지 — 0 이면 이미 그 자리라 표시하지 않는다 */
+function moveLabel(g: BoardGroup, target: Spot | null) {
+  const d = gapM(anchorOf(g), target)
+  return d < SAME_M ? null : `${d < 1000 ? Math.round(d) + 'm' : (d / 1000).toFixed(1) + 'km'} 이동`
+}
+
+/** 지금 어느 규칙으로 찍혀 있는가 — 어느 쪽도 아니면 「처음 잡힌 자리」다 */
+function anchorNow(g: BoardGroup) {
+  if (isAt(g, centroidOf(g))) return '사진 평균 자리'
+  if (isAt(g, coverOf(g))) return '대표 사진 자리'
+  return '처음 잡힌 자리'
 }
 
 /**
@@ -107,16 +181,29 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
         포인트 {{ groups.length }} · 사진 {{ totalPhotos }}장
       </span>
       <span class="mono hint">
-        끌어서 다른 포인트로 · 터치는 꾹 눌러서
+        <template v-if="picking">커버로 쓸 사진을 고르세요 · Esc 로 취소</template>
+        <template v-else>끌어서 다른 포인트로 · 터치는 꾹 눌러서</template>
       </span>
-      <button type="button" class="addbtn mono" @click="emit('add')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-        사진 추가
-      </button>
+      <div class="acts">
+        <button
+          type="button"
+          class="addbtn mono"
+          :class="{ armed: picking }"
+          :aria-pressed="picking"
+          @click="picking = !picking"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+          {{ picking ? '고르는 중…' : '커버 지정' }}
+        </button>
+        <button type="button" class="addbtn mono" @click="emit('add')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+          사진 추가
+        </button>
+      </div>
     </div>
 
     <!-- touchmove 는 여기서 받는다 — 드래그 중일 때만 브라우저 스크롤을 막는다 -->
-    <div class="scroll-y board" @touchmove="drag.onTouchMove">
+    <div class="scroll-y board" :class="{ picking }" @touchmove="drag.onTouchMove">
       <section
         v-for="(g, gi) in groups"
         :key="g.id"
@@ -130,7 +217,42 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <span class="mono gnum">{{ String(gi + 1).padStart(2, '0') }}</span>
           <span class="gname">{{ g.title }}</span>
           <span v-if="g.id < 0" class="mono badge-new">새 포인트</span>
-          <span class="mono gmeta">{{ g.photos.length }}장 · {{ headTime(g) }}</span>
+          <span class="mono gmeta">{{ g.photos.length }}장</span>
+
+          <!--
+            포인트를 어느 자리에 찍을지. 여기 있던 촬영 시각은 뺐다 — 그룹의 시각은
+            «첫 타일의 시각»과 같은 값이라 칸마다 이미 적혀 있다.
+
+            목록 스타일(.ovf-*)은 menu.css 에 있다. 포털이 내용을 body 로 옮기므로
+            scoped 가 닿지 않는다 — OverflowMenu 와 같은 이유로 같은 것을 쓴다.
+          -->
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger
+              class="spotbtn"
+              :aria-label="`${g.title} 포인트 자리 — 지금 ${anchorNow(g)}`"
+              :data-testid="`board-spot-${gi}`"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent class="ovf-content" align="end" :side-offset="6" :collision-padding="12">
+                <!-- 누르기 «전»에 지금 어디인지 알아야 판단이 된다 -->
+                <div class="ovf-head mono">지금 {{ anchorNow(g) }}</div>
+                <DropdownMenuItem class="ovf-item" :data-testid="`board-spot-avg-${gi}`" @select="emit('setAnchor', g.id, 'centroid')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+                  사진 평균 자리로
+                  <span v-if="isAt(g, centroidOf(g))" class="ovf-state">지금 여기</span>
+                  <span v-else-if="moveLabel(g, centroidOf(g))" class="ovf-state">{{ moveLabel(g, centroidOf(g)) }}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem class="ovf-item" :data-testid="`board-spot-cover-${gi}`" @select="emit('setAnchor', g.id, 'cover')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+                  대표 사진 자리로
+                  <span v-if="isAt(g, coverOf(g))" class="ovf-state">지금 여기</span>
+                  <span v-else-if="moveLabel(g, coverOf(g))" class="ovf-state">{{ moveLabel(g, coverOf(g)) }}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
         </header>
 
         <div class="tiles">
@@ -144,6 +266,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
               @pointermove="drag.onPointerMove"
               @pointerup="drag.onPointerUp"
               @pointercancel="drag.cancel"
+              @click="onTileClick(ph.id)"
             >
               <img v-sk class="thumb sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
               <span class="mono ord">{{ String(i + 1).padStart(2, '0') }}</span>
@@ -221,6 +344,10 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   cursor: pointer;
 }
 .addbtn:hover { background: rgba(146, 178, 169, 0.1); }
+/* 고르는 중 — 다음에 누를 것이 「이 버튼」이 아니라 「사진」이라는 걸 색으로 말한다 */
+.addbtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
+/* 두 버튼은 한 덩어리다 — space-between 에 낱개로 두면 둘 사이가 벌어져 남남처럼 보인다 */
+.acts { display: flex; align-items: center; gap: 8px; flex: none; }
 
 .board { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
 
@@ -230,6 +357,21 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border-radius: var(--radius-lg);
   background: rgba(146, 178, 169, 0.03);
   transition: border-color 0.12s, background 0.12s;
+  /*
+   * 가상 스크롤 — 화면 밖 그룹은 브라우저가 통째로 건너뛴다 (레이아웃도 페인트도).
+   *
+   * 사진 한 장이 칸 하나라 500장이면 칸이 500개고, 그 전부를 매번 다시 재는 순간
+   * 스크롤이 끊긴다. JS 로 잘라 붙이는 가상 목록 대신 이걸 쓴 이유는 셋이다:
+   *   · 칸이 DOM 에서 사라지지 않아 드래그의 elementFromPoint 조준이 그대로 산다
+   *   · flex-wrap 로 줄이 접히는 높이를 미리 계산할 필요가 없다
+   *   · 지원하지 않는 브라우저에서는 두 줄이 무시될 뿐, 화면은 지금과 똑같다
+   *
+   * contain-intrinsic-size 의 auto 는 「한 번이라도 그려봤으면 그때 높이를 기억한다」다 —
+   * 두 번째부터는 자리표시 높이가 실제와 같아 스크롤바가 튀지 않는다. 240px 은
+   * 두 줄짜리 그룹의 대략적인 높이(머리 44 + 타일 두 줄)로, 처음 훑을 때만 쓰인다.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
 }
 /* 손끝이 올라온 그룹 — 어디에 떨어질지 그룹 단위로 먼저 보여준다 */
 .group.target { border-color: rgba(146, 178, 169, 0.6); background: rgba(146, 178, 169, 0.09); }
@@ -268,6 +410,26 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 .badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgba(214, 178, 106, 0.16); color: var(--route); }
 .gmeta { flex: none; font-size: 10px; color: var(--faint); }
 
+/* 포인트 자리 — 헤더 높이(44px) 안에 들어가는 아이콘 버튼 */
+.spotbtn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--deep);
+  cursor: pointer;
+}
+.spotbtn:hover { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.spotbtn[data-state='open'] { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+
+@media (max-width: 900px) {
+  .spotbtn { width: 40px; height: 40px; }
+}
+
 /* grid 가 아니라 flex-wrap 이다 — 끼어들 자리 표식(.caret)이 칸 사이에 실제로 끼어야 한다 */
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; align-items: flex-start; }
 
@@ -300,6 +462,13 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   cursor: grab;
 }
 .tile.src { opacity: 0.35; }
+
+/* 커버 고르는 중: 칸이 고를 수 있는 것이 된다 */
+.board.picking .tile { cursor: pointer; }
+.board.picking .tile:hover { box-shadow: inset 0 0 0 2px var(--acc); }
+/* 지금 커버는 이미 고른 것이라 다시 고를 일이 없다 — 표식만 유지한다 */
+.board.picking .tile .kill,
+.board.picking .tile .handle { opacity: 0.25; pointer-events: none; }
 
 .thumb {
   display: block;
@@ -395,6 +564,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 
 @media (max-width: 900px) {
   .hint { display: none; }
+  /* 나란히 놓인 두 버튼이라 32px 은 좁다 */
+  .addbtn { min-height: 40px; }
   /* 3열 — 여백을 빼고 나눈다 */
   .tile { width: calc((100% - 16px) / 3); }
   .thumb { height: 66px; }

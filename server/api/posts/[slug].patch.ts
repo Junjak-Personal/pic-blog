@@ -81,13 +81,36 @@ export default defineEventHandler(async (event) => {
   if (startedAt && endedAt && startedAt > endedAt) bad('기간: 시작이 종료보다 늦습니다')
 
 
-  // 커버는 여기서 받지 않는다 — 「첫 포인트의 대표 썸네일」 규칙이라 포인트 구성·대표 지정이
-  // 바뀔 때 syncPostCover() 가 스스로 세운다. 두 곳에서 쓰면 저장 순서에 따라 값이 갈린다.
-  db.prepare<[string, string | null, number, string | null, string | null, string, number]>(
+  /*
+   * 기록 커버 — 편집 2단계 「커버 지정」이 고른 사진이다. 포인트의 대표 썸네일과는
+   * 다른 값이다(그건 points/[id] PATCH 가 받는다). 여기서 받은 값이 SSOT 이고,
+   * syncPostCover() 는 이 사진이 지워졌을 때만 대신 채운다.
+   */
+  let coverPhotoId = post.cover_photo_id
+  if ('cover_photo_id' in b) {
+    const v = b.cover_photo_id
+    if (v == null) {
+      coverPhotoId = null
+    } else {
+      if (typeof v !== 'number' || !Number.isInteger(v)) bad('cover_photo_id: 정수여야 합니다')
+      // 다른 기록의 사진이 커버가 되면 목록(1a)에 엉뚱한 썸네일이 뜬다 — 소속을 확인한다
+      const owned = db
+        .prepare<[number, number], { n: number }>(
+          `SELECT COUNT(*) AS n FROM photo ph JOIN point pt ON pt.id = ph.point_id
+            WHERE ph.id = ? AND pt.post_id = ?`,
+        )
+        .get(v, post.id)
+      if (!owned?.n) bad('cover_photo_id: 이 기록의 사진이 아닙니다')
+      coverPhotoId = v
+    }
+  }
+
+  db.prepare<[string, string | null, number, number | null, string | null, string | null, string, number]>(
     `UPDATE post
-        SET title = ?, summary = ?, is_public = ?, started_at = ?, ended_at = ?, updated_at = ?
+        SET title = ?, summary = ?, is_public = ?, cover_photo_id = ?,
+            started_at = ?, ended_at = ?, updated_at = ?
       WHERE id = ?`,
-  ).run(title, summary, isPublic, startedAt, endedAt, new Date().toISOString(), post.id)
+  ).run(title, summary, isPublic, coverPhotoId, startedAt, endedAt, new Date().toISOString(), post.id)
 
   return { ok: true }
 })

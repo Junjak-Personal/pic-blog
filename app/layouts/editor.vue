@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UpdateBanner from '~/components/UpdateBanner.vue'
+import ConfirmDialog from '~/components/ConfirmDialog.vue'
 /**
  * 쓰기 전체가 이 레이아웃 아래에 있다. 진입 조건이 비밀번호다 (설계문서 §7).
  * 라우트 단위가 아니라 레이아웃 단위 게이트 — 세션이 없으면 어떤 페이지든 비밀번호 화면으로 떨어진다.
@@ -12,6 +13,8 @@ const { loggedIn } = useUserSession()
     <EditorGate v-if="!loggedIn" />
     <slot v-else />
     <UpdateBanner />
+    <!-- 확인창 한 벌. 라우트가 바뀌어도 살아 있어야 한다 (나가기 확인이 여기서 뜬다) -->
+    <ConfirmDialog />
   </div>
 </template>
 

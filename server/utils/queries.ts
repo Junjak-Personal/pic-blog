@@ -1,6 +1,7 @@
 import type { PhotoRow, PointRow, PostDetail, PostRow, PostSummary } from '#shared/types/db'
 import { distanceKm } from '#shared/utils/geo'
 import { parseTags } from '#shared/utils/format'
+import { parseExpenses, parseLinks } from '#shared/utils/extras'
 
 const PHOTO_URL = '/photos/'
 
@@ -22,17 +23,38 @@ function routeKm(points: ReadonlyArray<{ lat: number; lng: number }>) {
 }
 
 /**
- * 포스트 커버를 규칙대로 다시 세운다 — 「첫 포인트의 대표 썸네일, 지정이 없으면 그 포인트의 첫 사진」.
+ * 포스트 커버가 «성립하는지» 확인하고, 아니면 규칙대로 다시 세운다.
  *
- * 커버를 쓰는 곳이 넷(업로드 · 사진 추가 · 사진 삭제 · 포인트 재구성)이라 각자 고르게 두면
- * 규칙이 갈린다. 실제로 3단계에서 첫 포인트의 대표를 바꿔도 목록 썸네일은 그대로였다.
- * 커버를 건드릴 수 있는 모든 경로가 마지막에 이 함수 하나를 부른다.
+ * 커버는 사용자가 편집 2단계에서 직접 고른다 (「커버 지정」). 그 선택이 SSOT 이므로
+ * 살아 있는 사진을 가리키고 있으면 여기서 손대지 않는다 — 사진을 옮기거나 순서를
+ * 바꿨다고 고른 커버가 말없이 바뀌면 그건 예고 없는 결과다.
+ *
+ * 고른 적이 없거나(NULL) 그 사진이 지워졌을 때만 자동으로 채운다:
+ * 「첫 포인트의 대표 썸네일 → 없으면 그 포인트의 첫 사진」.
+ *
+ * 커버를 건드릴 수 있는 모든 경로(업로드 · 사진 추가 · 사진 삭제 · 포인트 재구성)가
+ * 마지막에 이 함수 하나를 부른다 — 각자 고르게 두면 규칙이 갈린다.
  *
  * 🔴 호출하는 쪽 트랜잭션 «안»에서 부른다. post.cover_photo_id 는 FK 라
  *    참조 중인 사진을 지우기 «전»에 먼저 피신시켜 두어야 한다 — 이 함수는 그 뒤를 정리한다.
  */
 export function syncPostCover(postId: number) {
   const db = useDb()
+
+  // 지금 커버가 이 기록의 살아 있는 사진이면 그대로 둔다 (사용자가 고른 값일 수 있다)
+  const current = db
+    .prepare<[number], { cover_photo_id: number | null }>(`SELECT cover_photo_id FROM post WHERE id = ?`)
+    .get(postId)?.cover_photo_id ?? null
+  if (current !== null) {
+    const alive = db
+      .prepare<[number, number], { n: number }>(
+        `SELECT COUNT(*) AS n FROM photo ph JOIN point pt ON pt.id = ph.point_id
+          WHERE ph.id = ? AND pt.post_id = ?`,
+      )
+      .get(current, postId)
+    if (alive?.n) return current
+  }
+
   const first = db
     .prepare<[number], { id: number; cover_photo_id: number | null }>(
       `SELECT id, cover_photo_id FROM point WHERE post_id = ? ORDER BY order_index LIMIT 1`,
@@ -131,9 +153,11 @@ export function getPost(slug: string, includePrivate: boolean): PostDetail | nul
 
   return {
     ...summarize(post),
-    points: points.map(({ post_id: _postId, tags, ...pt }) => ({
+    points: points.map(({ post_id: _postId, tags, links, expenses, ...pt }) => ({
       ...pt,
       tags: parseTags(tags),
+      links: parseLinks(links),
+      expenses: parseExpenses(expenses),
       photos: photoStmt.all(pt.id).map(({ point_id: _pointId, ...ph }) => photoUrls({ ...ph, point_id: pt.id })),
     })),
   }

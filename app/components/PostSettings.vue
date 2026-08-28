@@ -49,11 +49,13 @@ const table = computed(() =>
 /** 재클러스터링으로 내용을 잃게 될 포인트들 — 이름을 그대로 보여준다 */
 const atRisk = computed(() =>
   props.post.points
-    .filter((p) => p.title || p.body || p.tags.length)
+    .filter((p) => p.title || p.body || p.tags.length || p.links.length || p.expenses.length)
     .map((p) => {
       const bits: string[] = []
       if (p.tags.length) bits.push(`태그 ${p.tags.length}`)
       if (p.body) bits.push(`본문 ${p.body.length}자`)
+      if (p.links.length) bits.push(`링크 ${p.links.length}`)
+      if (p.expenses.length) bits.push(`소비 ${p.expenses.length}건`)
       return { id: p.id, name: p.title || `포인트 ${p.order_index + 1}`, detail: bits.join(', ') }
     }),
 )
@@ -212,7 +214,7 @@ function confirmRecluster() {
               아래 내용이 사라집니다. 되돌릴 수 없습니다.
             </template>
             <template v-else>
-              사진이 다시 묶입니다. 지금은 잃을 이름·태그·본문이 없습니다.
+              사진이 다시 묶입니다. 지금은 잃을 이름·태그·본문·기타 정보가 없습니다.
             </template>
           </AlertDialogDescription>
 
@@ -243,7 +245,9 @@ function confirmRecluster() {
 
 /* 기간 — 두 날짜 입력이 한 줄. 좁아지면 「EXIF 값으로」가 아래로 내려간다 */
 .period { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
-.period .field { flex: 0 1 190px; display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+/* 두 날짜가 «한 줄»을 반씩 나눠 갖는다 — 190px 고정이면 680px 블록 안에서 왼쪽에 몰려
+   입력만 짧게 남는다. yyyy. mm. dd. 는 절반 폭에 들어간다 (모바일 390px 에서도). */
+.period .field { flex: 1 1 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .dash { padding-bottom: 12px; color: var(--faint); }
 .revert {
   min-height: 40px;
@@ -256,6 +260,7 @@ function confirmRecluster() {
 }
 .revert:hover { background: rgba(146, 178, 169, 0.1); }
 .warn { font-size: 10.5px; color: var(--danger); }
+
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .blabel { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
 .bnow { font-size: 11px; color: var(--deep); }
@@ -337,9 +342,10 @@ function confirmRecluster() {
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
   .input.title { font-size: 18px; }
-  /* 두 날짜가 한 줄에 들어가면 각 190px 은 못 잡는다 — 세로로 쌓고 대시는 지운다 */
-  .period .field { flex: 1 1 100%; }
+  /* 좁아도 한 줄을 유지한다. 대시만 지워 두 입력에 폭을 넘긴다. */
   .dash { display: none; }
+  /* 「EXIF 값으로」는 자기 줄로 내려간다 — 날짜 둘 사이에 끼면 셋 다 못 읽는다 */
+  .revert { flex: 1 1 100%; }
   /* date 입력은 iOS 에서 16px 미만이면 초점을 잡을 때 화면이 확대된다 */
   .period .input { min-height: 44px; font-size: 16px; }
   .revert { min-height: 44px; }

@@ -29,6 +29,14 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
   const failed = ref<FailedPhoto[]>([])
   const photoIds = ref<Record<string, number>>({})
   const errorMessage = ref<string | null>(null)
+  /**
+   * 방금 마친 추가의 결과 — 완료 화면이 읽는다.
+   *
+   * 🔴 완료 화면에서 assignment 를 그대로 읽으면 안 된다. 「이어서 추가」를 대비해
+   *    업로드 직후 기록을 새로 받는데, 그러면 points 가 바뀌면서 assignment 가 다시
+   *    계산돼 방금 한 일과 다른 숫자가 뜬다. 그 순간의 값을 여기 찍어둔다.
+   */
+  const result = ref<{ photos: number; joined: number; created: number; leftover: number } | null>(null)
 
   /** 기존 포인트를 배정 알고리즘이 받는 최소 형태로 좁힌다 */
   const existing = computed<ExistingPoint[]>(() =>
@@ -60,6 +68,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
     uploaded.value = 0
     totalPhotos.value = 0
     errorMessage.value = null
+    result.value = null
     radius.value = DEFAULT_RADIUS
     stage.value = 'idle'
   }
@@ -77,11 +86,11 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
           .map((ph) => photoKey({ shotAt: ph.shot_at!, lat: ph.lat, lng: ph.lng })),
       ),
     )
-    const result = await scanFiles(files, (done, total) => {
+    const scan = await scanFiles(files, (done, total) => {
       scanProgress.value = { done, total }
     }, existingKeys)
-    scanned.value = result.passed
-    skipped.value = result.skipped
+    scanned.value = scan.passed
+    skipped.value = scan.skipped
     stage.value = 'preview'
   }
 
@@ -161,6 +170,13 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
       const id = created.photoIds[shot.key]
       if (id != null) await uploadOne(shot, id)
     }
+    result.value = {
+      photos: shots.length,
+      joined: assignment.value.joinedShots,
+      created: assignment.value.news.length,
+      // 상한에 걸려 이번에 못 올린 장수 — 완료 화면이 「이어서 추가」를 주 버튼으로 세울 근거다
+      leftover: skipped.value.reduce((n, sk) => (sk.reason === 'over-limit' ? n + 1 : n), 0),
+    }
     stage.value = 'done'
   }
 
@@ -211,7 +227,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
 
   return {
     stage, scanned, skipped, radius, assignment, radiusTable, totalAfter,
-    scanProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage,
+    scanProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage, result,
     selectFiles, confirm, retryFailed, skipFailed, reset,
   }
 }

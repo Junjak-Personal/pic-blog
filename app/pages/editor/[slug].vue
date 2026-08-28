@@ -5,6 +5,7 @@ import PointGroupBoard, { type BoardGroup } from '~/components/PointGroupBoard.v
 import OverflowMenu from '~/components/OverflowMenu.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import BusyOverlay from '~/components/BusyOverlay.vue'
+import CurrencySelect from '~/components/CurrencySelect.vue'
 /**
  * 포스트 편집 — 세 페이즈.
  *   1 기본 정보    타이틀 · 요약 · 공개 · 기간 · 포인트 범위
@@ -20,11 +21,33 @@ import BusyOverlay from '~/components/BusyOverlay.vue'
  * 예외는 포인트 범위(재클러스터링) 하나뿐이고, 그건 1단계가 별도 확인을 받는다.
  */
 import { onBeforeRouteLeave } from 'vue-router'
-import type { Photo, PostDetail } from '#shared/types/db'
+import type { Photo, Point, PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
+import { centroid } from '#shared/utils/cluster'
+import { distanceM } from '#shared/utils/geo'
+import {
+  cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
+  MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
+  type CurrencyCode, type PointExpense, type PointLink,
+} from '#shared/utils/extras'
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
+import { askConfirm } from '~/composables/useConfirm'
+
+/**
+ * 편집 중의 금액은 «문자열»이다.
+ * 숫자로 묶어두면 「12.」 를 치는 도중에 Number('12.') → 12 로 되돌아가 점이 지워지고,
+ * 빈 칸은 NaN 이 된다. 저장할 때 한 번만 숫자로 옮긴다 (outExpenses).
+ */
+interface ExpenseDraft {
+  item: string
+  amount: string
+  currency: CurrencyCode
+}
+
+/** 앵커를 무엇으로 잡을지. 좌표는 서버가 이 포인트의 사진에서 직접 계산한다 (§7.2 유지). */
+type AnchorPick = 'centroid' | 'cover'
 
 interface PointDraft {
   /** 서버 포인트 id. 🔴 음수면 2단계에서 사진을 끌어내 만든 «아직 없는» 포인트다. */
@@ -36,10 +59,19 @@ interface PointDraft {
   ids: number[]
   /** 대표 썸네일. null 이면 첫 사진 (서버의 규칙과 같다). */
   coverId: number | null
+  links: PointLink[]
+  expenses: ExpenseDraft[]
+  /**
+   * 지도에 찍힐 자리를 다시 잡았는가. null 이면 손대지 않은 것이다.
+   * 좌표가 아니라 «규칙»을 든다 — 저장 전에 대표 사진을 바꾸면 'cover' 가 그걸 따라간다.
+   */
+  anchor: AnchorPick | null
 }
 
 const MAX_BODY = 2000
 const MAX_TAGS = 20
+/** 마지막으로 고른 화폐를 기억한다 — 한 여행에서는 대개 같은 화폐로만 적는다 */
+const CURRENCY_KEY = 'pic-blog:currency'
 
 definePageMeta({ layout: 'editor' })
 
@@ -55,6 +87,8 @@ const draftPublic = ref(false)
 /** 기간은 날짜만 고른다 (YYYY-MM-DD) — 화면 어디에도 시각까지 쓰는 자리가 없다 */
 const draftStart = ref('')
 const draftEnd = ref('')
+/** 기록 커버 — 2단계 「커버 지정」이 고른 사진. 포인트 대표 썸네일과는 다른 값이다. */
+const draftCoverId = ref<number | null>(null)
 const pointDrafts = ref<PointDraft[]>([])
 /** 삭제 예약. 저장 전까지는 DB 도 디스크도 건드리지 않는다. */
 const removedPhotoIds = ref<number[]>([])
@@ -63,6 +97,8 @@ const tagInput = ref('')
 const saving = ref(false)
 const step = ref<'basic' | 'points' | 'notes'>('basic')
 const reclustering = ref(false)
+/** 삭제 중 — 나가기 확인을 건너뛰게 한다 (기록이 사라졌는데 「저장할까요?」를 물으면 안 된다) */
+const deleting = ref(false)
 const errorMessage = ref<string | null>(null)
 /** 새 포인트의 임시 id — 서버 id 와 절대 겹치지 않게 음수로 센다 */
 const nextTempId = ref(-1)
@@ -86,14 +122,20 @@ const boardGroups = computed<BoardGroup[]>(() =>
     id: d.id,
     title: d.title.trim() || (d.id < 0 ? '새 포인트' : `포인트 ${i + 1}`),
     photos: photosOf(d.ids),
+    // 고른 규칙까지 반영한 «지금 찍힐» 자리 — 보드가 「지금 어디인지」를 이 값으로 말한다
+    anchor: draftAnchor(d),
+    coverPhotoId: d.coverId,
   })),
 )
 
 /**
- * 커버는 「첫 포인트의 대표 썸네일, 지정이 없으면 그 포인트의 첫 사진」이다 —
- * 서버 syncPostCover() 와 같은 문장이라 저장 뒤에도 화면이 그대로 유지된다.
+ * 지금 기록 커버. 고른 사진이 살아 있으면 그것이고, 아니면 서버 syncPostCover() 와
+ * 같은 문장으로 되돌아간다 — 「첫 포인트의 대표 썸네일 → 그 포인트의 첫 사진」.
+ * 두 곳이 다른 규칙을 쓰면 저장 직후 화면의 「커버」 배지가 옮겨 다닌다.
  */
 const coverId = computed(() => {
+  const chosen = draftCoverId.value
+  if (chosen !== null && pointDrafts.value.some((d) => d.ids.includes(chosen))) return chosen
   const head = pointDrafts.value.find((d) => d.ids.length)
   if (!head) return null
   return head.coverId !== null && head.ids.includes(head.coverId) ? head.coverId : head.ids[0] ?? null
@@ -127,6 +169,7 @@ const changes = computed(() => {
   if (draftSummary.value.trim() !== (p.summary ?? '')) n++
   if (draftPublic.value !== p.is_public) n++
   if (draftStart.value !== dateOf(p.started_at) || draftEnd.value !== dateOf(p.ended_at)) n++
+  if (coverId.value !== p.cover_photo_id) n++
   for (const d of pointDrafts.value) {
     const base = basePoint(d.id)
     if (!base) continue
@@ -134,6 +177,9 @@ const changes = computed(() => {
     if (d.body.trim() !== (base.body ?? '')) n++
     if (d.tags.join('\n') !== base.tags.join('\n')) n++
     if (d.coverId !== base.cover_photo_id) n++
+    if (!sameLinks(d, base)) n++
+    if (!sameExpenses(d, base)) n++
+    if (anchorMoved(d)) n++
   }
   return n
 })
@@ -143,11 +189,15 @@ hydrate()
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
-onBeforeRouteLeave(
-  () =>
-    changes.value === 0 ||
-    window.confirm(`저장하지 않은 변경 ${changes.value}건이 있습니다. 저장하지 않고 나갈까요?`),
-)
+onBeforeRouteLeave(async () => {
+  if (deleting.value || changes.value === 0) return true
+  return askConfirm({
+    title: '저장하지 않고 나갈까요?',
+    body: `변경 ${changes.value}건이 저장되지 않았습니다. 나가면 사라집니다.`,
+    confirmLabel: '저장하지 않고 나가기',
+    danger: true,
+  })
+})
 
 /** 서버 응답을 초안으로 되돌린다. 최초 진입 · 저장 직후 · 「취소」가 모두 이걸 부른다. */
 function hydrate() {
@@ -165,6 +215,7 @@ function hydrate() {
   draftPublic.value = p.is_public
   draftStart.value = dateOf(p.started_at)
   draftEnd.value = dateOf(p.ended_at)
+  draftCoverId.value = p.cover_photo_id
   pointDrafts.value = p.points.map((pt) => ({
     id: pt.id,
     title: pt.title ?? '',
@@ -172,6 +223,9 @@ function hydrate() {
     tags: [...pt.tags],
     ids: pt.photos.map((ph) => ph.id),
     coverId: pt.cover_photo_id,
+    links: pt.links.map((l) => ({ ...l })),
+    expenses: pt.expenses.map((e) => ({ ...e, amount: String(e.amount) })),
+    anchor: null,
   }))
   if (!pointDrafts.value.some((d) => d.id === activeId.value)) {
     activeId.value = pointDrafts.value[0]?.id ?? null
@@ -242,10 +296,15 @@ function confirmVanish(d: PointDraft, how: '옮기면' | '지우면') {
   if (d.title.trim()) lost.push('이름')
   if (d.tags.length) lost.push(`태그 ${d.tags.length}개`)
   if (d.body.trim()) lost.push(`본문 ${d.body.trim().length}자`)
+  if (outLinks(d).length) lost.push(`링크 ${outLinks(d).length}개`)
+  if (outExpenses(d).length) lost.push(`소비 기록 ${outExpenses(d).length}건`)
   const tail = lost.length ? ` 적어둔 ${lost.join(' · ')} 도 함께 없어집니다.` : ''
-  return window.confirm(
-    `「${name}」의 마지막 사진입니다. ${how} 이 포인트가 지도에서 사라집니다.${tail} 계속할까요?`,
-  )
+  return askConfirm({
+    title: `「${name}」 포인트가 사라집니다`,
+    body: `이 포인트의 마지막 사진입니다. ${how} 포인트가 지도에서 없어집니다.${tail}`,
+    confirmLabel: how === '옮기면' ? '옮기기' : '사진 지우기',
+    danger: true,
+  })
 }
 
 function dropDraft(id: number) {
@@ -254,16 +313,15 @@ function dropDraft(id: number) {
 }
 
 /** 2단계 — 사진 한 장이 어디에서 어디로 */
-function onBoardDrop(from: DragFrom, over: DragOver) {
+async function onBoardDrop(from: DragFrom, over: DragOver) {
   const src = pointDrafts.value.find((d) => d.id === from.groupId)
   if (!src) return
-  const at = src.ids.indexOf(from.photoId)
-  if (at < 0) return
+  if (src.ids.indexOf(from.photoId) < 0) return
 
   // 새 포인트로 분리 — 혼자 남은 사진을 떼어내는 건 제자리 놓기라 아무 일도 하지 않는다
   if (over.groupId === null) {
     if (src.ids.length <= 1) return
-    src.ids.splice(at, 1)
+    src.ids.splice(src.ids.indexOf(from.photoId), 1)
     if (src.coverId === from.photoId) src.coverId = null
     pointDrafts.value.push({
       id: nextTempId.value--,
@@ -272,6 +330,9 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
       tags: [],
       ids: [from.photoId],
       coverId: null,
+      links: [],
+      expenses: [],
+      anchor: null,
     })
     resort()
     return
@@ -279,6 +340,7 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
 
   // 같은 그룹 안 = 순서 바꾸기. 자기 자리를 빼고 나면 뒤쪽 인덱스가 하나씩 당겨진다.
   if (over.groupId === src.id) {
+    const at = src.ids.indexOf(from.photoId)
     const to = over.index > at ? over.index - 1 : over.index
     if (to === at) return
     src.ids.splice(at, 1)
@@ -288,7 +350,11 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
 
   const dst = pointDrafts.value.find((d) => d.id === over.groupId)
   if (!dst) return
-  if (src.ids.length === 1 && !confirmVanish(src, '옮기면')) return
+  // 🔴 물어보는 동안 화면이 멈춰 있지만, 자리는 답을 받은 «뒤에» 다시 찾는다 —
+  //    await 앞에서 잡아둔 인덱스를 그대로 쓰면 조용히 엉뚱한 사진을 옮기게 된다.
+  if (src.ids.length === 1 && !(await confirmVanish(src, '옮기면'))) return
+  const at = src.ids.indexOf(from.photoId)
+  if (at < 0) return
 
   src.ids.splice(at, 1)
   if (src.coverId === from.photoId) src.coverId = null
@@ -297,7 +363,7 @@ function onBoardDrop(from: DragFrom, over: DragOver) {
   resort()
 }
 
-function onRemovePhoto(id: number) {
+async function onRemovePhoto(id: number) {
   const d = pointDrafts.value.find((x) => x.ids.includes(id))
   if (!d) return
   if (d.ids.length === 1) {
@@ -306,10 +372,13 @@ function onRemovePhoto(id: number) {
       errorMessage.value = '기록의 마지막 사진은 지울 수 없습니다'
       return
     }
-    if (!confirmVanish(d, '지우면')) return
+    if (!(await confirmVanish(d, '지우면'))) return
+    if (!d.ids.includes(id)) return
   }
   d.ids = d.ids.filter((x) => x !== id)
   if (d.coverId === id) d.coverId = null
+  // 지운 사진이 기록 커버였으면 지정을 푼다 — 아래 coverId 가 규칙대로 다시 고른다
+  if (draftCoverId.value === id) draftCoverId.value = null
   if (!removedPhotoIds.value.includes(id)) removedPhotoIds.value.push(id)
   if (!d.ids.length) dropDraft(d.id)
   resort()
@@ -320,7 +389,12 @@ function onAddPhotos() {
   void router.push(`/editor/add/${slug.value}`)
 }
 
-/** 3단계 — 대표 썸네일 지정. 이미 대표인 사진을 다시 누르면 「지정 없음」으로 돌아간다. */
+/** 2단계 — 기록 커버 지정 (목록 카드에 뜨는 한 장) */
+function onPickCover(id: number) {
+  draftCoverId.value = id
+}
+
+/** 3단계 — 그 «포인트»의 대표 썸네일. 이미 대표인 사진을 다시 누르면 「지정 없음」으로 돌아간다. */
 function pickThumb(photoId: number) {
   const d = activeDraft.value
   if (!d) return
@@ -341,6 +415,158 @@ function rowThumb(draftId: number) {
   return pointThumb({ cover_photo_id: d.coverId, photos: photosOf(d.ids) })
 }
 
+/* ── 기타 정보 (링크 · 소비 금액) ───────────────────────────────────────────
+ * 서버로 나가는 형태로 옮기는 길은 이 두 함수뿐이다. 「변경 N건」도 저장도 같은 값을
+ * 보고 판단해야 저장한 뒤에 건수가 0 이 된다 (extras.ts cleanLinks 의 🔴).
+ */
+function outLinks(d: PointDraft) {
+  return cleanLinks(d.links)
+}
+
+function outExpenses(d: PointDraft): PointExpense[] {
+  return cleanExpenses(
+    // 자릿수 쉼표를 찍는 사람이 있다 — 숫자로 옮기기 전에 걷어낸다
+    d.expenses.map((e) => ({ item: e.item, amount: Number(e.amount.replace(/,/g, '')), currency: e.currency })),
+  )
+}
+
+/** 서버 값과 같은가. 두 쪽이 키를 같은 순서로 만들어서 문자열 비교로 충분하다 (__checks.ts 가 지킨다). */
+function sameLinks(d: PointDraft, base: Point) {
+  return JSON.stringify(outLinks(d)) === JSON.stringify(base.links)
+}
+
+function sameExpenses(d: PointDraft, base: Point) {
+  return JSON.stringify(outExpenses(d)) === JSON.stringify(base.expenses)
+}
+
+function addLink() {
+  const d = activeDraft.value
+  if (!d || d.links.length >= MAX_LINKS) return
+  d.links.push({ label: '', url: '' })
+}
+
+/** 🔴 포인트 앵커가 아니라 «대표 사진»의 좌표다 — 앵커는 사진들의 평균이라 실제로 간 자리가 아니다 */
+const mapLink = computed(() => {
+  const id = activeThumbId.value
+  const ph = id === null ? undefined : photoById.value.get(id)
+  return ph ? googleMapsUrl(ph.lat, ph.lng) : null
+})
+
+/** 이미 같은 링크가 있으면 버튼을 잠근다 — 눌러도 아무 일이 없는 버튼은 고장으로 읽힌다 */
+const mapLinkExists = computed(() => {
+  const url = mapLink.value
+  const d = activeDraft.value
+  return !!url && !!d && d.links.some((l) => l.url.trim() === url)
+})
+
+function addMapLink() {
+  const d = activeDraft.value
+  const url = mapLink.value
+  if (!d || !url || mapLinkExists.value || d.links.length >= MAX_LINKS) return
+  d.links.push({ label: '구글 지도', url })
+}
+
+function lastCurrency(): CurrencyCode {
+  try {
+    const v = localStorage.getItem(CURRENCY_KEY)
+    if (v && isCurrency(v)) return v
+  } catch {
+    // 사파리 비공개 모드 등 — 기억을 못 할 뿐이라 기본값으로 간다
+  }
+  return DEFAULT_CURRENCY
+}
+
+function rememberCurrency(c: CurrencyCode) {
+  try {
+    localStorage.setItem(CURRENCY_KEY, c)
+  } catch {
+    // 위와 같다
+  }
+}
+
+function addExpense() {
+  const d = activeDraft.value
+  if (!d || d.expenses.length >= MAX_EXPENSES) return
+  d.expenses.push({ item: '', amount: '', currency: lastCurrency() })
+}
+
+/** 숫자로 안 읽히는 금액은 표시로 알린다 — 저장할 때 조용히 0 이 되면 안 된다 */
+function badAmount(e: ExpenseDraft) {
+  const t = e.amount.replace(/,/g, '').trim()
+  return t !== '' && !(isFinite(Number(t)) && Number(t) >= 0)
+}
+
+/** 편집 중에도 합계를 보여준다 — 화폐가 섞이면 화폐마다 한 줄 */
+const activeTotals = computed(() => (activeDraft.value ? totalsOf(outExpenses(activeDraft.value)) : []))
+
+/* ── 포인트 자리 (앵커) ────────────────────────────────────────────────────
+ * 기본은 사진들의 평균이고 만들어질 때 한 번 정해진다. 거리로 안 묶이는 것을 맥락으로
+ * 묶으면 평균이 아무도 안 간 중간에 찍히므로, 2단계에서 대표 사진 자리로 옮길 수 있다.
+ * 좌표는 서버가 계산한다 — 여기서는 «무엇으로 잡을지»만 들고 미리보기를 그린다.
+ */
+
+/** 그 포인트의 대표 사진 — 지정이 없으면 첫 사진 (지도 마커와 같은 규칙) */
+function coverPhotoOf(d: PointDraft) {
+  const photos = photosOf(d.ids)
+  return photos.find((p) => p.id === d.coverId) ?? photos[0] ?? null
+}
+
+/** 고른 규칙이 가리키는 자리. 안 골랐으면 지금 서버에 저장된 자리다. */
+function draftAnchor(d: PointDraft) {
+  if (d.anchor === 'centroid') {
+    const photos = photosOf(d.ids)
+    return photos.length ? centroid(photos) : null
+  }
+  if (d.anchor === 'cover') {
+    const p = coverPhotoOf(d)
+    return p ? { lat: p.lat, lng: p.lng } : null
+  }
+  const base = basePoint(d.id)
+  if (base) return { lat: base.lat, lng: base.lng }
+  // 아직 저장 안 된 포인트 — 저장될 값(사진 평균)을 미리 보여준다
+  const photos = photosOf(d.ids)
+  return photos.length ? centroid(photos) : null
+}
+
+/** 자리가 실제로 «움직였는가». 이미 그 자리를 고른 것은 변경이 아니다. */
+function anchorMoved(d: PointDraft) {
+  if (!d.anchor) return false
+  const now = draftAnchor(d)
+  const base = basePoint(d.id)
+  const photos = photosOf(d.ids)
+  const from = base
+    ? { lat: base.lat, lng: base.lng }
+    : (photos.length ? centroid(photos) : null)
+  if (!now || !from) return false
+  return distanceM([from.lat, from.lng], [now.lat, now.lng]) >= 0.5
+}
+
+/** 3단계 헤더에 뜨는 좌표 — 2단계에서 자리를 다시 잡았으면 그 값이 먼저다 */
+const activeSpot = computed(() => (activeDraft.value ? draftAnchor(activeDraft.value) : null))
+
+/**
+ * 그 좌표가 «무엇»인지. 예전엔 언제나 「EXIF 원본」이라고 붙였는데, 자리를 옮길 수 있게 된
+ * 지금은 옮긴 포인트에서 거짓말이 된다. 촬영 시각은 그대로 EXIF 라 그건 건드리지 않는다.
+ */
+const activeSpotNote = computed(() => {
+  const d = activeDraft.value
+  const spot = activeSpot.value
+  if (!d || !spot) return null
+  const near = (t: { lat: number; lng: number } | null) =>
+    !!t && distanceM([spot.lat, spot.lng], [t.lat, t.lng]) < 0.5
+  const photos = photosOf(d.ids)
+  if (near(photos.length ? centroid(photos) : null)) return '사진 평균 자리'
+  const cp = coverPhotoOf(d)
+  if (near(cp ? { lat: cp.lat, lng: cp.lng } : null)) return '대표 사진 자리'
+  return '처음 잡힌 자리'
+})
+
+/** 2단계 — 이 포인트를 어느 자리에 찍을지 */
+function onSetAnchor(groupId: number, kind: AnchorPick) {
+  const d = pointDrafts.value.find((x) => x.id === groupId)
+  if (d) d.anchor = kind
+}
+
 function addTag() {
   const t = tagInput.value.trim()
   tagInput.value = ''
@@ -354,10 +580,15 @@ function removeTag(tag: string) {
   if (d) d.tags = d.tags.filter((t) => t !== tag)
 }
 
-function revert() {
+async function revert() {
   if (!changes.value) return
-  if (!window.confirm(`저장하지 않은 변경 ${changes.value}건을 되돌릴까요?`)) return
-  hydrate()
+  const ok = await askConfirm({
+    title: '변경을 되돌릴까요?',
+    body: `저장하지 않은 변경 ${changes.value}건이 서버에 저장된 상태로 돌아갑니다.`,
+    confirmLabel: '되돌리기',
+    danger: true,
+  })
+  if (ok) hydrate()
 }
 
 /**
@@ -377,6 +608,29 @@ async function recluster(radius: number) {
     errorMessage.value = reason(e)
   } finally {
     reclustering.value = false
+  }
+}
+
+/** 기록 삭제 — 포인트·사진까지 통째로. 확인을 받고 목록으로 나간다. */
+async function removePost() {
+  const p = post.value
+  if (!p || deleting.value) return
+  const ok = await askConfirm({
+    title: `「${p.title}」을 삭제할까요?`,
+    body: `포인트 ${p.point_count}개와 사진 ${p.photo_count}장이 함께 지워집니다. 되돌릴 수 없습니다.`,
+    confirmLabel: '삭제',
+    danger: true,
+  })
+  if (!ok) return
+
+  deleting.value = true
+  errorMessage.value = null
+  try {
+    await $fetch(`/api/posts/${slug.value}`, { method: 'DELETE' })
+    await navigateTo('/editor')
+  } catch (e) {
+    deleting.value = false
+    errorMessage.value = reason(e)
   }
 }
 
@@ -430,10 +684,16 @@ async function save() {
         d.title.trim() !== (base.title ?? '') ||
         d.body.trim() !== (base.body ?? '') ||
         d.tags.join('\n') !== base.tags.join('\n') ||
-        d.coverId !== base.cover_photo_id
+        d.coverId !== base.cover_photo_id ||
+        !sameLinks(d, base) ||
+        !sameExpenses(d, base) ||
+        anchorMoved(d)
       // 새 포인트인데 적은 것이 하나도 없으면 보낼 것도 없다
       if (!dirty) continue
-      if (!base && !d.title.trim() && !d.body.trim() && !d.tags.length && d.coverId === null) continue
+      if (
+        !base && !d.title.trim() && !d.body.trim() && !d.tags.length && d.coverId === null
+        && !outLinks(d).length && !outExpenses(d).length && !anchorMoved(d)
+      ) continue
       await $fetch(`/api/points/${d.id}`, {
         method: 'PATCH',
         body: {
@@ -441,11 +701,19 @@ async function save() {
           body: d.body.trim() || null,
           tags: d.tags,
           cover_photo_id: d.coverId,
+          links: outLinks(d),
+          expenses: outExpenses(d),
+          // 'cover' 는 여기서 실제 사진 id 로 굳힌다 — 서버가 그 사진의 좌표를 쓴다
+          anchor: !anchorMoved(d)
+            ? null
+            : d.anchor === 'centroid'
+              ? 'centroid'
+              : { photoId: coverPhotoOf(d)?.id ?? null },
         },
       })
     }
 
-    // 3) 포스트가 마지막이다 — 커버는 구성이 확정돼야 정해진다 (서버가 스스로 세운다)
+    // 3) 포스트가 마지막이다 — 커버는 구성이 확정된 뒤라야 「그 사진이 아직 있는지」가 맞는다
     await $fetch(`/api/posts/${slug.value}`, {
       method: 'PATCH',
       body: {
@@ -454,6 +722,7 @@ async function save() {
         is_public: draftPublic.value,
         started_at: periodOut(draftStart.value, p.started_at, false),
         ended_at: periodOut(draftEnd.value, p.ended_at, true),
+        cover_photo_id: coverId.value,
       },
     })
 
@@ -519,6 +788,17 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
             {{ saving ? '저장 중' : '저장' }}
           </button>
+          <!--
+            되돌릴 수 없는 것은 메뉴 안으로. 저장·취소와 나란히 두면 손이 미끄러질 자리다.
+            always — 넓은 화면에는 펼친 버튼이 따로 있는 게 이 메뉴의 기본이지만,
+            삭제는 펼쳐둘 자리가 없다.
+          -->
+          <OverflowMenu label="기록 메뉴" always testid="editor-menu-wide">
+          <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+            기록 삭제
+          </DropdownMenuItem>
+          </OverflowMenu>
         </div>
       </div>
 
@@ -526,7 +806,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <div class="hd-mobile">
         <AppBack fallback="/editor" label="기록 목록으로" />
         <h1 class="hd-title">{{ draftTitle || '기록 편집' }}</h1>
-        <OverflowMenu label="기록 메뉴">
+        <OverflowMenu label="기록 메뉴" testid="editor-menu-narrow">
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
             변경 취소
@@ -544,6 +824,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6s6.6 2 9 6" /></svg>
               공개 화면 보기
             </NuxtLink>
+          </DropdownMenuItem>
+          <div class="ovf-sep" />
+          <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+            기록 삭제
           </DropdownMenuItem>
         </OverflowMenu>
       </div>
@@ -598,7 +883,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         v-model:ended-at="draftEnd"
         :post="post"
         :dirty="changes > 0"
-        :busy="reclustering"
+        :busy="reclustering || deleting"
         @recluster="recluster"
       />
 
@@ -609,6 +894,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           :cover-id="coverId"
           @drop="onBoardDrop"
           @remove-photo="onRemovePhoto"
+          @pick-cover="onPickCover"
+          @set-anchor="onSetAnchor"
           @add="onAddPhotos"
         />
       </div>
@@ -665,9 +952,12 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
               <span class="mono">
                 {{ formatDateTime(activePoint.first_shot_at) || '시각 없음' }}
-                · {{ activePoint.lat.toFixed(5) }}, {{ activePoint.lng.toFixed(5) }}
+                <template v-if="activeSpot">
+                  · {{ activeSpot.lat.toFixed(5) }}, {{ activeSpot.lng.toFixed(5) }}
+                </template>
               </span>
-              <span class="mono lock-note">EXIF 원본</span>
+              <!-- 시각은 언제나 EXIF 다. 좌표는 2단계에서 다시 잡을 수 있어 무엇인지 적는다. -->
+              <span class="mono lock-note">시각 EXIF · 자리 {{ activeSpotNote ?? '—' }}</span>
             </span>
             <!-- 아직 저장 전인 포인트는 앵커가 없다 — 저장할 때 담긴 사진들의 평균 좌표로 정해진다 -->
             <span v-else class="lockrow fresh">
@@ -743,6 +1033,120 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   data-testid="editor-point-body-input"
                 />
               </div>
+
+              <!--
+                기타 정보 — 콘텐츠 아래. 공개 화면에서는 포인트 상세(데스크탑 우측 칸 ·
+                모바일 ⓘ 판)에 같은 것이 뜬다 (PointExtras.vue).
+              -->
+              <div class="field">
+                <span class="flabel-row">
+                  <span class="mono flabel">링크</span>
+                  <span class="mono counter">{{ activeDraft.links.length }} / {{ MAX_LINKS }}</span>
+                </span>
+
+                <div v-for="(l, i) in activeDraft.links" :key="i" class="xrow">
+                  <input
+                    v-model="l.url"
+                    class="input mini mono"
+                    :maxlength="MAX_URL"
+                    inputmode="url"
+                    placeholder="https://"
+                    :aria-label="`링크 ${i + 1} 주소`"
+                    :data-testid="`editor-link-input-${i}`"
+                  >
+                  <button
+                    type="button"
+                    class="xkill"
+                    :aria-label="`링크 ${i + 1} 삭제`"
+                    @click="activeDraft.links.splice(i, 1)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div class="xacts">
+                  <!-- 잠근 이유를 글자로 말한다 — 눌러도 아무 일이 없는 버튼을 두지 않는다 -->
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="!mapLink || mapLinkExists || activeDraft.links.length >= MAX_LINKS"
+                    data-testid="editor-maplink-btn"
+                    @click="addMapLink"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
+                    {{ mapLinkExists ? '구글 지도 — 이미 있음' : '구글 지도 자동 입력' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="activeDraft.links.length >= MAX_LINKS"
+                    @click="addLink"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    링크 추가
+                  </button>
+                </div>
+                <p class="mono xnote">자동 입력한 것은 「구글 지도」로, 직접 넣은 주소는 도메인으로 보입니다</p>
+              </div>
+
+              <div class="field">
+                <span class="flabel-row">
+                  <span class="mono flabel">소비한 금액</span>
+                  <span class="mono counter">{{ activeDraft.expenses.length }} / {{ MAX_EXPENSES }}</span>
+                </span>
+
+                <div v-for="(e, i) in activeDraft.expenses" :key="i" class="xrow">
+                  <input
+                    v-model="e.item"
+                    class="input mini"
+                    :maxlength="MAX_ITEM"
+                    placeholder="품목명"
+                    :aria-label="`${i + 1}번 품목명`"
+                    :data-testid="`editor-expense-item-${i}`"
+                  >
+                  <input
+                    v-model="e.amount"
+                    class="input mini amt mono"
+                    :class="{ bad: badAmount(e) }"
+                    inputmode="decimal"
+                    maxlength="16"
+                    placeholder="0"
+                    :aria-label="`${i + 1}번 금액`"
+                    :data-testid="`editor-expense-amount-${i}`"
+                  >
+                  <CurrencySelect
+                    v-model="e.currency"
+                    :label="`${i + 1}번 화폐`"
+                    @update:model-value="rememberCurrency"
+                  />
+                  <button
+                    type="button"
+                    class="xkill"
+                    :aria-label="`${i + 1}번 항목 삭제`"
+                    @click="activeDraft.expenses.splice(i, 1)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div class="xacts">
+                  <button
+                    type="button"
+                    class="minibtn mono"
+                    :disabled="activeDraft.expenses.length >= MAX_EXPENSES"
+                    data-testid="editor-expense-add"
+                    @click="addExpense"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    항목 추가
+                  </button>
+                  <!-- 화폐가 섞이면 화폐마다 한 줄 — 섞어서 더하지 않는다 -->
+                  <span v-if="activeTotals.length" class="xtotal">
+                    <span class="mono xtlabel">합계</span>
+                    <b v-for="t in activeTotals" :key="t.currency" class="mono">{{ formatMoney(t.amount, t.currency) }}</b>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -768,6 +1172,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     -->
     <BusyOverlay v-if="saving" label="저장 중" />
     <BusyOverlay v-else-if="reclustering" label="포인트를 다시 묶는 중" />
+    <BusyOverlay v-else-if="deleting" label="기록을 지우는 중" />
   </div>
 </template>
 
@@ -1068,7 +1473,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 아직 저장 전인 포인트 — 좌표가 없다는 걸 색으로도 구분한다 */
 .lockrow.fresh { border-color: rgba(214, 178, 106, 0.42); color: var(--route); white-space: normal; }
 
-.split { flex: 1; display: grid; grid-template-columns: 1fr 352px; min-height: 0; }
+.split { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
 .grid-col {
   display: flex;
   flex-direction: column;
@@ -1114,6 +1519,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 .pick-note { flex: none; font-size: 10px; color: var(--faint); }
 
+/* 🔴 .field 는 flex: 1 이다 (태그+콘텐츠 둘뿐이던 시절의 값). 그대로 두면 링크·소비까지
+   남는 높이를 나눠 가져 링크 아래에 빈 칸이 크게 뜬다 — 늘어나는 건 콘텐츠 하나뿐이다. */
+.side > .field { flex: none; }
+.side > .field.grow { flex: 1; }
 .side {
   display: flex;
   flex-direction: column;
@@ -1122,7 +1531,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-left: 1px solid rgba(177, 199, 193, 0.1);
   min-height: 0;
 }
-.field.grow { flex: 1; min-height: 0; }
+/* 아래에 기타 정보가 붙는다 — min-height 0 이면 콘텐츠 칸이 눌려 텍스트영역이 넘쳐 나온다 */
+.field.grow { flex: 1; min-height: 190px; }
 
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
@@ -1204,6 +1614,51 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .content:focus { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .content::placeholder { color: var(--faint); }
 
+/* 기타 정보 — 링크 · 소비 금액. 352px 칸에 들어가야 해서 줄바꿈을 허용한다 */
+.xrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.input.mini { padding: 7px 10px; font-size: 12px; }
+/*
+ * [품목 45 · 금액 30 · 화폐 15] 로 «남는 폭»을 나눈다. flex-basis 를 고정값으로 주면
+ * 좁은 칸(352px)에서 품목·금액이 나란히 쪼그라든다 — 실제로 84/68px 까지 줄어 있었다.
+ * 지우기(✕)만 비율에서 뺀다: 5% 면 15px 이라 손가락이 닿지 않는다.
+ */
+.xrow .input { flex: 45 1 0; min-width: 0; }
+.xrow .input.amt { flex: 30 1 0; text-align: right; }
+/* 숫자로 안 읽히는 금액 — 저장하면 0 이 되므로 미리 붉게 알린다 */
+.input.bad { border-color: rgba(255, 128, 128, 0.55); color: var(--danger); }
+
+.xkill {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.xkill:hover { background: rgba(255, 128, 128, 0.14); color: var(--danger); }
+
+.xacts { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.minibtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: var(--radius);
+  font-size: 10.5px;
+  color: var(--mid);
+  cursor: pointer;
+}
+.minibtn:hover:not(:disabled) { background: rgba(146, 178, 169, 0.1); }
+.minibtn:disabled { opacity: 0.45; cursor: default; }
+.xnote { font-size: 9.5px; color: var(--faint); }
+.xtotal { margin-left: auto; display: flex; align-items: baseline; gap: 10px; }
+.xtlabel { font-size: 9.5px; color: var(--faint); }
+.xtotal b { font-size: 12px; color: var(--ink); }
+
 /* 빈 상태 */
 .blank {
   flex: 1;
@@ -1273,6 +1728,16 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .chip-x { width: 24px; height: 24px; }
   /* 입력은 보이지 않는 판을 못 넓힌다 — 상자 자체가 손가락이 닿는 곳이라 44px */
   .chip-add { min-height: 44px; padding: 4px 12px; flex: 1; min-width: 140px; }
+
+  /* 기타 정보 — 입력이 16px 로 커지므로(base.css) 줄이 넘친다. 지우기·추가도 손가락 크기로 */
+  .xrow { gap: 8px; }
+  .input.mini { padding: 10px 11px; }
+  /* 보이는 크기는 줄이고 닿는 면적은 44px 로 넓힌다 — 그 8px 이 품목명 칸으로 간다 */
+  .xkill { position: relative; width: 32px; height: 32px; }
+  .xkill::after { content: ''; position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; }
+  .minibtn { min-height: 40px; font-size: 12px; padding: 0 12px; }
+  .xnote { font-size: 11px; }
+  .xtotal b { font-size: 13.5px; }
   .tag-input { flex: 1; width: auto; min-width: 0; }
   .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
   .field.grow { min-height: 0; }

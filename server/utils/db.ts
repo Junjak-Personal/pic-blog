@@ -37,7 +37,12 @@ CREATE TABLE IF NOT EXISTS point (
   --    트랜잭션 전체가 FOREIGN KEY constraint 로 죽는다 (post.cover_photo_id 가 실제로 그랬다).
   --    지운 사진을 가리키게 되어도 화면은 첫 사진으로 되돌아갈 뿐이고,
   --    regroup·photos DELETE 가 그 자리에서 NULL 로 되돌린다.
-  cover_photo_id INTEGER
+  cover_photo_id INTEGER,
+  -- 기타 정보. tags 와 같은 JSON 배열 문자열이다 (shared/utils/extras.ts 가 SSOT).
+  --   links    [{ label, url }]        — 구글 지도 등
+  --   expenses [{ item, amount, currency }]
+  links          TEXT NOT NULL DEFAULT '[]',
+  expenses       TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS photo (
@@ -94,6 +99,8 @@ export function useDb() {
   db.exec(SCHEMA)
   addColumnIfMissing(db, 'post', 'cluster_radius', 'INTEGER')
   addColumnIfMissing(db, 'point', 'cover_photo_id', 'INTEGER')
+  addColumnIfMissing(db, 'point', 'links', `TEXT NOT NULL DEFAULT '[]'`)
+  addColumnIfMissing(db, 'point', 'expenses', `TEXT NOT NULL DEFAULT '[]'`)
 
   handle = db
   return db

@@ -40,6 +40,17 @@
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
 
+/* 항목 위의 상태 한 줄 — 「지금 어디인지」를 누르기 전에 알려준다. 누를 수 없는 글이라
+   DropdownMenuItem 이 아니다 (항목이면 방향키가 여기에도 멈춘다). */
+.ovf-head {
+  padding: 6px 12px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 4px;
+}
+
 /*
  * BottomCta 는 fixed 라 문서 흐름에서 자리를 차지하지 않는다. 그 아래 깔리는 내용을
  * 페이지마다 손으로 74px 씩 적어두면 CTA 높이가 바뀔 때 전부 어긋난다 — 한 곳에서 센다.
@@ -47,3 +58,43 @@
  */
 :root { --cta-h: 84px; }
 
+
+/*
+ * CurrencySelect 의 포털 내용 — SelectPortal 이 body 로 옮기므로 전역이어야 한다
+ * (.ovf-content 와 같은 이유). 두 목록은 같은 앱의 같은 「열리는 판」이라 값을 맞춘다.
+ */
+.cur-content {
+  min-width: var(--reka-select-trigger-width);
+  /* 9종이 한 판에 다 안 들어가는 높이면 뷰포트가 스스로 굴러간다 */
+  max-height: var(--reka-select-content-available-height, 320px);
+  background: var(--s1);
+  border: 1px solid rgba(146, 178, 169, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  z-index: 110;
+  overflow: hidden;
+}
+.cur-viewport { padding: 6px; overflow-y: auto; scrollbar-width: none; }
+.cur-viewport::-webkit-scrollbar { display: none; }
+
+.cur-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 터치 타깃 — .ovf-item 과 같은 44px */
+  min-height: 44px;
+  padding: 0 12px 0 8px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--mid);
+  cursor: pointer;
+  user-select: none;
+}
+.cur-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
+.cur-item[data-state='checked'] { color: var(--ink); }
+/* 체크 자리는 늘 비워둔다 — 고른 항목만 아이콘이 들어오면서 글자가 밀리면 안 된다 */
+.cur-check { display: grid; place-items: center; width: 16px; flex: none; color: var(--acc); }
+/* 코드가 주인공이고(트리거에도 이게 뜬다) 한글은 무엇인지 알려주는 몫이다 */
+.cur-item .cur-code { letter-spacing: 0.06em; color: var(--ink); }
+.cur-item .cur-name { margin-left: auto; font-size: 12px; color: var(--faint); }

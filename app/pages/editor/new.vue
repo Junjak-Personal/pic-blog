@@ -7,7 +7,7 @@ import RadiusSlider from '~/components/RadiusSlider.vue'
  * 1 사진 선택 → 2 검사 결과 → 3 클러스터 미리보기 + 반경 → 4 확정 → /editor/[slug]
  */
 import { formatDate, formatGap, formatTime, localIso } from '#shared/utils/format'
-import { summarizeSkipped } from '~/utils/exif'
+import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
 
 definePageMeta({ layout: 'editor' })
 
@@ -132,6 +132,11 @@ async function skip() {
         hidden
         @change="onPick"
       >
+      <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
+      <p class="mono pick-hint">
+        한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
+        고른 뒤 화면이 잠시 조용해도 기다려 주세요.
+      </p>
     </section>
 
     <!-- 2단계 — 검사 진행 -->
@@ -165,6 +170,12 @@ async function skip() {
         </template>
         <span class="scanbar-note mono">스크린샷·메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다</span>
       </div>
+
+      <!-- 조치가 따라붙는 제외(상한 초과 · 이미 올라간 사진)는 한 줄로 따로 말한다 -->
+      <p v-if="skipNotice(flow.skipped.value)" class="mono notice">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
+        {{ skipNotice(flow.skipped.value) }}
+      </p>
 
       <!-- 통과한 사진이 하나도 없다 — 사유는 아래 목록이 한 장씩 말한다 -->
       <section v-if="!flow.scanned.value.length" class="empty">
@@ -547,6 +558,22 @@ async function skip() {
 .t-row.on { background: rgba(146, 178, 169, 0.1); border-color: rgba(146, 178, 169, 0.4); }
 .t-label { width: 42px; font-size: 12px; color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
+/* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
+.notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 24px;
+  background: rgba(214, 178, 106, 0.1);
+  border-bottom: 1px solid rgba(214, 178, 106, 0.28);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--route);
+}
+.notice svg { flex: none; }
+.pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+
 .t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.1); overflow: hidden; }
 .t-fill { display: block; height: 100%; border-radius: 6px; background: var(--acc); }
 .t-count { width: 44px; text-align: right; font-size: 11px; color: var(--faint); }
