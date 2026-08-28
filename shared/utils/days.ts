@@ -17,14 +17,15 @@ export interface DayPoint {
 /**
  * 날짜 색 — 다크 배경에서 서로 구분되는 6색. 밝기를 비슷하게 맞춰 어느 날짜도
  * 더 «중요해» 보이지 않게 했다. 7일차부터는 처음 색으로 돌아간다 (그때는 날짜 글자가 구분한다).
+ * 1일차 색은 --acc 와 같은 값이다 (팔레트가 틸로 옮겨가며 함께 옮겼다).
  * 활성 마커 흰색은 피했다 — 겹치면 상태 신호와 헷갈린다.
  * 난색(#E2A857)을 맨 뒤로 미뤄둔 것도 같은 이유다: 동선 색(--route #FFB454)과 가까워서
  * 축소된 지도에서 점이 선 위에 겹치면 둘이 한 덩어리로 보인다. 6일 넘는 기록에서만 만난다.
  */
-export const DAY_COLORS = ['#92B2A9', '#7FA7D9', '#C48FBF', '#8FC98A', '#E08C7A', '#E2A857'] as const
+export const DAY_COLORS = ['#92ACB2', '#7FA7D9', '#C48FBF', '#8FC98A', '#E08C7A', '#E2A857'] as const
 
 /** 촬영 시각이 없는 포인트 (설계문서 §6 — 동선에서 빠지고 마커만 남는 그 포인트들) */
-export const NO_DAY_COLOR = '#6B837E'
+export const NO_DAY_COLOR = '#6B7C83'
 
 export interface DayGroup<T extends DayPoint> {
   /** 'YYYY-MM-DD'. 촬영 시각이 없으면 '' */

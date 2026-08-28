@@ -59,8 +59,8 @@ const year = new Date().getFullYear()
   border-radius: var(--radius);
   color: var(--faint);
 }
-.ico:hover { color: var(--mid); background: rgba(146, 178, 169, 0.1); }
-.ico:active { background: rgba(146, 178, 169, 0.16); }
+.ico:hover { color: var(--mid); background: rgb(var(--acc-rgb) / 0.1); }
+.ico:active { background: rgb(var(--acc-rgb) / 0.16); }
 
 @media (max-width: 900px) {
   .sitefoot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }

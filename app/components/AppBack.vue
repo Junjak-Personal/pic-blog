@@ -59,7 +59,7 @@ function back() {
     color: var(--mid);
     cursor: pointer;
   }
-  .appback:active { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+  .appback:active { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
   .appback:focus-visible { outline: 2px solid var(--focus-border); outline-offset: 2px; }
 }
 </style>

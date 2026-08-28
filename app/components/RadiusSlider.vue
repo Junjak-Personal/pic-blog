@@ -158,7 +158,7 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   height: 9px;
   border-radius: 50%;
   background: var(--s0);
-  border: 1.5px solid rgba(146, 178, 169, 0.5);
+  border: 1.5px solid rgb(var(--acc-rgb) / 0.5);
   transition: all 0.12s;
 }
 .dot.on {
@@ -166,7 +166,7 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   height: 13px;
   background: var(--acc);
   border-color: var(--ink);
-  box-shadow: 0 0 0 4px rgba(146, 178, 169, 0.18);
+  box-shadow: 0 0 0 4px rgb(var(--acc-rgb) / 0.18);
 }
 
 /* Reka 의 thumb 는 키보드 포커스 타깃으로만 쓰고 시각적으로는 정지점 dot 이 대신한다 */

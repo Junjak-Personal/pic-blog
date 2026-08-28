@@ -85,13 +85,13 @@ const model = defineModel<CurrencyCode>({ required: true })
   gap: 4px;
   padding: 0 8px 0 10px;
   background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   font-size: 12px;
   color: var(--ink);
   cursor: pointer;
 }
-.curtrigger:hover { border-color: rgba(146, 178, 169, 0.34); }
+.curtrigger:hover { border-color: rgb(var(--acc-rgb) / 0.34); }
 .curtrigger:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .curtrigger[data-state='open'] { border-color: var(--focus-border); }
 .curtrigger svg { flex: none; color: var(--deep); }

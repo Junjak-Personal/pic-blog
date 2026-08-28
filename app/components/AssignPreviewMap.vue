@@ -6,6 +6,7 @@ import MapFrame from '~/components/MapFrame.vue'
  * 기존 포인트 중심은 움직이지 않는다 — 그래서 뷰포트도 기존 포인트 기준으로 한 번만 맞춘다.
  */
 import mapboxgl from 'mapbox-gl'
+import { tokenColor } from '~/utils/route-style'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
@@ -74,9 +75,9 @@ function render() {
       source: DOTS,
       paint: {
         'circle-radius': 3,
-        'circle-color': 'rgba(146,178,169,0.95)',
+        'circle-color': tokenColor('--acc-rgb', 0.95),
         'circle-stroke-width': 1,
-        'circle-stroke-color': 'rgba(4,4,8,0.7)',
+        'circle-stroke-color': tokenColor('--s0-rgb', 0.7),
         // night 프리셋에서 커스텀 레이어가 조명에 눌려 검게 깔린다 — route-style.ts 주석 참고
         'circle-emissive-strength': 1,
       },
@@ -148,20 +149,20 @@ onBeforeUnmount(clearMarkers)
   display: flex;
   align-items: center;
   gap: 9px;
-  background: rgba(4, 4, 8, 0.8);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  background: rgb(var(--s0-rgb) / 0.8);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 6px 10px;
 }
 .chip .mono { font-size: 10px; color: var(--mid); }
-.dot-sample { width: 6px; height: 6px; border-radius: 50%; background: rgba(146, 178, 169, 0.95); }
+.dot-sample { width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--acc-rgb) / 0.95); }
 .gain-sample {
   display: grid;
   place-items: center;
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  background: rgba(146, 178, 169, 0.28);
+  background: rgb(var(--acc-rgb) / 0.28);
   border: 1.5px dashed var(--acc);
   font-family: var(--font-mono);
   font-size: 8px;
@@ -185,17 +186,17 @@ onBeforeUnmount(clearMarkers)
 <style>
 /* 1f 전용 마커 변형 — map.css 의 .map-marker 를 확장한다 */
 .map-marker.gain .body {
-  background: rgba(146, 178, 169, 0.28);
-  color: #E8EBE9;
-  border: 1.5px dashed #92B2A9;
+  background: rgb(var(--acc-rgb) / 0.28);
+  color: var(--ink);
+  border: 1.5px dashed var(--acc);
 }
-.map-marker.gain .tail { border-top-color: #92B2A9; }
+.map-marker.gain .tail { border-top-color: var(--acc); }
 .map-marker.fresh { z-index: 70; }
 .map-marker.fresh .body {
-  background: #92B2A9;
-  color: #040408;
-  border: 1.5px solid #E8EBE9;
+  background: var(--acc);
+  color: var(--s0);
+  border: 1.5px solid var(--ink);
   transform: scale(1.1);
 }
-.map-marker.fresh .tail { border-top-color: #92B2A9; }
+.map-marker.fresh .tail { border-top-color: var(--acc); }
 </style>

@@ -160,9 +160,12 @@ select:focus-visible {
   cursor: pointer;
 }
 .btn:disabled { opacity: 0.45; cursor: default; }
-.btn.primary { background: var(--mid); color: var(--s0); }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.ghost:hover:not(:disabled) { border-color: rgba(146, 178, 169, 0.45); color: var(--ink); }
+/* 채우는 면은 어둡고 글자는 --ink 다 — 이유는 tokens.css 의 --primary-fill 주석 참고 */
+.btn.primary { background: var(--primary-fill); color: var(--ink); }
+/* 어두운 면이라 눌린 티가 옅다. 색을 하나 더 만들지 않고 밝기로만 올린다 */
+.btn.primary:hover:not(:disabled) { filter: brightness(1.2); }
+.btn.ghost { border: 1px solid rgb(var(--mid-rgb) / 0.2); color: var(--mid); }
+.btn.ghost:hover:not(:disabled) { border-color: rgb(var(--acc-rgb) / 0.45); color: var(--ink); }
 /* 크게 — 빈 화면 한가운데의 「사진 선택」처럼 그 화면의 유일한 행동일 때 */
 .btn.big { padding: 12px 20px; font-size: 12px; }
 /* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.
@@ -187,7 +190,7 @@ select:focus-visible {
   min-height: var(--field-h);
   padding: 0 14px;
   background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   font-size: 14px;
   color: var(--ink);
@@ -235,7 +238,7 @@ select:focus-visible {
    */
   background-color: var(--s3);
   /* 훑고 지나가는 빛. 색은 --mid 계열이라 표면과 같은 온도를 유지한다. */
-  background-image: linear-gradient(90deg, transparent 0%, rgba(177, 199, 193, 0.1) 50%, transparent 100%);
+  background-image: linear-gradient(90deg, transparent 0%, rgb(var(--mid-rgb) / 0.1) 50%, transparent 100%);
   background-size: 200% 100%;
   background-repeat: no-repeat;
   background-position: 200% 0;
@@ -255,7 +258,7 @@ img.sk { border-radius: 0; }
 .spin {
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(177, 199, 193, 0.22);
+  border: 2px solid rgb(var(--mid-rgb) / 0.22);
   border-top-color: var(--acc);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -276,8 +279,8 @@ img.sk { border-radius: 0; }
   align-items: center;
   gap: 8px;
   padding: 9px 24px;
-  background: rgba(214, 178, 106, 0.1);
-  border-bottom: 1px solid rgba(214, 178, 106, 0.28);
+  background: rgb(var(--route-soft-rgb) / 0.1);
+  border-bottom: 1px solid rgb(var(--route-soft-rgb) / 0.28);
   font-size: 11px;
   line-height: 1.5;
   color: var(--route);
@@ -288,7 +291,7 @@ img.sk { border-radius: 0; }
   margin-bottom: 8px;
   padding: 8px 12px;
   background: none;
-  border: 1px solid rgba(214, 178, 106, 0.34);
+  border: 1px solid rgb(var(--route-soft-rgb) / 0.34);
   border-radius: var(--radius);
   font-size: 10.5px;
   line-height: 1.6;
@@ -330,7 +333,7 @@ img.sk { border-radius: 0; }
   z-index: 210;
   max-width: min(320px, calc(100vw - 16px));
   padding: 7px 10px;
-  border: 1px solid rgba(146, 178, 169, 0.3);
+  border: 1px solid rgb(var(--acc-rgb) / 0.3);
   border-radius: var(--radius);
   background: var(--s1);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);

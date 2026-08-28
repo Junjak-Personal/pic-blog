@@ -435,13 +435,13 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   gap: 6px;
   min-height: 32px;
   padding: 0 11px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 11px;
   color: var(--mid);
   cursor: pointer;
 }
-.addbtn:hover { background: rgba(146, 178, 169, 0.1); }
+.addbtn:hover { background: rgb(var(--acc-rgb) / 0.1); }
 /* 고르는 중 — 다음에 누를 것이 「이 버튼」이 아니라 「사진」이라는 걸 색으로 말한다 */
 .addbtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
 /* 두 버튼은 한 덩어리다 — space-between 에 낱개로 두면 둘 사이가 벌어져 남남처럼 보인다 */
@@ -453,7 +453,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   flex: none;
   border: 1px solid var(--hair);
   border-radius: var(--radius-lg);
-  background: rgba(146, 178, 169, 0.03);
+  background: rgb(var(--acc-rgb) / 0.03);
   transition: border-color 0.12s, background 0.12s;
   /*
    * 가상 스크롤 — 화면 밖 그룹은 브라우저가 통째로 건너뛴다 (레이아웃도 페인트도).
@@ -472,11 +472,11 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   contain-intrinsic-size: auto 240px;
 }
 /* 지도 마커로 찾아온 그룹 — 잠깐 빛나고 사라진다 */
-.group.flash { border-color: var(--acc); background: rgba(146, 178, 169, 0.1); }
+.group.flash { border-color: var(--acc); background: rgb(var(--acc-rgb) / 0.1); }
 
 /* 손끝이 올라온 그룹 — 어디에 떨어질지 그룹 단위로 먼저 보여준다 */
-.group.target { border-color: rgba(146, 178, 169, 0.6); background: rgba(146, 178, 169, 0.09); }
-.group.fresh { border-style: dashed; border-color: rgba(214, 178, 106, 0.5); }
+.group.target { border-color: rgb(var(--acc-rgb) / 0.6); background: rgb(var(--acc-rgb) / 0.09); }
+.group.fresh { border-style: dashed; border-color: rgb(var(--route-soft-rgb) / 0.5); }
 
 .ghead {
   display: flex;
@@ -495,9 +495,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border-radius: 50%;
   font-size: 10px;
   font-weight: 600;
-  background: rgba(19, 28, 24, 0.94);
+  background: rgb(var(--marker-rgb) / 0.94);
   color: var(--mid);
-  border: 1px solid rgba(146, 178, 169, 0.55);
+  border: 1px solid rgb(var(--acc-rgb) / 0.55);
 }
 .gname {
   flex: 1;
@@ -508,7 +508,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgba(214, 178, 106, 0.16); color: var(--route); }
+.badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgb(var(--route-soft-rgb) / 0.16); color: var(--route); }
 .gmeta { flex: none; font-size: 10px; color: var(--faint); }
 .gspot { flex: none; font-size: 10px; color: var(--deep); }
 
@@ -525,8 +525,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   color: var(--deep);
   cursor: pointer;
 }
-.spotbtn:hover { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
-.spotbtn[data-state='open'] { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.spotbtn:hover { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
+.spotbtn[data-state='open'] { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
 
 @media (max-width: 900px) {
   .spotbtn { width: 40px; height: 40px; }
@@ -546,14 +546,14 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  border: 1px dashed rgba(146, 178, 169, 0.34);
+  border: 1px dashed rgb(var(--acc-rgb) / 0.34);
   border-radius: 6px;
   background: none;
   color: var(--deep);
   font-size: 9.5px;
   cursor: pointer;
 }
-.addtile:hover:not(:disabled) { border-color: var(--acc); color: var(--ink); background: rgba(146, 178, 169, 0.08); }
+.addtile:hover:not(:disabled) { border-color: var(--acc); color: var(--ink); background: rgb(var(--acc-rgb) / 0.08); }
 /* 0.4 는 이유를 읽을 수 없을 만큼 흐리다 — 누를 수 없다는 것만 말하고 글자는 남긴다 */
 .addtile:disabled { border-style: dotted; color: var(--faint); cursor: default; }
 /* 이유가 「사진 추가」보다 길다 — 두 줄까지 접히게 두고 가운데로 맞춘다 */
@@ -603,7 +603,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   width: 20px;
   height: 20px;
   border-radius: 5px;
-  background: rgba(4, 4, 8, 0.72);
+  background: rgb(var(--s0-rgb) / 0.72);
   color: var(--mid);
   cursor: pointer;
 }
@@ -622,7 +622,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   touch-action: none;
   -webkit-touch-callout: none;
 }
-.handle:hover { color: var(--mid); background: rgba(146, 178, 169, 0.14); }
+.handle:hover { color: var(--mid); background: rgb(var(--acc-rgb) / 0.14); }
 
 .newzone {
   position: fixed;
@@ -637,14 +637,14 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   justify-content: center;
   gap: 9px;
   height: 66px;
-  border: 1px dashed rgba(146, 178, 169, 0.42);
+  border: 1px dashed rgb(var(--acc-rgb) / 0.42);
   border-radius: var(--radius-lg);
-  background: rgba(11, 14, 18, 0.92);
+  background: rgb(var(--s1-rgb) / 0.92);
   backdrop-filter: blur(6px);
   color: var(--faint);
   font-size: 11px;
 }
-.newzone.target { border-color: var(--acc); border-style: solid; color: var(--ink); background: rgba(146, 178, 169, 0.14); }
+.newzone.target { border-color: var(--acc); border-style: solid; color: var(--ink); background: rgb(var(--acc-rgb) / 0.14); }
 
 @media (max-width: 900px) {
   .hint { display: none; }

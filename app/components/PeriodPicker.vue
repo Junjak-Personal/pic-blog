@@ -116,13 +116,13 @@ const label = computed(() => {
   min-height: var(--field-h);
   padding: 0 12px;
   background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   font-size: 13px;
   color: var(--ink);
   cursor: pointer;
 }
-.periodtrigger:hover { border-color: rgba(146, 178, 169, 0.34); }
+.periodtrigger:hover { border-color: rgb(var(--acc-rgb) / 0.34); }
 .periodtrigger:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .periodtrigger[data-state='open'] { border-color: var(--focus-border); }
 .periodtrigger svg { flex: none; color: var(--deep); }

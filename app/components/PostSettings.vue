@@ -242,13 +242,13 @@ function confirmRecluster() {
 .revert {
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 11px;
   color: var(--mid);
   cursor: pointer;
 }
-.revert:hover { background: rgba(146, 178, 169, 0.1); }
+.revert:hover { background: rgb(var(--acc-rgb) / 0.1); }
 .warn { font-size: 10.5px; color: var(--danger); }
 
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -261,17 +261,17 @@ function confirmRecluster() {
 
 .switch { position: relative; display: flex; align-items: center; gap: 11px; cursor: pointer; }
 .switch input { position: absolute; width: 42px; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
-.track { position: relative; display: block; width: 42px; height: 24px; flex: none; border-radius: 999px; background: rgba(177, 199, 193, 0.2); transition: background 0.14s; }
+.track { position: relative; display: block; width: 42px; height: 24px; flex: none; border-radius: 999px; background: rgb(var(--mid-rgb) / 0.2); transition: background 0.14s; }
 .knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--mid); transition: transform 0.14s, background 0.14s; }
-.switch input:checked ~ .track { background: rgba(146, 178, 169, 0.9); }
+.switch input:checked ~ .track { background: rgb(var(--acc-rgb) / 0.9); }
 .switch input:checked ~ .track .knob { transform: translateX(18px); background: var(--s0); }
 .switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
 .switch-text { font-size: 13px; color: var(--mid); }
 
 
 .rwrap {
-  background: rgba(11, 14, 18, 0.7);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  background: rgb(var(--s1-rgb) / 0.7);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 14px 16px 10px;
 }
@@ -280,7 +280,7 @@ function confirmRecluster() {
 .hint { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 .warn { font-size: 10.5px; line-height: 1.7; color: var(--danger); }
 
-.ovl { position: fixed; inset: 0; z-index: 100; background: rgba(4, 4, 8, 0.7); backdrop-filter: blur(3px); }
+.ovl { position: fixed; inset: 0; z-index: 100; background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .dlg {
   position: fixed;
   z-index: 101;
@@ -294,7 +294,7 @@ function confirmRecluster() {
   flex-direction: column;
   gap: 14px;
   background: var(--s1);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   padding: 20px;
 }
@@ -304,7 +304,7 @@ function confirmRecluster() {
 .dlg-sep { color: var(--faint); }
 .dlg-desc { font-size: 13px; line-height: 1.6; color: var(--mid); }
 
-.lose { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 10px 12px; list-style: none; background: rgba(255, 128, 128, 0.07); border: 1px solid rgba(255, 128, 128, 0.3); border-radius: var(--radius); }
+.lose { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 10px 12px; list-style: none; background: rgb(var(--danger-rgb) / 0.07); border: 1px solid rgb(var(--danger-rgb) / 0.3); border-radius: var(--radius); }
 .lose li { display: flex; align-items: baseline; gap: 10px; }
 .lose-name { font-size: 13px; color: var(--ink); }
 .lose-detail { margin-left: auto; font-size: 10px; color: var(--danger); }

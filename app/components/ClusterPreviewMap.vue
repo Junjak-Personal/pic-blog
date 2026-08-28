@@ -12,7 +12,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Cluster, ClusterInput } from '#shared/utils/cluster'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
-import { addRouteLayers } from '~/utils/route-style'
+import { addRouteLayers, tokenColor } from '~/utils/route-style'
 
 const props = defineProps<{
   clusters: Cluster<ClusterInput>[]
@@ -138,9 +138,9 @@ function setSource(m: mapboxgl.Map, id: string, data: FeatureCollection) {
       source: id,
       paint: {
         'circle-radius': 2.5,
-        'circle-color': 'rgba(177,199,193,0.5)',
+        'circle-color': tokenColor('--mid-rgb', 0.5),
         'circle-stroke-width': 1,
-        'circle-stroke-color': 'rgba(4,4,8,0.7)',
+        'circle-stroke-color': tokenColor('--s0-rgb', 0.7),
         // night 프리셋에서 커스텀 레이어가 조명에 눌려 검게 깔린다 — route-style.ts 주석 참고
         'circle-emissive-strength': 1,
       },
@@ -161,7 +161,7 @@ function setSource(m: mapboxgl.Map, id: string, data: FeatureCollection) {
     source: id,
     layout: { 'line-cap': 'round' },
     paint: {
-      'line-color': 'rgba(146,178,169,0.55)',
+      'line-color': tokenColor('--acc-rgb', 0.55),
       'line-width': 1.4,
       'line-dasharray': [1, 6],
       'line-emissive-strength': 1,
@@ -222,17 +222,17 @@ onBeforeUnmount(clearMarkers)
   display: flex;
   align-items: center;
   gap: 9px;
-  background: rgba(4, 4, 8, 0.8);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  background: rgb(var(--s0-rgb) / 0.8);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 6px 10px;
 }
-.chip.accent { border-color: rgba(146, 178, 169, 0.4); }
+.chip.accent { border-color: rgb(var(--acc-rgb) / 0.4); }
 .chip .mono { font-size: 10px; color: var(--mid); }
-.dot-sample { width: 5px; height: 5px; border-radius: 50%; background: rgba(177, 199, 193, 0.5); }
+.dot-sample { width: 5px; height: 5px; border-radius: 50%; background: rgb(var(--mid-rgb) / 0.5); }
 /* 지도의 동선 레이어와 같은 색 (--route) — .gap-sample 은 시간 공백선이라 세이지 유지 */
 .line-sample { width: 26px; height: 0; border-top: 2px dashed var(--route); }
-.gap-sample { width: 26px; height: 0; border-top: 1.4px dotted rgba(146, 178, 169, 0.85); }
+.gap-sample { width: 26px; height: 0; border-top: 1.4px dotted rgb(var(--acc-rgb) / 0.85); }
 .clock-sample {
   display: grid;
   place-items: center;

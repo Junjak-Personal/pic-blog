@@ -57,7 +57,7 @@ const { pending, open } = useConfirmState()
 
 <style scoped>
 /* PostSettings 의 다이얼로그와 같은 값 — 두 창이 나란히 뜨는 일은 없지만 같아야 한다 */
-.ovl { position: fixed; inset: 0; z-index: 100; background: rgba(4, 4, 8, 0.72); backdrop-filter: blur(3px); }
+.ovl { position: fixed; inset: 0; z-index: 100; background: rgb(var(--s0-rgb) / 0.72); backdrop-filter: blur(3px); }
 .dlg {
   position: fixed;
   z-index: 101;
@@ -70,7 +70,7 @@ const { pending, open } = useConfirmState()
   gap: 12px;
   padding: 22px;
   background: var(--s1);
-  border: 1px solid rgba(146, 178, 169, 0.3);
+  border: 1px solid rgb(var(--acc-rgb) / 0.3);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }

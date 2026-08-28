@@ -28,7 +28,7 @@ defineProps<{ label: string }>()
   z-index: 80;
   display: grid;
   place-items: center;
-  background: rgba(4, 4, 8, 0.5);
+  background: rgb(var(--s0-rgb) / 0.5);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   /* 흐림 뒤의 것을 누르지 못하게 — 판이 클릭을 전부 받아낸다 */
@@ -40,8 +40,8 @@ defineProps<{ label: string }>()
   gap: 12px;
   padding: 14px 20px;
   border-radius: var(--radius-lg);
-  background: rgba(11, 14, 18, 0.92);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  background: rgb(var(--s1-rgb) / 0.92);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 .text { font-size: 12px; color: var(--mid); }

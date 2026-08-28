@@ -39,8 +39,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(177, 199, 193, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(177, 199, 193, 0.05) 1px, transparent 1px);
+    linear-gradient(rgb(var(--mid-rgb) / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--mid-rgb) / 0.05) 1px, transparent 1px);
   background-size: 56px 56px;
   /* .sk 와 같은 훑기를 격자 위에 얹는다 */
   mask-image: linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);
@@ -71,7 +71,7 @@
   gap: 9px;
   padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(6, 7, 10, 0.72);
+  background: rgb(var(--sheet-rgb) / 0.72);
   font-size: 10.5px;
   letter-spacing: 0.06em;
   color: var(--faint);

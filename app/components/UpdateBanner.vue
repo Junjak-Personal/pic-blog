@@ -34,8 +34,8 @@ const dismissed = ref(false)
   gap: 10px;
   max-width: calc(100vw - 28px);
   padding: 9px 9px 9px 15px;
-  background: rgba(11, 14, 18, 0.97);
-  border: 1px solid rgba(146, 178, 169, 0.32);
+  background: rgb(var(--s1-rgb) / 0.97);
+  border: 1px solid rgb(var(--acc-rgb) / 0.32);
   border-radius: 999px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
@@ -46,8 +46,9 @@ const dismissed = ref(false)
   padding: 0 13px;
   border: 0;
   border-radius: 999px;
-  background: var(--mid);
-  color: var(--s0);
+  /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
+  background: var(--primary-fill);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -64,7 +65,7 @@ const dismissed = ref(false)
   color: var(--faint);
   cursor: pointer;
 }
-.x:active { background: rgba(146, 178, 169, 0.14); }
+.x:active { background: rgb(var(--acc-rgb) / 0.14); }
 
 .rise-enter-active, .rise-leave-active { transition: opacity 0.2s, transform 0.2s; }
 .rise-enter-from, .rise-leave-to { opacity: 0; transform: translate(-50%, 10px); }

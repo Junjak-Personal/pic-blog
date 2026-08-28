@@ -1403,8 +1403,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   justify-content: space-between;
   gap: 20px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(146, 178, 169, 0.28);
-  background: rgba(146, 178, 169, 0.06);
+  border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
+  background: rgb(var(--acc-rgb) / 0.06);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
    * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
@@ -1414,7 +1414,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
    */
   padding-top: var(--top-inset);
   height: calc(60px + var(--top-inset));
-  background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
+  background: linear-gradient(rgb(var(--acc-rgb) / 0.06), rgb(var(--acc-rgb) / 0.06)), var(--s0);
 }
 .top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 14px; flex: none; }
@@ -1448,7 +1448,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   height: 24px;
   flex: none;
   border-radius: 999px;
-  background: rgba(177, 199, 193, 0.18);
+  background: rgb(var(--mid-rgb) / 0.18);
   border: 1px solid var(--hair);
   cursor: pointer;
   transition: background 0.15s;
@@ -1456,7 +1456,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 앱에 남은 유일한 스위치다 (목록의 공개 토글은 여기 1단계로 흡수됐다).
    링은 트랙 모양을 따라간다 — base.css 의 36px 규칙에서 role="switch" 를 뺀 이유다. */
 .toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.toggle.on { background: rgba(146, 178, 169, 0.9); border-color: var(--acc); }
+.toggle.on { background: rgb(var(--acc-rgb) / 0.9); border-color: var(--acc); }
 .knob {
   position: absolute;
   left: 3px;
@@ -1470,7 +1470,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 .toggle.on .knob { background: var(--s0); transform: translateX(18px); }
 .toggle-label { font-size: 13px; color: var(--mid); }
-.rule { width: 1px; height: 22px; background: rgba(177, 199, 193, 0.16); }
+.rule { width: 1px; height: 22px; background: rgb(var(--mid-rgb) / 0.16); }
 
 /* 버튼은 base.css 의 .btn 한 벌을 쓴다 (여백이 여기만 8px 13px 이었는데 14px 로 맞춘다) */
 
@@ -1508,18 +1508,18 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   width: min(520px, calc(100vw - 32px));
   background: var(--s1);
   color: var(--ink);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   padding: 20px;
 }
-.titledlg::backdrop { background: rgba(4, 4, 8, 0.7); backdrop-filter: blur(3px); }
+.titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
 .titledlg-close {
   display: block;
   margin: 16px 0 0 auto;
   min-height: 40px;
   padding: 0 15px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 12px;
   color: var(--mid);
@@ -1533,7 +1533,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   align-items: stretch;
   gap: 8px;
   padding: 10px 24px;
-  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+  border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .stepbtn {
   display: flex;
@@ -1541,15 +1541,15 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 9px;
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid rgba(177, 199, 193, 0.18);
+  border: 1px solid rgb(var(--mid-rgb) / 0.18);
   border-radius: var(--radius);
-  background: rgba(11, 14, 18, 0.7);
+  background: rgb(var(--s1-rgb) / 0.7);
   color: var(--faint);
   font-size: 12px;
   letter-spacing: 0.04em;
   cursor: pointer;
 }
-.stepbtn.on { border-color: var(--focus-border); background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.stepbtn.on { border-color: var(--focus-border); background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
 .sdot {
   display: grid;
   place-items: center;
@@ -1557,8 +1557,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   height: 20px;
   flex: none;
   border-radius: 50%;
-  background: rgba(146, 178, 169, 0.14);
-  border: 1px solid rgba(177, 199, 193, 0.22);
+  background: rgb(var(--acc-rgb) / 0.14);
+  border: 1px solid rgb(var(--mid-rgb) / 0.22);
   font-size: 10px;
   color: var(--mid);
 }
@@ -1582,7 +1582,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   flex-direction: column;
   min-height: 0;
   border-right: 1px solid var(--hair);
-  background: rgba(11, 14, 18, 0.92);
+  background: rgb(var(--s1-rgb) / 0.92);
 }
 .points-head {
   flex: none;
@@ -1607,8 +1607,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-bottom: 1px solid var(--hair-soft);
   cursor: pointer;
 }
-.prow:hover { background: rgba(232, 235, 233, 0.06); }
-.prow.on { background: rgba(232, 235, 233, 0.1); }
+.prow:hover { background: rgb(var(--ink-rgb) / 0.06); }
+.prow.on { background: rgb(var(--ink-rgb) / 0.1); }
 .pnum {
   display: grid;
   place-items: center;
@@ -1617,9 +1617,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-radius: 50%;
   font-size: 10.5px;
   font-weight: 600;
-  background: rgba(16, 19, 23, 0.94);
+  background: rgb(var(--field-rgb) / 0.94);
   color: var(--mid);
-  border: 1px solid rgba(146, 178, 169, 0.6);
+  border: 1px solid rgb(var(--acc-rgb) / 0.6);
 }
 .prow.on .pnum { background: var(--ink); color: var(--s0); border-color: var(--ink); }
 .pmain { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -1655,7 +1655,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   align-items: center;
   gap: 14px;
   padding: 14px 24px 12px;
-  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+  border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .enum {
   display: grid;
@@ -1676,7 +1676,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 8px;
   flex: none;
   padding: 8px 12px;
-  border: 1px dashed rgba(177, 199, 193, 0.18);
+  border: 1px dashed rgb(var(--mid-rgb) / 0.18);
   border-radius: var(--radius);
   font-size: 10.5px;
   color: var(--faint);
@@ -1685,7 +1685,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 좁아지면 줄이 넘치는 대신 말줄임표로 접힌다 — 가로 스크롤은 만들지 않는다 */
 .locktext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* 아직 저장 전인 포인트 — 좌표가 없다는 걸 색으로도 구분한다 */
-.lockrow.fresh { border-color: rgba(214, 178, 106, 0.42); color: var(--route); white-space: normal; }
+.lockrow.fresh { border-color: rgb(var(--route-soft-rgb) / 0.42); color: var(--route); white-space: normal; }
 
 .split { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
 .grid-col {
@@ -1727,7 +1727,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   flex-direction: column;
   gap: 13px;
   padding: 15px 24px;
-  border-left: 1px solid rgba(177, 199, 193, 0.1);
+  border-left: 1px solid rgb(var(--mid-rgb) / 0.1);
   min-height: 0;
 }
 /* 아래에 기타 정보가 붙는다 — min-height 0 이면 콘텐츠 칸이 눌려 텍스트영역이 넘쳐 나온다 */
@@ -1741,8 +1741,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   font-size: 10.5px;
   letter-spacing: 0.06em;
   color: var(--mid);
-  background: rgba(146, 178, 169, 0.12);
-  border: 1px solid rgba(146, 178, 169, 0.4);
+  background: rgb(var(--acc-rgb) / 0.12);
+  border: 1px solid rgb(var(--acc-rgb) / 0.4);
   border-radius: var(--radius);
   padding: 4px 5px 4px 9px;
   white-space: nowrap;
@@ -1753,7 +1753,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  background: rgba(4, 4, 8, 0.5);
+  background: rgb(var(--s0-rgb) / 0.5);
   border: 1px solid var(--hair);
   color: var(--deep);
   cursor: pointer;
@@ -1777,7 +1777,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   align-items: center;
   gap: 5px;
   color: var(--faint);
-  border: 1px dashed rgba(177, 199, 193, 0.24);
+  border: 1px dashed rgb(var(--mid-rgb) / 0.24);
   border-radius: var(--radius);
   padding: 4px 9px;
   transition: border-color 0.12s, box-shadow 0.12s;
@@ -1803,7 +1803,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   min-height: 140px;
   resize: none;
   background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 12px 13px;
   font-size: 13.5px;
@@ -1824,7 +1824,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .xrow .input { flex: 45 1 0; min-width: 0; }
 .xrow .input.amt { flex: 30 1 0; text-align: right; }
 /* 숫자로 안 읽히는 금액 — 저장하면 0 이 되므로 미리 붉게 알린다 */
-.input.bad { border-color: rgba(255, 128, 128, 0.55); color: var(--danger); }
+.input.bad { border-color: rgb(var(--danger-rgb) / 0.55); color: var(--danger); }
 
 .xkill {
   flex: none;
@@ -1836,7 +1836,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   color: var(--faint);
   cursor: pointer;
 }
-.xkill:hover { background: rgba(255, 128, 128, 0.14); color: var(--danger); }
+.xkill:hover { background: rgb(var(--danger-rgb) / 0.14); color: var(--danger); }
 
 .xacts { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .minibtn {
@@ -1845,13 +1845,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 5px;
   min-height: 30px;
   padding: 0 9px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 10.5px;
   color: var(--mid);
   cursor: pointer;
 }
-.minibtn:hover:not(:disabled) { background: rgba(146, 178, 169, 0.1); }
+.minibtn:hover:not(:disabled) { background: rgb(var(--acc-rgb) / 0.1); }
 /* 고르는 중 — 2단계 「커버 지정」(.addbtn.armed)과 같은 강조다. 없으면 모드가 켜진 것이 안 보인다. */
 .minibtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
 .minibtn:disabled { opacity: 0.45; cursor: default; }
@@ -1879,7 +1879,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 @media (max-width: 1240px) {
   .split { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
+  .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); }
   .body { grid-template-columns: 280px 1fr; }
   .picks { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 }
@@ -1933,7 +1933,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .xnote { font-size: 11px; }
   .xtotal b { font-size: 13.5px; }
   .tag-input { flex: 1; width: auto; min-width: 0; }
-  .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); }
+  .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); }
   .field.grow { min-height: 0; }
 }
 </style>

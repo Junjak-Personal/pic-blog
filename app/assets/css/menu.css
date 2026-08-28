@@ -4,7 +4,7 @@
   padding: 6px;
   /* 불투명 — 0.98 이면 뒤의 탭·목록 헤더 글자가 그대로 비쳐 읽힌다 */
   background: var(--s1);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
   z-index: 90;
@@ -29,18 +29,18 @@
   cursor: pointer;
 }
 .ovf-item svg { flex: none; color: var(--deep); }
-.ovf-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
+.ovf-item[data-highlighted] { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); outline: none; }
 .ovf-item[data-disabled] { opacity: 0.4; cursor: default; }
 /* 지금 그 상태인 항목 — 「무엇이 켜져 있는지」를 목록에서 바로 읽게 한다.
    🔴 글자색만으로는 안 보인다(실제 지적). 바탕과 테두리로 말하되, 테두리는 border 가
    아니라 안쪽 그림자다 — border 를 켜면 켜진 항목만 2px 커져 목록이 들썩인다. */
 .ovf-item.current {
   color: var(--ink);
-  background: rgba(146, 178, 169, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(146, 178, 169, 0.45);
+  background: rgb(var(--acc-rgb) / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(var(--acc-rgb) / 0.45);
 }
 /* 손이 얹힌 쪽이 늘 더 밝다 — 안 그러면 「켜진 것」과 「가리키는 것」이 구분되지 않는다 */
-.ovf-item.current[data-highlighted] { background: rgba(146, 178, 169, 0.2); }
+.ovf-item.current[data-highlighted] { background: rgb(var(--acc-rgb) / 0.2); }
 .ovf-item.current svg { color: var(--acc); }
 .ovf-item.current .ovf-state { color: var(--acc); }
 .ovf-item.danger { color: var(--danger); }
@@ -69,7 +69,7 @@
   /* 9종이 한 판에 다 안 들어가는 높이면 뷰포트가 스스로 굴러간다 */
   max-height: var(--reka-select-content-available-height, 320px);
   background: var(--s1);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
   z-index: 110;
@@ -92,7 +92,7 @@
   cursor: pointer;
   user-select: none;
 }
-.cur-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
+.cur-item[data-highlighted] { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); outline: none; }
 .cur-item[data-state='checked'] { color: var(--ink); }
 /* 체크 자리는 늘 비워둔다 — 고른 항목만 아이콘이 들어오면서 글자가 밀리면 안 된다 */
 .cur-check { display: grid; place-items: center; width: 16px; flex: none; color: var(--acc); }
@@ -108,7 +108,7 @@
   z-index: 120;
   padding: 12px;
   background: var(--s1);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
@@ -126,7 +126,7 @@
   color: var(--mid);
   cursor: pointer;
 }
-.cal-nav:hover { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.cal-nav:hover { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
 .cal-nav[data-disabled] { opacity: 0.35; cursor: default; }
 
 .cal-grid { width: 100%; border-collapse: collapse; }
@@ -144,12 +144,12 @@
   cursor: pointer;
   user-select: none;
 }
-.cal-day:hover { background: rgba(146, 178, 169, 0.16); color: var(--ink); }
+.cal-day:hover { background: rgb(var(--acc-rgb) / 0.16); color: var(--ink); }
 /* 이번 달이 아닌 날은 흐리게 — 지우면 6주 격자에서 경계가 안 보인다 */
 .cal-day[data-outside-view] { color: var(--faint); opacity: 0.5; }
-.cal-day[data-today] { box-shadow: inset 0 0 0 1px rgba(146, 178, 169, 0.5); }
+.cal-day[data-today] { box-shadow: inset 0 0 0 1px rgb(var(--acc-rgb) / 0.5); }
 /* 범위 안 · 양 끝. 끝 두 날만 채우고 사이는 옅은 띠로 이어 「구간」으로 읽히게 한다. */
-.cal-day[data-highlighted], .cal-day[data-selected] { background: rgba(146, 178, 169, 0.18); color: var(--ink); }
+.cal-day[data-highlighted], .cal-day[data-selected] { background: rgb(var(--acc-rgb) / 0.18); color: var(--ink); }
 .cal-day[data-selection-start], .cal-day[data-selection-end],
 .cal-day[data-highlighted-start], .cal-day[data-highlighted-end] {
   background: var(--acc);

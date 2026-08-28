@@ -242,9 +242,9 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   display: flex;
   gap: 2px;
   border-radius: var(--radius);
-  background: rgba(146, 178, 169, 0.06);
+  background: rgb(var(--acc-rgb) / 0.06);
   /* 테두리 대신 inset 그림자 — border 를 쓰면 트랙이 2px 자라 옆의 36px 컨트롤과 어긋난다 */
-  box-shadow: inset 0 0 0 1px rgba(177, 199, 193, 0.2);
+  box-shadow: inset 0 0 0 1px rgb(var(--mid-rgb) / 0.2);
 }
 .sort {
   font-size: 11px;
@@ -263,7 +263,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   align-items: center;
   font-size: 12.5px;
   color: var(--mid);
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   padding: 0 13px;
 }
@@ -293,13 +293,13 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   display: flex;
   flex-direction: column;
   background: var(--s2);
-  border: 1px solid rgba(177, 199, 193, 0.13);
+  border: 1px solid rgb(var(--mid-rgb) / 0.13);
   border-radius: var(--radius);
   overflow: hidden;
   color: inherit;
   transition: border-color 0.14s, transform 0.14s;
 }
-.card:hover { border-color: rgba(146, 178, 169, 0.45); transform: translateY(-2px); }
+.card:hover { border-color: rgb(var(--acc-rgb) / 0.45); transform: translateY(-2px); }
 
 .cover {
   height: 196px;
@@ -324,8 +324,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(4, 4, 8, 0.82);
-  border: 1px solid rgba(177, 199, 193, 0.18);
+  background: rgb(var(--s0-rgb) / 0.82);
+  border: 1px solid rgb(var(--mid-rgb) / 0.18);
   padding: 3px 7px;
   font-size: 9.5px;
   letter-spacing: 0.08em;
@@ -364,7 +364,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   justify-content: space-between;
   gap: 10px;
   padding: 11px 18px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .range { display: flex; align-items: center; gap: 6px; color: var(--faint); }
 .range .mono, .stat { font-size: 10.5px; color: var(--deep); }
@@ -391,7 +391,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  background: rgba(146, 178, 169, 0.1);
+  background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
 }
@@ -402,12 +402,14 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   align-items: center;
   gap: 7px;
   margin-top: 6px;
-  background: var(--mid);
-  color: var(--s0);
+  /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
+  background: var(--primary-fill);
+  color: var(--ink);
   border-radius: var(--radius);
   padding: 11px 18px;
   font-size: 12px;
 }
+.cta:hover { filter: brightness(1.2); }
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(2, 1fr); }

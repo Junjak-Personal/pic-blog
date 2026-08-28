@@ -73,7 +73,7 @@ const props = defineProps<{
   padding: 1px 4px;
   border-radius: 4px;
   font-size: 9px;
-  background: rgba(4, 4, 8, 0.72);
+  background: rgb(var(--s0-rgb) / 0.72);
   color: var(--mid);
 }
 
@@ -90,8 +90,10 @@ const props = defineProps<{
 }
 /* 이 포인트의 대표 — 왼쪽.
    🔴 예전엔 밝은 연두 바탕에 검정 글자였는데 사진 위에서 글자가 안 읽혔다.
-      바탕을 어둡게 내리고 글자를 밝게 올린다 (커버와 명암이 반대라 구분도 쉬워진다). */
-.rep { left: 4px; background: rgba(20, 51, 43, 0.94); color: var(--ink); }
+      바탕을 어둡게 내리고 글자를 밝게 올린다 (커버와 명암이 반대라 구분도 쉬워진다).
+   바탕은 주 버튼과 «같은» 값이다 (--primary-fill). 배지만 쓰는 짙은 초록을 따로 두면
+   팔레트에 색이 하나 더 늘고 화면이 그만큼 노이지해진다 — 역할이 같으니 값도 하나다. */
+.rep { left: 4px; background: var(--primary-fill); color: var(--ink); }
 /* 이 기록의 커버 — 오른쪽. 한 장뿐이라 흰 알약으로 더 세게 말한다. */
 .cover { right: 4px; background: var(--ink); color: var(--s0); }
 
@@ -118,10 +120,10 @@ const props = defineProps<{
   position: relative;
   overflow: hidden;
   border-radius: 6px;
-  background: rgba(11, 14, 18, 0.9);
+  background: rgb(var(--s1-rgb) / 0.9);
   /*
    * 🔴 테두리가 «칸의 경계»를 만든다. 바탕이 90% 반투명이라 합성 결과가 뒤에 뭐가 있느냐에
-   *    따라 달라진다 — 2단계는 포인트 카드(rgba(146,178,169,0.03)) 위라 카드보다 Δ4 어두워
+   *    따라 달라진다 — 2단계는 포인트 카드(rgb(var(--acc-rgb) / 0.03)) 위라 카드보다 Δ4 어두워
    *    시각 줄이 띠로 보였는데, 3단계는 셸 바탕(#0B0E12) 위라 Δ0 이 되어 아예 안 보였다.
    *    같은 컴포넌트가 부모에 따라 달라 보인 원인이 이것이다. 경계를 스스로 그으면 어디에
    *    놓이든 같게 보인다.

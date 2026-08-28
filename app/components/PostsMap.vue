@@ -114,8 +114,8 @@ const latRange = computed(() => {
   display: flex;
   align-items: center;
   gap: 7px;
-  background: rgba(4, 4, 8, 0.8);
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  background: rgb(var(--s0-rgb) / 0.8);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 5px 9px;
   pointer-events: none;

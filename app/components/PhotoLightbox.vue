@@ -225,7 +225,7 @@ watch(() => props.photos, async () => {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(5, 6, 9, 0.72);
+  background: rgb(var(--s0-rgb) / 0.72);
   backdrop-filter: blur(10px);
 }
 
@@ -235,7 +235,7 @@ watch(() => props.photos, async () => {
   z-index: 61;
   display: flex;
   flex-direction: column;
-  background: rgba(5, 6, 9, 0.97);
+  background: rgb(var(--s0-rgb) / 0.97);
 }
 
 .head {
@@ -244,7 +244,7 @@ watch(() => props.photos, async () => {
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+  border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .name { font-size: 11px; color: var(--ink); }
 .count { font-size: 11px; color: var(--faint); }
@@ -299,7 +299,7 @@ watch(() => props.photos, async () => {
   max-height: 100%;
   max-width: 100%;
   object-fit: contain;
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
 }
 .cap { font-size: 11px; color: var(--faint); }
@@ -310,12 +310,12 @@ watch(() => props.photos, async () => {
   flex: none;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   color: var(--mid);
   cursor: pointer;
 }
-.nav:hover:not(:disabled) { background: rgba(146, 178, 169, 0.14); }
+.nav:hover:not(:disabled) { background: rgb(var(--acc-rgb) / 0.14); }
 /* 갈 곳이 없을 때 — 눌리는데 아무 일도 없는 것보다 낫다 */
 .nav:disabled { opacity: 0.3; cursor: default; }
 
@@ -331,7 +331,7 @@ watch(() => props.photos, async () => {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-top: 1px solid rgba(177, 199, 193, 0.1);
+    border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   }
   /* 헤더 밖 조작 요소는 44px — 하단 바의 이전/다음이 34px 이었다 */
   .nav.sm { width: 44px; height: 44px; }

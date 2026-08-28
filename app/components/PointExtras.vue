@@ -66,13 +66,13 @@ const totals = computed(() => (props.expenses.length > 1 ? totalsOf(props.expens
   gap: 8px;
   min-height: 34px;
   padding: 0 10px;
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius);
   color: var(--mid);
   font-size: 12.5px;
   text-decoration: none;
 }
-.link:hover { background: rgba(146, 178, 169, 0.12); color: var(--ink); }
+.link:hover { background: rgb(var(--acc-rgb) / 0.12); color: var(--ink); }
 .ltext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .out { flex: none; color: var(--faint); }
 
@@ -83,7 +83,7 @@ const totals = computed(() => (props.expenses.length > 1 ? totalsOf(props.expens
   padding: 10px 11px;
   border: 1px solid var(--hair);
   border-radius: var(--radius);
-  background: rgba(146, 178, 169, 0.04);
+  background: rgb(var(--acc-rgb) / 0.04);
 }
 .slabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 .items { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }

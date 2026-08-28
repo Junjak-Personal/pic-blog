@@ -233,9 +233,9 @@ const deviceLine = computed(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgba(6, 7, 10, 0.96);
+  background: rgb(var(--sheet-rgb) / 0.96);
   backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(146, 178, 169, 0.3);
+  border-top: 1px solid rgb(var(--acc-rgb) / 0.3);
   border-radius: 12px 12px 0 0;
 }
 
@@ -248,7 +248,7 @@ const deviceLine = computed(() => {
   align-items: center;
   gap: 14px;
   padding: 16px 24px 14px;
-  border-bottom: 1px solid rgba(177, 199, 193, 0.1);
+  border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 /* 번호는 날짜마다 01 로 되돌아간다 — 며칠차인지는 이 색이 말한다 (레일 날짜 탭이 범례) */
 .badge {
@@ -300,14 +300,14 @@ const deviceLine = computed(() => {
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: 50%;
-  background: rgba(6, 7, 10, 0.82);
+  background: rgb(var(--sheet-rgb) / 0.82);
   backdrop-filter: blur(6px);
   color: var(--mid);
   cursor: pointer;
 }
-.pnav:hover { background: rgba(146, 178, 169, 0.2); color: var(--ink); }
+.pnav:hover { background: rgb(var(--acc-rgb) / 0.2); color: var(--ink); }
 .pnav.prev { left: 12px; }
 .pnav.next { right: 12px; }
 
@@ -331,7 +331,7 @@ const deviceLine = computed(() => {
   inset: 0;
   z-index: 30;
   padding: 16px 18px 22px;
-  background: rgba(6, 7, 10, 0.97);
+  background: rgb(var(--sheet-rgb) / 0.97);
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
@@ -352,14 +352,14 @@ const deviceLine = computed(() => {
   flex-direction: column;
   gap: 14px;
   padding: 18px 24px;
-  border-left: 1px solid rgba(177, 199, 193, 0.1);
+  border-left: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
   font-size: 10.5px;
   letter-spacing: 0.06em;
   color: var(--mid);
-  border: 1px solid rgba(146, 178, 169, 0.4);
+  border: 1px solid rgb(var(--acc-rgb) / 0.4);
   border-radius: var(--radius);
   padding: 4px 9px;
   white-space: nowrap;
@@ -369,7 +369,7 @@ const deviceLine = computed(() => {
 .exif {
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -380,7 +380,7 @@ const deviceLine = computed(() => {
 /* 모바일·태블릿 — 세로 스택 */
 @media (max-width: 1100px) {
   .body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
-  .side { border-left: 0; border-top: 1px solid rgba(177, 199, 193, 0.1); max-height: 44%; }
+  .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); max-height: 44%; }
 }
 @media (max-width: 900px) {
   /* 손잡이 — 쓸어 닫을 수 있다는 유일한 시각 신호다 */
@@ -397,7 +397,7 @@ const deviceLine = computed(() => {
     width: 38px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(177, 199, 193, 0.3);
+    background: rgb(var(--mid-rgb) / 0.3);
   }
   /* 헤더는 한 줄 48px 고정 — [번호] [이름] ... [ⓘ] [✕]. 시각·좌표는 ⓘ 판으로 갔다.
      안쪽 여백으로 높이가 정해지면 47·49 로 흔들린다 — box-sizing 이 border-box(전역)라

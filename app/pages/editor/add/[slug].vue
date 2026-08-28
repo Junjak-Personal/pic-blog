@@ -335,8 +335,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   justify-content: space-between;
   gap: 20px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(146, 178, 169, 0.28);
-  background: rgba(146, 178, 169, 0.06);
+  border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
+  background: rgb(var(--acc-rgb) / 0.06);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
    * 안전영역만큼 자라면서 자기 불투명 배경으로 그 구간을 덮어야 한다 —
@@ -346,7 +346,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
    */
   padding-top: var(--top-inset);
   height: calc(60px + var(--top-inset));
-  background: linear-gradient(rgba(146, 178, 169, 0.06), rgba(146, 178, 169, 0.06)), var(--s0);
+  background: linear-gradient(rgb(var(--acc-rgb) / 0.06), rgb(var(--acc-rgb) / 0.06)), var(--s0);
 }
 .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 /* 모바일에서만 쓰는 화면 이름 — 데스크탑은 배지가 그 역할을 한다 */
@@ -375,15 +375,15 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: rgba(146, 178, 169, 0.14);
-  border: 1px solid rgba(146, 178, 169, 0.4);
+  background: rgb(var(--acc-rgb) / 0.14);
+  border: 1px solid rgb(var(--acc-rgb) / 0.4);
   color: var(--acc);
 }
 .done-detail { font-size: 12px; color: var(--deep); }
 .leftover {
   font-size: 11.5px;
   color: var(--route);
-  border: 1px solid rgba(214, 178, 106, 0.34);
+  border: 1px solid rgb(var(--route-soft-rgb) / 0.34);
   border-radius: var(--radius);
   padding: 8px 12px;
   max-width: 460px;
@@ -399,9 +399,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   bottom: 20px;
   width: 452px;
   max-width: calc(100% - 40px);
-  background: rgba(6, 7, 10, 0.94);
+  background: rgb(var(--sheet-rgb) / 0.94);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
   display: flex;
@@ -413,7 +413,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   align-items: stretch;
   gap: 14px;
   padding-top: 12px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .metric { display: flex; flex-direction: column; gap: 4px; }
 .metric-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
@@ -427,14 +427,14 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   color: var(--ink);
 }
 .unit { font-size: 10.5px; color: var(--deep); }
-.metric-rule { width: 1px; background: rgba(177, 199, 193, 0.12); }
+.metric-rule { width: 1px; background: rgb(var(--mid-rgb) / 0.12); }
 .footnote { margin-left: auto; font-size: 9.5px; line-height: 1.6; color: var(--faint); text-align: right; }
 
 .side {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgba(11, 14, 18, 0.92);
+  background: rgb(var(--s1-rgb) / 0.92);
   border-left: 1px solid var(--hair);
 }
 .side-head {
@@ -455,7 +455,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: rgba(146, 178, 169, 0.06);
+  background: rgb(var(--acc-rgb) / 0.06);
   border-top: 1px solid var(--hair-soft);
   border-bottom: 1px solid var(--hair-soft);
   font-size: 9.5px;
@@ -480,7 +480,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   font-size: 10.5px;
   font-weight: 600;
 }
-.num.gain { background: rgba(146, 178, 169, 0.28); color: var(--ink); border: 1px dashed var(--acc); }
+.num.gain { background: rgb(var(--acc-rgb) / 0.28); color: var(--ink); border: 1px dashed var(--acc); }
 .num.fresh { background: var(--acc); color: var(--s0); border: 1px solid var(--ink); font-size: 11px; }
 .row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .row-name { font-size: 14px; line-height: 1.2; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -518,23 +518,23 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   cursor: pointer;
   text-align: left;
 }
-.t-row:hover { background: rgba(232, 235, 233, 0.04); }
-.t-row.on { background: rgba(146, 178, 169, 0.1); border-color: rgba(146, 178, 169, 0.4); }
+.t-row:hover { background: rgb(var(--ink-rgb) / 0.04); }
+.t-row.on { background: rgb(var(--acc-rgb) / 0.1); border-color: rgb(var(--acc-rgb) / 0.4); }
 .t-label { width: 42px; font-size: 12px; color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
 .pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 
-.t-bar { flex: 1; display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: rgba(177, 199, 193, 0.1); }
+.t-bar { flex: 1; display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: rgb(var(--mid-rgb) / 0.1); }
 .t-fill { display: block; height: 100%; }
-.t-fill.join { background: rgba(146, 178, 169, 0.35); }
+.t-fill.join { background: rgb(var(--acc-rgb) / 0.35); }
 .t-fill.new { background: var(--acc); }
 .t-count { width: 52px; text-align: right; font-size: 11px; color: var(--faint); }
 
 .t-legend { display: flex; gap: 14px; font-size: 9.5px; color: var(--faint); }
 .t-legend span { display: flex; align-items: center; gap: 6px; }
 .sw { width: 9px; height: 9px; border-radius: 3px; display: block; }
-.sw.join { background: rgba(146, 178, 169, 0.35); }
+.sw.join { background: rgb(var(--acc-rgb) / 0.35); }
 .sw.new { background: var(--acc); }
 
 .rules {
@@ -543,7 +543,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   gap: 10px;
   margin: 0;
   padding: 14px 0 0;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   list-style: none;
 }
 .rules li { font-size: 13px; line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
@@ -551,7 +551,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .rules-foot {
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   font-size: 9.5px;
   line-height: 1.7;
   color: var(--faint);
@@ -572,7 +572,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 .empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
 .empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
-.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.12); overflow: hidden; }
+.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .failed { display: flex; flex-direction: column; gap: 6px; width: min(460px, 100%); margin: 0; padding: 0; list-style: none; }
 .failed li {

@@ -63,9 +63,9 @@ withDefaults(defineProps<{
   color: var(--mid);
   cursor: pointer;
 }
-.ovf-trigger:active { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.ovf-trigger:active { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
 .ovf-trigger:focus-visible { box-shadow: var(--focus-ring); border-color: var(--focus-border); }
-.ovf-trigger[data-state='open'] { background: rgba(146, 178, 169, 0.12); color: var(--ink); }
+.ovf-trigger[data-state='open'] { background: rgb(var(--acc-rgb) / 0.12); color: var(--ink); }
 
 /* 넓은 화면에도 남는다 — 펼친 버튼으로 뺄 자리가 없는 동작을 담은 메뉴다 */
 .ovf-trigger.always { display: grid; }

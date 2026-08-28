@@ -23,15 +23,15 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  background: rgba(19, 28, 24, 0.94);
+  background: rgb(var(--marker-rgb) / 0.94);
   /*
    * --day 는 촬영 «날짜» 색이다 (shared/utils/days.ts). TripMap 이 마커마다 인라인으로 심는다.
    * 번호가 날짜마다 01 로 되돌아가므로 며칠차인지는 색이 말한다 — 레일의 날짜 탭이
    * 같은 색 점을 달고 있어 범례 노릇을 한다. 날짜를 모르는 화면(PostsMap)은
    * 변수를 심지 않으므로 폴백 값 그대로다.
    */
-  color: var(--day, #B1C7C1);
-  border: 1.5px solid var(--day, rgba(146, 178, 169, 0.55));
+  color: var(--day, var(--mid));
+  border: 1.5px solid var(--day, rgb(var(--acc-rgb) / 0.55));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
   transition: transform 0.12s, background 0.12s, color 0.12s;
 }
@@ -43,7 +43,7 @@
   margin-top: -1px;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 7px solid var(--day, rgba(146, 178, 169, 0.62));
+  border-top: 7px solid var(--day, rgb(var(--acc-rgb) / 0.62));
 }
 
 .map-marker:hover { filter: brightness(1.12); }
@@ -61,10 +61,10 @@
   margin-bottom: 5px;
   object-fit: cover;
   border-radius: 6px;
-  border: 1.5px solid #E8EBE9;
+  border: 1.5px solid var(--ink);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
   /* 이미지가 오기 전 빈 칸이 검은 구멍으로 보이지 않게 */
-  background: #131C18;
+  background: rgb(var(--marker-rgb));
 }
 /* 축소 모드에서도 활성 마커는 dot 이 되지 않으므로 썸네일이 그대로 남는다 */
 
@@ -80,20 +80,20 @@
   margin-bottom: 4px;
   object-fit: cover;
   border-radius: 5px;
-  border: 1.5px solid #E8EBE9;
+  border: 1.5px solid var(--ink);
   box-shadow: 0 5px 14px rgba(0, 0, 0, 0.55);
-  background: #131C18;
+  background: rgb(var(--marker-rgb));
 }
 
 /* 활성 — 1.15× · #E8EBE9 배경 · #040408 텍스트 */
 .map-marker.on { z-index: 80; }
 .map-marker.on .body {
-  background: #E8EBE9;
-  color: #040408;
-  border-color: #E8EBE9;
+  background: var(--ink);
+  color: var(--s0);
+  border-color: var(--ink);
   transform: scale(1.15);
 }
-.map-marker.on .tail { border-top-color: #E8EBE9; }
+.map-marker.on .tail { border-top-color: var(--ink); }
 
 /* 축소 시 dot 12px — 번호가 접히면 날짜 색만 남으므로 테두리가 아니라 점 자체를 칠한다 */
 .map-marker.dot .body {
@@ -101,7 +101,7 @@
   height: 12px;
   font-size: 0;
   border-width: 1.5px;
-  background: var(--day, rgba(19, 28, 24, 0.94));
+  background: var(--day, rgb(var(--marker-rgb) / 0.94));
 }
 .map-marker.dot .tail { display: none; }
 
@@ -120,9 +120,9 @@
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: #040408;
-  border: 1px solid #92B2A9;
-  color: #92B2A9;
+  background: var(--s0);
+  border: 1px solid var(--acc);
+  color: var(--acc);
   pointer-events: none;
 }
 

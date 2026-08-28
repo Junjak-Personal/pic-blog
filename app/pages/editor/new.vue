@@ -408,8 +408,8 @@ async function skip() {
   height: 20px;
   flex: none;
   border-radius: 50%;
-  background: rgba(146, 178, 169, 0.12);
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  background: rgb(var(--acc-rgb) / 0.12);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
@@ -419,7 +419,7 @@ async function skip() {
 .bullet.on { background: var(--ink); border-color: var(--ink); color: var(--s0); }
 .step-label { font-size: 13px; color: var(--faint); white-space: nowrap; }
 .step-label.on { color: var(--ink); }
-.step-rule { width: 22px; height: 1px; background: rgba(177, 199, 193, 0.18); margin: 0 12px; }
+.step-rule { width: 22px; height: 1px; background: rgb(var(--mid-rgb) / 0.18); margin: 0 12px; }
 
 .top-actions { display: flex; align-items: center; gap: 14px; flex: none; }
 
@@ -433,7 +433,7 @@ async function skip() {
   gap: 16px;
   padding: 13px 24px;
   border-bottom: 1px solid var(--hair);
-  background: rgba(146, 178, 169, 0.04);
+  background: rgb(var(--acc-rgb) / 0.04);
   font-size: 13.5px;
 }
 .scanbar .ok { display: flex; align-items: center; gap: 8px; color: var(--ink); }
@@ -452,9 +452,9 @@ async function skip() {
   bottom: 20px;
   width: 452px;
   max-width: calc(100% - 40px);
-  background: rgba(6, 7, 10, 0.94);
+  background: rgb(var(--sheet-rgb) / 0.94);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
   display: flex;
@@ -467,7 +467,7 @@ async function skip() {
   align-items: center;
   gap: 14px;
   padding-top: 12px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .metric { display: flex; flex-direction: column; gap: 4px; }
 .metric-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
@@ -484,7 +484,7 @@ async function skip() {
 .unit { font-size: 10.5px; color: var(--deep); }
 .gapc { font-size: 13px; color: var(--acc); }
 .arrow { color: var(--faint); flex: none; }
-.metric-rule { width: 1px; height: 34px; background: rgba(177, 199, 193, 0.12); }
+.metric-rule { width: 1px; height: 34px; background: rgb(var(--mid-rgb) / 0.12); }
 .footnote { margin-left: auto; font-size: 9.5px; line-height: 1.6; color: var(--faint); text-align: right; }
 
 /* 잠정 포인트 목록 */
@@ -492,7 +492,7 @@ async function skip() {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgba(11, 14, 18, 0.92);
+  background: rgb(var(--s1-rgb) / 0.92);
   border-left: 1px solid var(--hair);
 }
 .side-head {
@@ -517,8 +517,8 @@ async function skip() {
   border-bottom: 1px solid var(--hair-soft);
   cursor: pointer;
 }
-.row:hover { background: rgba(232, 235, 233, 0.06); }
-.row.on { background: rgba(232, 235, 233, 0.1); }
+.row:hover { background: rgb(var(--ink-rgb) / 0.06); }
+.row.on { background: rgb(var(--ink-rgb) / 0.1); }
 .num {
   position: relative;
   display: grid;
@@ -528,9 +528,9 @@ async function skip() {
   border-radius: 50%;
   font-size: 10.5px;
   font-weight: 600;
-  background: rgba(16, 19, 23, 0.94);
+  background: rgb(var(--field-rgb) / 0.94);
   color: var(--mid);
-  border: 1px solid rgba(146, 178, 169, 0.6);
+  border: 1px solid rgb(var(--acc-rgb) / 0.6);
 }
 .row.on .num { background: var(--ink); color: var(--s0); border-color: var(--ink); }
 .gap-badge {
@@ -591,14 +591,14 @@ async function skip() {
   cursor: pointer;
   text-align: left;
 }
-.t-row:hover { background: rgba(232, 235, 233, 0.04); }
-.t-row.on { background: rgba(146, 178, 169, 0.1); border-color: rgba(146, 178, 169, 0.4); }
+.t-row:hover { background: rgb(var(--ink-rgb) / 0.04); }
+.t-row.on { background: rgb(var(--acc-rgb) / 0.1); border-color: rgb(var(--acc-rgb) / 0.4); }
 .t-label { width: 42px; font-size: 12px; color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
 .pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 
-.t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.1); overflow: hidden; }
+.t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.1); overflow: hidden; }
 .t-fill { display: block; height: 100%; border-radius: 6px; background: var(--acc); }
 .t-count { width: 44px; text-align: right; font-size: 11px; color: var(--faint); }
 
@@ -608,7 +608,7 @@ async function skip() {
   gap: 10px;
   margin: 0;
   padding: 14px 0 0;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   list-style: none;
 }
 .rules li { font-size: 13px; line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
@@ -616,7 +616,7 @@ async function skip() {
 .rules-foot {
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px solid rgba(177, 199, 193, 0.1);
+  border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   font-size: 9.5px;
   line-height: 1.7;
   color: var(--faint);
@@ -642,7 +642,7 @@ async function skip() {
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  background: rgba(146, 178, 169, 0.1);
+  background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
 }
@@ -658,13 +658,13 @@ async function skip() {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: rgba(146, 178, 169, 0.12);
-  border: 1px solid rgba(146, 178, 169, 0.4);
+  background: rgb(var(--acc-rgb) / 0.12);
+  border: 1px solid rgb(var(--acc-rgb) / 0.4);
   color: var(--acc);
 }
 .picked-range { font-size: 12px; color: var(--faint); }
 
-.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.12); overflow: hidden; }
+.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .progress-line { font-size: 11px; color: var(--deep); }
 

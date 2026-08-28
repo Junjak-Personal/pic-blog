@@ -8,6 +8,25 @@
  */
 import type { Map } from 'mapbox-gl'
 
+/**
+ * CSS 토큰을 지도 레이어 색으로 넘긴다.
+ *
+ * 🔴 Mapbox 의 paint 값은 CSS 가 아니다 — `var(--acc-rgb)` 를 넣으면 그대로 문자열로
+ *    들어가 파싱에 실패한다 (색이 조용히 기본값으로 떨어진다). 그렇다고 리터럴을
+ *    적으면 팔레트를 옮길 때 여기만 옛 색으로 남는다 — 실제로 그렇게 남을 뻔했다.
+ *    그래서 :root 에서 채널을 «읽어» rgba() 문자열로 만들어 넘긴다.
+ *    공백/슬래시 표기(rgb(r g b / a))가 아니라 rgba(r, g, b, a) 인 이유도 같다 —
+ *    Mapbox 의 색 파서가 확실히 받는 형식이 이쪽이다.
+ *
+ * 브라우저에서만 부른다 (지도 레이어를 올리는 시점이라 언제나 클라이언트다).
+ */
+export function tokenColor(channel: string, alpha = 1) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(channel).trim()
+  const [r, g, b] = raw.split(/\s+/)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+
 /** 동선 전용 난색. 마커(--ink 흰색 / --acc 세이지) 어느 상태와도 겹치지 않는다. */
 export const ROUTE_COLOR = '#FFB454'
 

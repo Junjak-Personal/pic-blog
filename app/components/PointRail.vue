@@ -143,7 +143,7 @@ function dayLabel(g: DayGroup<Point>) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgba(11, 14, 18, 0.92);
+  background: rgb(var(--s1-rgb) / 0.92);
   backdrop-filter: blur(12px);
   border-left: 1px solid var(--hair);
 }
@@ -178,15 +178,15 @@ function dayLabel(g: DayGroup<Point>) {
   flex: none;
   min-height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: 999px;
-  background: rgba(16, 19, 23, 0.7);
+  background: rgb(var(--field-rgb) / 0.7);
   font-size: 10.5px;
   color: var(--deep);
   cursor: pointer;
   white-space: nowrap;
 }
-.tab:hover { background: rgba(232, 235, 233, 0.07); }
+.tab:hover { background: rgb(var(--ink-rgb) / 0.07); }
 .tab.on { background: var(--ink); border-color: var(--ink); color: var(--s0); font-weight: 600; }
 .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--day, var(--acc)); }
 
@@ -203,7 +203,7 @@ function dayLabel(g: DayGroup<Point>) {
   align-items: center;
   gap: 8px;
   padding: 7px 14px 7px 18px;
-  background: rgba(11, 14, 18, 0.97);
+  background: rgb(var(--s1-rgb) / 0.97);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--hair-soft);
 }
@@ -220,8 +220,8 @@ function dayLabel(g: DayGroup<Point>) {
   border-bottom: 1px solid var(--hair-soft);
   cursor: pointer;
 }
-.row:hover { background: rgba(232, 235, 233, 0.06); }
-.row.on { background: rgba(232, 235, 233, 0.1); }
+.row:hover { background: rgb(var(--ink-rgb) / 0.06); }
+.row.on { background: rgb(var(--ink-rgb) / 0.1); }
 
 .num {
   display: grid;
@@ -231,9 +231,9 @@ function dayLabel(g: DayGroup<Point>) {
   border-radius: 50%;
   font-size: 10.5px;
   font-weight: 600;
-  background: rgba(19, 28, 24, 0.94);
+  background: rgb(var(--marker-rgb) / 0.94);
   color: var(--day, var(--mid));
-  border: 1px solid var(--day, rgba(146, 178, 169, 0.55));
+  border: 1px solid var(--day, rgb(var(--acc-rgb) / 0.55));
 }
 /* 상태는 «링 → 채움»으로만 말한다. 색은 두 상태에서 같은 날짜 색이라
    고른 행에서도 며칠차가 그대로 읽힌다 (예전엔 흰색으로 덮여 날짜가 사라졌다). */
@@ -260,7 +260,7 @@ function dayLabel(g: DayGroup<Point>) {
   color: var(--deep);
   cursor: pointer;
 }
-.open:hover { background: rgba(146, 178, 169, 0.14); }
+.open:hover { background: rgb(var(--acc-rgb) / 0.14); }
 
 .foot {
   flex: none;
@@ -276,7 +276,7 @@ function dayLabel(g: DayGroup<Point>) {
 
 /* 모바일: 터치 타깃 40×44 (아트보드 1b 인터랙션 규칙 2) */
 @media (max-width: 900px) {
-  .rail { border-left: 0; border-top: 1px solid rgba(146, 178, 169, 0.28); }
+  .rail { border-left: 0; border-top: 1px solid rgb(var(--acc-rgb) / 0.28); }
   .tabs { padding: 8px 12px 8px 16px; }
   /* 손가락으로 고르는 칩이다 — 28px 은 작다 */
   .tab { min-height: 32px; padding: 0 12px; }

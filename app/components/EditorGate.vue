@@ -137,7 +137,7 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   background: var(--field);
   /* 평상시는 중립. 예전엔 --focus-border + --focus-ring 이 상시 걸려 있어
      늘 포커스된 것처럼 보였고, 거기에 input 자신의 outline 이 겹쳐 이중 링이 됐다. */
-  border: 1px solid rgba(177, 199, 193, 0.16);
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   transition: border-color 0.12s, box-shadow 0.12s;
 }
@@ -145,7 +145,7 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   border-color: var(--focus-border);
   box-shadow: var(--focus-ring);
 }
-.field.bad { border-color: rgba(255, 128, 128, 0.6); box-shadow: 0 0 0 3px rgba(255, 128, 128, 0.12); }
+.field.bad { border-color: rgb(var(--danger-rgb) / 0.6); box-shadow: 0 0 0 3px rgb(var(--danger-rgb) / 0.12); }
 /* 화면에서는 감추되 DOM 에는 남긴다 — display:none 이면 암호 관리자가 못 본다 */
 .sr-only {
   position: absolute;
@@ -177,19 +177,21 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   display: flex;
   align-items: center;
   gap: 7px;
-  background: var(--mid);
-  color: var(--s0);
+  /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
+  background: var(--primary-fill);
+  color: var(--ink);
   border-radius: var(--radius);
   padding: 9px 15px;
   font-size: 11px;
   cursor: pointer;
 }
+.primary:hover:not(:disabled) { filter: brightness(1.2); }
 .primary:disabled { opacity: 0.5; cursor: default; }
 .ghost {
   display: flex;
   align-items: center;
   padding: 9px 15px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 11px;
   color: var(--mid);

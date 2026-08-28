@@ -61,9 +61,9 @@ onMounted(() => {
     /* 위를 더 띄운다 — 10px 이면 바로 위 내용과 붙어 판이 «잘린 것»처럼 보였다.
        이 값을 바꾸면 --cta-h(menu.css)도 같이 바꿔야 한다. 아래 내용이 그만큼 비켜선다. */
     padding: 16px 14px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(4, 4, 8, 0.94);
+    background: rgb(var(--s0-rgb) / 0.94);
     backdrop-filter: blur(14px);
-    border-top: 1px solid rgba(146, 178, 169, 0.22);
+    border-top: 1px solid rgb(var(--acc-rgb) / 0.22);
   }
   .note { font-size: 10.5px; color: var(--faint); text-align: center; }
   .row { display: flex; align-items: center; gap: 8px; }

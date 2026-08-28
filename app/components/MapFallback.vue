@@ -58,7 +58,7 @@ defineEmits<{ retry: [] }>()
   align-items: center;
   gap: 6px;
   padding: 7px 12px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 10.5px;
   color: var(--mid);
@@ -83,7 +83,7 @@ defineEmits<{ retry: [] }>()
   font-size: 10.5px;
   font-weight: 600;
   color: var(--mid);
-  border: 1px solid rgba(146, 178, 169, 0.6);
+  border: 1px solid rgb(var(--acc-rgb) / 0.6);
 }
 .name { font-size: 14px; color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .coord { font-size: 10.5px; color: var(--faint); }

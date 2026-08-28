@@ -421,18 +421,18 @@ useHead(() => ({
   width: min(520px, calc(100vw - 32px));
   background: var(--s1);
   color: var(--ink);
-  border: 1px solid rgba(146, 178, 169, 0.28);
+  border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius-lg);
   padding: 20px;
 }
-.titledlg::backdrop { background: rgba(4, 4, 8, 0.7); backdrop-filter: blur(3px); }
+.titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
 .titledlg-close {
   display: block;
   margin: 16px 0 0 auto;
   min-height: 40px;
   padding: 0 15px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 12px;
   color: var(--mid);
@@ -492,7 +492,7 @@ useHead(() => ({
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: rgba(146, 178, 169, 0.1);
+  background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
 }
@@ -502,7 +502,7 @@ useHead(() => ({
 .back-link {
   margin-top: 6px;
   padding: 9px 15px;
-  border: 1px solid rgba(177, 199, 193, 0.2);
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
   font-size: 11px;
   color: var(--mid);

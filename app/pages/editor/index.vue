@@ -169,7 +169,7 @@ async function logout() {
   gap: 18px;
   padding: 14px 18px;
   background: var(--s2);
-  border: 1px solid rgba(177, 199, 193, 0.13);
+  border: 1px solid rgb(var(--mid-rgb) / 0.13);
   border-radius: var(--radius);
   transition: border-color 0.14s;
 }
@@ -186,7 +186,7 @@ async function logout() {
 .line { display: block; height: 11px; border-radius: 4px; }
 .line.lg { height: 17px; width: 46%; }
 .line.sm { height: 9px; width: 62%; }
-.row:hover { border-color: rgba(146, 178, 169, 0.45); }
+.row:hover { border-color: rgb(var(--acc-rgb) / 0.45); }
 
 .cover {
   position: relative;
@@ -235,7 +235,7 @@ async function logout() {
   display: inline-block;
   margin-right: 6px;
   padding: 1px 5px;
-  border: 1px solid rgba(177, 199, 193, 0.28);
+  border: 1px solid rgb(var(--mid-rgb) / 0.28);
   border-radius: 4px;
   color: var(--mid);
 }
@@ -256,8 +256,8 @@ async function logout() {
   border-radius: var(--radius);
   color: var(--deep);
 }
-.edit:hover { color: var(--ink); background: rgba(146, 178, 169, 0.12); }
-.edit:active { background: rgba(146, 178, 169, 0.18); }
+.edit:hover { color: var(--ink); background: rgb(var(--acc-rgb) / 0.12); }
+.edit:active { background: rgb(var(--acc-rgb) / 0.18); }
 
 /* 아트보드 1c ① 기록 0 */
 .empty {
@@ -279,7 +279,7 @@ async function logout() {
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  background: rgba(146, 178, 169, 0.1);
+  background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
 }
