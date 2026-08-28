@@ -9,7 +9,11 @@ import { photoKey } from '#shared/utils/photo'
 export { photoKey }
 
 export interface ScannedPhoto {
-  /** 업로드 세션 내 고유 키 — 파일명은 중복될 수 있다 */
+  /**
+   * 업로드 세션 내 고유 키 — 서버가 배정한 photo.id 를 이 키로 되돌려준다.
+   * photoKey 를 그대로 쓴다: 통과 목록 안에서는 중복이 제거돼 있으므로 이미 유일하고,
+   * 파일 순번을 섞어 만들면 «묶음을 이어서 고를 때» 0번끼리 부딪힌다.
+   */
   key: string
   file: File
   name: string
@@ -37,7 +41,8 @@ export interface SkippedPhoto {
  * 아이폰 사진첩에서 200장을 고르면 Safari 가 그걸 전부 복사·변환하는 동안 화면은
  * 완전히 조용하고, 사용자는 되고 있는 건지조차 알 수 없다 — 실제로 196장에서 그랬다.
  * 우리가 그 구간에 진행률을 그릴 방법은 없으므로, 대신 그 구간을 짧게 만든다.
- * 남은 사진은 저장한 뒤 「사진 추가」로 이어서 올린다.
+ * 이건 «한 번에» 의 상한이지 기록 전체의 상한이 아니다 — 새 기록은 1단계에서 여러 번
+ * 이어서 고를 수 있고(useUploadFlow.selectFiles), 편집은 「이어서 추가」가 맡는다.
  */
 export const MAX_PER_SELECTION = 50
 
@@ -62,7 +67,7 @@ export function skipNotice(files: readonly SkippedPhoto[], limit = MAX_PER_SELEC
   const notes: string[] = []
   const over = countBy(files, 'over-limit')
   if (over) {
-    notes.push(`한 번에 ${limit}장까지 처리합니다 — 나머지 ${over}장은 이 묶음을 올린 뒤 이어서 올리면 됩니다`)
+    notes.push(`한 번에 ${limit}장까지 처리합니다 — 나머지 ${over}장은 「사진 더 선택」으로 이어서 고르면 됩니다`)
   }
   const dup = countBy(files, 'already-in-post')
   if (dup) notes.push(`이미 올라간 사진 ${dup}장은 제외했습니다`)
@@ -116,7 +121,7 @@ function cameraName(make: string | null, model: string | null) {
   return model ?? make
 }
 
-async function scanOne(file: File, index: number): Promise<ScannedPhoto | SkippedPhoto> {
+async function scanOne(file: File): Promise<ScannedPhoto | SkippedPhoto> {
   let gps: { latitude: number; longitude: number } | undefined
   let raw: RawExif = {}
 
@@ -142,14 +147,15 @@ async function scanOne(file: File, index: number): Promise<ScannedPhoto | Skippe
     ? raw.DateTimeOriginal
     : new Date(file.lastModified)
 
+  const shotAt = toLocalIso(original)
   return {
-    key: `${index}:${file.name}:${file.size}`,
+    key: photoKey({ shotAt, lat: gps.latitude, lng: gps.longitude }),
     file,
     name: file.name,
     lat: gps.latitude,
     lng: gps.longitude,
     t: original.getTime(),
-    shotAt: toLocalIso(original),
+    shotAt,
     camera: cameraName(asString(raw.Make), asString(raw.Model)),
     fNumber: asNumber(raw.FNumber),
     exposure: formatExposure(asNumber(raw.ExposureTime)),
@@ -161,23 +167,30 @@ function isSkipped(r: ScannedPhoto | SkippedPhoto): r is SkippedPhoto {
   return 'reason' in r
 }
 
+export interface ScanOptions {
+  /** 이미 이 «기록»에 들어 있는 사진들의 photoKey. 여기 걸리면 'already-in-post'. */
+  inPost?: ReadonlySet<string>
+  /** 앞선 묶음에서 이미 고른 사진들의 photoKey. 여기 걸리면 'duplicate' — 아직 올라간 게 아니다. */
+  picked?: ReadonlySet<string>
+  /** 한 번에 처리할 상한. 포인트별 추가처럼 더 작게 잡는 자리가 있다. */
+  limit?: number
+}
+
 /**
  * 파일 목록을 훑어 통과/제외로 가른다.
  * 좌표 없는 사진도, 중복도 조용히 버리지 않는다 — 제외 파일명이 그대로 UI 에 뜬다 (설계문서 §8).
- *
- * @param existingKeys 이미 이 기록에 들어 있는 사진들의 photoKey. 여기 걸리면 'already-in-post'.
  */
 export async function scanFiles(
   files: readonly File[],
   onProgress?: (done: number, total: number) => void,
-  existingKeys?: ReadonlySet<string>,
-  /** 한 번에 처리할 상한. 포인트별 추가처럼 더 작게 잡는 자리가 있다. */
-  limit = MAX_PER_SELECTION,
+  opts: ScanOptions = {},
 ): Promise<ScanResult> {
+  const { inPost, picked, limit = MAX_PER_SELECTION } = opts
   const passed: ScannedPhoto[] = []
   const skipped: SkippedPhoto[] = []
-  /** 이번 선택 안에서 이미 통과한 키 — 같은 파일을 두 번 고른 경우를 여기서 잡는다 */
-  const seen = new Set<string>()
+  /** 이미 통과한 키 — 같은 파일을 두 번 고른 경우를 여기서 잡는다.
+      묶음을 이어서 고를 때 앞 묶음의 키를 씨앗으로 받아 같은 사유로 처리한다. */
+  const seen = new Set<string>(picked)
 
   // 상한을 넘는 몫은 EXIF 를 읽기도 «전»에 잘라낸다 — 읽어봐야 어차피 안 쓴다
   const take = files.slice(0, limit)
@@ -185,22 +198,21 @@ export async function scanFiles(
   onProgress?.(0, take.length)
 
   for (let i = 0; i < take.length; i++) {
-    const r = await scanOne(take[i]!, i)
+    const r = await scanOne(take[i]!)
     onProgress?.(i + 1, take.length)
     if (isSkipped(r)) {
       skipped.push(r)
       continue
     }
-    const key = photoKey(r)
-    if (existingKeys?.has(key)) {
+    if (inPost?.has(r.key)) {
       skipped.push({ name: r.name, reason: 'already-in-post' })
       continue
     }
-    if (seen.has(key)) {
+    if (seen.has(r.key)) {
       skipped.push({ name: r.name, reason: 'duplicate' })
       continue
     }
-    seen.add(key)
+    seen.add(r.key)
     passed.push(r)
   }
 

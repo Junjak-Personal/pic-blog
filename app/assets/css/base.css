@@ -149,6 +149,9 @@ select:focus-visible {
 .btn {
   display: flex;
   align-items: center;
+  /* 늘어나는 자리(하단 CTA · 완료 화면의 flex:1)에서 글자가 왼쪽에 붙어 있었다 —
+     버튼 글자는 언제나 가운데다. 폭이 내용에 맞는 버튼에서는 아무 차이가 없다. */
+  justify-content: center;
   gap: 7px;
   padding: 8px 14px;
   border-radius: var(--radius);
@@ -165,7 +168,7 @@ select:focus-visible {
 /* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.
    🔴 이름이 .dlg 면 안 된다 — 그건 다이얼로그 «상자»가 이미 쓰는 클래스라 버튼이 상자
       스타일(padding 22px · 바탕 --s1)을 그대로 먹는다. 실제로 한 번 그렇게 깨졌다. */
-.btn.foot { justify-content: center; min-height: 40px; padding: 0 15px; font-size: 12px; }
+.btn.foot { min-height: 40px; padding: 0 15px; font-size: 12px; }
 /* 「확인」과 「삭제」는 되돌리기 어려운 쪽이라 취소보다 무겁게 */
 .btn.foot.primary, .btn.danger { font-weight: 600; }
 /* --danger 는 어두운 바탕 «위의 글자»용 밝은 빨강이다 — 채우는 면은 tokens.css 참고 */

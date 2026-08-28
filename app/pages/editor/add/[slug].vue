@@ -138,7 +138,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     <!-- 파일 선택 -->
     <section v-if="flow.stage.value === 'idle'" class="empty">
       <h3>추가할 사진을 선택하세요</h3>
-      <p>기존 포인트 중심에서 반경 안이면 그 포인트에 합류하고, 밖이면 새 포인트가 만들어집니다.</p>
+      <p>기존 포인트 중심에서 반경 안이고 «같은 날»이면 그 포인트에 합류하고, 아니면 새 포인트가 만들어집니다.</p>
       <button type="button" class="btn primary mono big" @click="fileInput?.click()">사진 선택</button>
       <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
       <p class="mono pick-hint">
@@ -190,7 +190,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
               </span>
             </span>
             <span class="footnote mono">
-              포인트 {{ points.length }} → {{ flow.totalAfter.value }}<br>90분 이상 공백은 끊습니다
+              포인트 {{ points.length }} → {{ flow.totalAfter.value }}<br>날짜가 다르면 합류하지 않습니다
             </span>
           </div>
         </div>
@@ -207,7 +207,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
             <span class="mono num gain">{{ String(j.point.order_index + 1).padStart(2, '0') }}</span>
             <span class="row-main">
               <span class="row-name">{{ j.point.title ?? `포인트 ${j.point.order_index + 1}` }}</span>
-              <span class="mono row-sub">중심에서 최대 {{ j.farthest }}m</span>
+              <!-- 날짜를 적는다 — 「왜 저 포인트에는 안 붙었지」의 답이 대개 날짜다 -->
+              <span class="mono row-sub">{{ formatDate(j.point.first_shot_at) }} · 중심에서 최대 {{ j.farthest }}m</span>
             </span>
             <span class="mono row-count">+{{ j.shots.length }}장</span>
           </div>
@@ -224,7 +225,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
             <span class="mono row-count">{{ c.shots.length }}장</span>
           </div>
         </div>
-        <div class="side-foot mono">새 포인트 이름은 추가 후 편집 화면에서 씁니다</div>
+        <div class="side-foot mono">날짜가 다르면 같은 자리라도 새 포인트가 됩니다 · 이름은 추가 후 편집 화면에서 씁니다</div>
       </aside>
 
       <aside class="table-card">
@@ -254,8 +255,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
           <span><i class="sw new" />새 포인트</span>
         </div>
         <ul class="rules">
-          <li>기존 포인트 중심에서 반경 안이면 그 포인트에 합류합니다</li>
-          <li>밖이면 추가 사진끼리 다시 묶어 새 포인트를 만듭니다</li>
+          <li>기존 포인트 중심에서 반경 안이고 촬영 날짜가 같으면 그 포인트에 합류합니다</li>
+          <li>날짜가 다르면 같은 자리라도 합류하지 않습니다 — 포인트는 하루에 속합니다</li>
+          <li>남은 사진끼리는 다시 묶어 새 포인트를 만듭니다</li>
           <li>값을 바꾸면 그 자리에서 다시 계산됩니다 — 뷰포트는 그대로</li>
         </ul>
         <p class="rules-foot mono">

@@ -10,7 +10,14 @@ import { formatRange } from '#shared/utils/format'
 import { outputExt, resizePhoto } from '~/utils/resize'
 import { scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
 
-export type UploadStage = 'idle' | 'scanning' | 'preview' | 'uploading' | 'done'
+/**
+ * idle → scanning → picked → (더 고르면 scanning 으로 되돌아감) → preview → uploading → done
+ *
+ * picked 가 1단계의 «머무는 자리»다. 사진첩이 한 번에 넘겨주는 양에 상한이 있어서
+ * (exif.ts MAX_PER_SELECTION) 한 기록을 채우려면 여러 번 고르는 게 정상인데, 예전에는
+ * 고를 때마다 앞의 것을 버리고 곧장 경계 지정으로 넘어가 그게 불가능했다.
+ */
+export type UploadStage = 'idle' | 'scanning' | 'picked' | 'preview' | 'uploading' | 'done'
 
 export interface FailedPhoto {
   key: string
@@ -42,22 +49,35 @@ export function useUploadFlow() {
   const radiusTable = computed(() =>
     RADII.map((r) => {
       const cs = clusterAt(scanned.value, r)
-      return { radius: r, count: cs.length, gaps: cs.filter((c) => c.gap).length }
+      return { radius: r, count: cs.length, gaps: cs.filter((c) => c.gap || c.dayBreak).length }
     }),
   )
 
+  /** 시간 공백(90분)으로 끊긴 자리 */
   const gapCount = computed(() => clusters.value.filter((c) => c.gap).length)
+  /** 날짜가 바뀌어 끊긴 자리 — 90분 규칙과 «이유»가 다르므로 따로 센다 */
+  const dayCount = computed(() => clusters.value.filter((c) => c.dayBreak).length)
 
+  /** 한 묶음을 고른다 — 앞서 고른 것을 «버리지 않고 더한다». */
   async function selectFiles(files: readonly File[]) {
-    reset()
+    errorMessage.value = null
     stage.value = 'scanning'
     scanProgress.value = { done: 0, total: files.length }
-    const result = await scanFiles(files, (done, total) => {
+    const scan = await scanFiles(files, (done, total) => {
       scanProgress.value = { done, total }
-    })
-    scanned.value = result.passed
-    skipped.value = result.skipped
-    stage.value = 'preview'
+    }, { picked: new Set(scanned.value.map((s) => s.key)) })
+    // 촬영 시각 순은 클러스터링의 전제다 — 묶음을 이어 붙이면 순서가 섞이므로 여기서 다시 정렬한다
+    scanned.value = [...scanned.value, ...scan.passed].sort((a, b) => a.t - b.t)
+    skipped.value = [...skipped.value, ...scan.skipped]
+    stage.value = 'picked'
+  }
+
+  /** 1단계 ↔ 2단계. 고른 사진은 그대로 두고 화면만 오간다. */
+  function toBoundary() {
+    if (scanned.value.length) stage.value = 'preview'
+  }
+  function backToPick() {
+    stage.value = 'picked'
   }
 
   function reset() {
@@ -215,6 +235,7 @@ export function useUploadFlow() {
     clusters,
     radiusTable,
     gapCount,
+    dayCount,
     scanProgress,
     uploaded,
     totalPhotos,
@@ -224,6 +245,8 @@ export function useUploadFlow() {
     provisionalTitle,
     errorMessage,
     selectFiles,
+    toBoundary,
+    backToPick,
     confirm,
     retryFailed,
     skipFailed,

@@ -4,7 +4,11 @@ import BottomCta from '~/components/BottomCta.vue'
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
  * 새 기록 — 업로드. 아트보드 1g.
- * 1 사진 선택 → 2 검사 결과 → 3 클러스터 미리보기 + 반경 → 4 확정 → /editor/[slug]
+ * 1 사진 선택(여러 묶음을 이어서) → 2 포인트 경계 + 반경 → 3 업로드 → /editor/[slug]
+ *
+ * 예전엔 네 단계였는데 2단계가 「검사 결과」였다. 검사는 몇 초짜리 진행 막대였고 그 «결과»는
+ * 정작 3단계 화면 위에 떴다 — 고르자마자 1에서 3으로 건너뛰는 것처럼 보였다. 검사는
+ * 1단계 안의 한 구간으로 넣고, 단계는 사용자가 «결정»하는 지점으로만 나눈다.
  */
 import { formatDate, formatGap, formatTime, localIso } from '#shared/utils/format'
 import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
@@ -19,16 +23,14 @@ const activeCluster = ref<string | null>(null)
 
 const steps = [
   { n: 1, label: '사진 선택' },
-  { n: 2, label: '검사 결과' },
-  { n: 3, label: '클러스터 미리보기' },
-  { n: 4, label: '작성' },
+  { n: 2, label: '포인트 경계' },
+  { n: 3, label: '업로드' },
 ] as const
 
 const currentStep = computed(() => {
-  if (flow.stage.value === 'idle') return 1
-  if (flow.stage.value === 'scanning') return 2
-  if (flow.stage.value === 'preview') return 3
-  return 4
+  if (flow.stage.value === 'preview') return 2
+  if (flow.stage.value === 'uploading' || flow.stage.value === 'done') return 3
+  return 1 // idle · scanning · picked — 전부 「고르는 중」이다
 })
 
 /** 시도가 아니라 실제 안착한 장수 기준. 2장 실패면 100%가 아니라 98.x% 로 보인다. */
@@ -71,10 +73,22 @@ async function skip() {
 
 <template>
   <div class="page">
+    <!--
+      🔴 단계와 무관하게 늘 DOM 에 있어야 한다. idle 구간 안에 두면 「사진 더 선택」을
+         누르는 순간(picked · preview) ref 가 null 이라 선택기가 열리지 않는다.
+         add/[slug].vue 에서 실제로 그렇게 깨졌던 자리다.
+    -->
+    <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
+
     <!-- 단계 표시 + 확정 버튼 -->
     <header class="topbar">
-      <!-- 모바일은 다른 화면과 같은 ← 아이콘. 데스크탑은 우측 「뒤로」 텍스트 버튼이 맡는다 -->
-      <AppBack fallback="/editor" label="기록 목록으로" />
+      <!-- 모바일은 다른 화면과 같은 ← 아이콘. 데스크탑은 우측 「뒤로」 텍스트 버튼이 맡는다.
+           2단계에서는 ← 가 페이지를 떠나는 게 아니라 1단계로 돌아간다 (고른 사진을 버리지 않는다) -->
+      <AppBack
+        fallback="/editor"
+        :label="flow.stage.value === 'preview' ? '사진 선택으로' : '기록 목록으로'"
+        :intercept="flow.stage.value === 'preview' ? flow.backToPick : undefined"
+      />
 
       <ol class="steps">
         <li v-for="(s, i) in steps" :key="s.n" class="step">
@@ -89,6 +103,10 @@ async function skip() {
 
       <div class="top-actions">
         <NuxtLink to="/editor" class="btn ghost mono wide-only">뒤로</NuxtLink>
+        <!-- 라벨은 «되돌아가는 곳»이다. 「사진 더 선택」이면 1단계의 같은 이름 버튼(선택기를 여는)과 헷갈린다 -->
+        <button v-if="flow.stage.value === 'preview'" type="button" class="btn ghost mono wide-only" @click="flow.backToPick()">
+          사진 선택으로
+        </button>
         <button
           v-if="flow.stage.value === 'preview'"
           type="button"
@@ -102,9 +120,21 @@ async function skip() {
       </div>
     </header>
 
+    <!-- 모바일 1단계: 더 고르기 / 다음. 이 화면에서 손가락이 닿는 곳은 여기뿐이다 -->
+    <BottomCta
+      v-if="flow.stage.value === 'picked' && flow.scanned.value.length"
+      :note="`사진 ${flow.scanned.value.length}장 선택됨`"
+    >
+      <button type="button" class="btn ghost mono" @click="fileInput?.click()">사진 더 선택</button>
+      <button type="button" class="btn primary mono" @click="flow.toBoundary()">
+        포인트 경계 지정
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+      </button>
+    </BottomCta>
+
     <!-- 모바일: 확정은 화면 아래에서. 반경 슬라이더를 만지다 바로 누르는 흐름이다 -->
     <BottomCta
-      v-if="flow.stage.value === 'preview'"
+      v-else-if="flow.stage.value === 'preview'"
       :note="`사진 ${flow.scanned.value.length}장 · 반경 ${flow.radius.value}m`"
     >
       <button type="button" class="btn primary mono" :disabled="!flow.clusters.value.length" @click="confirm">
@@ -124,14 +154,6 @@ async function skip() {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 9l5 -5l5 5" /><path d="M12 4l0 12" /></svg>
         사진 선택
       </button>
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        multiple
-        hidden
-        @change="onPick"
-      >
       <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
       <p class="mono pick-hint">
         한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
@@ -139,7 +161,7 @@ async function skip() {
       </p>
     </section>
 
-    <!-- 2단계 — 검사 진행 -->
+    <!-- 1단계 (계속) — 검사 진행. 몇 초짜리라 단계로 세지 않는다 -->
     <section v-else-if="flow.stage.value === 'scanning'" class="empty">
       <h3>사진을 검사하는 중</h3>
       <p class="mono scan-count">
@@ -154,8 +176,8 @@ async function skip() {
       <p class="hint mono">EXIF 를 읽고 좌표가 없는 사진을 걸러냅니다</p>
     </section>
 
-    <!-- 3단계 — 검사 결과 + 클러스터 미리보기 -->
-    <template v-else-if="flow.stage.value === 'preview'">
+    <!-- 고른 목록(1단계) · 포인트 경계(2단계) — 검사 결과 줄은 둘이 함께 쓴다 -->
+    <template v-else-if="flow.stage.value === 'picked' || flow.stage.value === 'preview'">
       <div class="scanbar">
         <span class="ok">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
@@ -187,6 +209,27 @@ async function skip() {
         </button>
       </section>
 
+      <!--
+        1단계에 «머무는» 화면. 사진첩이 한 번에 넘겨주는 양에 상한이 있어 한 기록을 채우려면
+        여러 번 골라야 한다 — 고른 것을 여기 쌓아두고, 다 됐을 때 사용자가 다음으로 넘긴다.
+      -->
+      <section v-else-if="flow.stage.value === 'picked'" class="empty picked">
+        <span class="tick">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
+        </span>
+        <h3>사진 {{ flow.scanned.value.length }}장 선택됨</h3>
+        <p class="mono picked-range">{{ flow.provisionalTitle.value }}</p>
+        <p>더 올릴 사진이 남았으면 이어서 고르세요. 다 골랐으면 다음 단계에서 포인트 경계를 정합니다.</p>
+        <SkippedList v-if="flow.skipped.value.length" :files="flow.skipped.value" />
+        <div class="actions wide-only">
+          <button type="button" class="btn ghost mono" @click="fileInput?.click()">사진 더 선택</button>
+          <button type="button" class="btn primary mono" @click="flow.toBoundary()">
+            포인트 경계 지정
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+          </button>
+        </div>
+      </section>
+
       <div v-else class="preview">
         <div class="map-area">
           <ClusterPreviewMap
@@ -212,8 +255,8 @@ async function skip() {
               </span>
               <span class="metric-rule" />
               <span class="metric">
-                <span class="metric-label mono">시간 공백으로 끊김</span>
-                <span class="mono gapc">{{ flow.gapCount.value }}곳</span>
+                <span class="metric-label mono">날짜·시간으로 끊김</span>
+                <span class="mono gapc">{{ flow.dayCount.value + flow.gapCount.value }}곳</span>
               </span>
               <span class="footnote mono">합류할 때마다 중심이<br>다시 계산됩니다</span>
             </div>
@@ -235,13 +278,18 @@ async function skip() {
             >
               <span class="num mono">
                 {{ String(i + 1).padStart(2, '0') }}
-                <span v-if="c.gap" class="gap-badge" title="시간 공백으로 끊김">
+                <span
+                  v-if="c.gap || c.dayBreak"
+                  class="gap-badge"
+                  :title="c.dayBreak ? '날짜가 바뀌어 끊김' : '시간 공백으로 끊김'"
+                >
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="9" /></svg>
                 </span>
               </span>
               <span class="row-main">
                 <span class="row-name">{{ formatTime(localIso(c.tStart)) }} · 퍼짐 {{ c.spread }}m</span>
-                <span class="mono row-sub" :class="{ gap: c.gap }">
+                <!-- 끊긴 «이유»를 그대로 적는다: 시간이면 공백, 날짜면 그 날짜 자체가 이유다 -->
+                <span class="mono row-sub" :class="{ gap: c.gap || c.dayBreak }">
                   {{ c.gap ? formatGap(c.gapMinutes) : formatDate(localIso(c.tStart)) }}
                 </span>
               </span>
@@ -281,17 +329,18 @@ async function skip() {
           <ul class="rules">
             <li>이 슬라이더가 포인트 병합·분할 UI 를 전부 대체합니다</li>
             <li>사진이 합류할 때마다 클러스터 중심이 평균 좌표로 다시 계산됩니다</li>
-            <li>90분 이상 공백은 거리와 무관하게 끊습니다 — 지도에서 점선과 시계 표식으로 보입니다</li>
+            <li>촬영 날짜가 바뀌면 같은 자리라도 끊습니다 — 포인트는 하루에 속합니다</li>
+            <li>같은 날 안에서 90분 이상 비면 거리와 무관하게 끊습니다 — 지도에서 점선과 시계 표식으로 보입니다</li>
           </ul>
           <p class="rules-foot mono">
-            묶는 규칙: 촬영 시각 순으로 훑으며 진행 중인 포인트의 중심에서 반경을 벗어나면 새 포인트를 연다.
-            확정하면 작성 단계로 넘어가고, 이후 중심 좌표는 고정됩니다.
+            묶는 규칙: 촬영 시각 순으로 훑으며 진행 중인 포인트의 중심에서 반경을 벗어나거나
+            날짜가 바뀌면 새 포인트를 연다. 확정하면 업로드가 시작되고, 이후 중심 좌표는 고정됩니다.
           </p>
         </aside>
       </div>
     </template>
 
-    <!-- 4단계 — 업로드 진행률 · 부분 실패 (아트보드 1c) -->
+    <!-- 3단계 — 업로드 진행률 · 부분 실패 (아트보드 1c) -->
     <section v-else class="empty">
       <h3 v-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
       <h3 v-else-if="flow.stage.value === 'done'">저장했습니다</h3>
@@ -601,6 +650,19 @@ async function skip() {
 .hint { font-size: 10.5px; color: var(--faint); }
 .scan-count { font-size: 15px; color: var(--deep); }
 
+/* 1단계에 머무는 화면 — 「됐다」는 신호와 두 갈래(더 고르기 / 다음) */
+.tick {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(146, 178, 169, 0.12);
+  border: 1px solid rgba(146, 178, 169, 0.4);
+  color: var(--acc);
+}
+.picked-range { font-size: 12px; color: var(--faint); }
+
 .bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.12); overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .progress-line { font-size: 11px; color: var(--deep); }
@@ -645,6 +707,7 @@ async function skip() {
   .top-actions { display: none; }
   /* 하단 CTA 에 가리지 않게 목록 끝을 비운다 */
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
+  .picked { padding-bottom: calc(40px + var(--cta-h) + env(safe-area-inset-bottom)); }
 
   .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: 12.5px; }
   .scanbar-note { display: none; }

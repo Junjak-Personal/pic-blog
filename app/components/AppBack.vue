@@ -9,13 +9,27 @@
  * 히스토리가 없으면(그 화면으로 바로 들어왔을 때) fallback 으로 간다 —
  * router.back() 만 믿으면 아무 일도 안 일어나는 막다른 골목이 된다.
  */
-const props = withDefaults(defineProps<{ fallback: string; label?: string }>(), {
+const props = withDefaults(defineProps<{
+  fallback: string
+  label?: string
+  /**
+   * 값이 있으면 히스토리 대신 이걸 부른다.
+   * 한 화면 안에 단계가 있는 곳(새 기록 업로드)에서 ← 는 「이전 단계」여야 한다 —
+   * 그냥 두면 2단계에서 ← 를 눌렀을 때 고른 사진을 통째로 버리고 페이지를 떠난다.
+   */
+  intercept?: () => void
+}>(), {
   label: '뒤로',
+  intercept: undefined,
 })
 
 const router = useRouter()
 
 function back() {
+  if (props.intercept) {
+    props.intercept()
+    return
+  }
   if (window.history.length > 1) router.back()
   else navigateTo(props.fallback)
 }

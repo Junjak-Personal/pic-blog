@@ -25,16 +25,45 @@ assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.76385, lng: 12
 // 위도 0.00001° ≈ 1.1m — 움직인 것
 assert.ok(!sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763857, lng: 128.899886 }))
 
-// ── 90분 갭 규칙: 같은 자리, 다음 날 → 두 포인트 ─────────────────────────
+// ── 날짜 경계: 같은 자리, 다음 날 → 두 포인트 ────────────────────────────
+/** 로컬 벽시계로 못 박는다 — dayOf 가 로컬 날짜를 보므로 UTC 리터럴로 쓰면 TZ 에 따라 결과가 갈린다 */
+const at = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi).getTime()
+
 const sameSpotShots: ClusterInput[] = [
-  { key: 'a', lat: 37.7638, lng: 128.8998, t: Date.parse('2026-08-23T18:35:00Z') },
-  { key: 'b', lat: 37.7638, lng: 128.8999, t: Date.parse('2026-08-23T18:40:00Z') },
-  { key: 'c', lat: 37.7638, lng: 128.8998, t: Date.parse('2026-08-24T18:35:00Z') },
+  { key: 'a', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 18, 35) },
+  { key: 'b', lat: 37.7638, lng: 128.8999, t: at(2026, 8, 23, 18, 40) },
+  { key: 'c', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 24, 18, 35) },
 ]
 const gapped = clusterAt(sameSpotShots, 50)
-assert.equal(gapped.length, 2, '90분 갭 규칙이 없으면 다음 날이 한 포인트로 합쳐진다')
-assert.equal(gapped[1]!.gap, true, '거리는 반경 안이었으므로 끊긴 이유는 시간이다')
+assert.equal(gapped.length, 2, '다음 날은 같은 자리라도 다른 포인트다')
+assert.equal(gapped[1]!.dayBreak, true, '끊긴 이유는 날짜다')
+assert.equal(gapped[1]!.gap, false, '날짜가 이유일 때 시간 갭 플래그까지 서면 화면이 거짓말한다')
 assert.ok(gapped[1]!.gapMinutes >= GAP_MINUTES)
+
+// 자정 경계 — 30분 갭이라 90분 규칙은 못 잡는다. 날짜가 잡아야 한다.
+const midnight = clusterAt(
+  [
+    { key: 'a', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 23, 50) },
+    { key: 'b', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 24, 0, 20) },
+  ],
+  50,
+)
+assert.equal(midnight.length, 2, '자정을 넘으면 30분 갭이라도 포인트가 갈린다')
+assert.equal(midnight[1]!.dayBreak, true)
+assert.ok(midnight[1]!.gapMinutes < GAP_MINUTES, '이 경계는 90분 규칙이 못 잡는 자리다')
+
+// 같은 날 · 같은 자리 · 짧은 간격은 그대로 한 포인트다 (날짜 규칙이 과잉 분할하면 안 된다)
+assert.equal(
+  clusterAt(
+    [
+      { key: 'a', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 9, 0) },
+      { key: 'b', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 9, 30) },
+    ],
+    50,
+  ).length,
+  1,
+  '같은 날 30분 간격은 한 포인트여야 한다',
+)
 
 // 시간이 붙어 있고 멀면 → 거리로 끊긴다 (gap=false)
 const farApart = clusterAt(
@@ -67,10 +96,12 @@ assert.deepEqual(
 )
 
 // ── assignTo: 기존 포인트 중심 불변 ──────────────────────────────────────
-const existing = [{ id: 1, title: '월화거리', lat: 37.763847, lng: 128.899886, order_index: 0 }]
+const existing = [
+  { id: 1, title: '월화거리', lat: 37.763847, lng: 128.899886, order_index: 0, first_shot_at: '2026-08-23T09:00:00' },
+]
 const added: ClusterInput[] = [
-  { key: 'near', lat: 37.763900, lng: 128.899900, t: 0 }, // ~6m
-  { key: 'far', lat: 37.800000, lng: 128.950000, t: 60_000 },
+  { key: 'near', lat: 37.763900, lng: 128.899900, t: at(2026, 8, 23, 10, 0) }, // ~6m · 같은 날
+  { key: 'far', lat: 37.800000, lng: 128.950000, t: at(2026, 8, 23, 10, 1) },
 ]
 const res = assignTo(added, existing, 50)
 assert.equal(res.joins.length, 1)
@@ -79,6 +110,31 @@ assert.equal(res.joins[0]!.point.lat, 37.763847, '기존 중심은 절대 움직
 assert.equal(res.news.length, 1)
 assert.equal(res.joinedShots, 1)
 assert.equal(res.total, 2)
+
+// 같은 자리(~6m) 라도 «다른 날»이면 합류하지 않고 새 포인트가 된다
+const nextDay = assignTo([{ key: 'd2', lat: 37.763900, lng: 128.899900, t: at(2026, 8, 24, 10, 0) }], existing, 50)
+assert.equal(nextDay.joins.length, 0, '다른 날 사진이 어제 포인트에 합류하면 안 된다')
+assert.equal(nextDay.news.length, 1, '다른 날은 새 포인트로 선다')
+
+// 가장 가까운 것이 다른 날이어도, 반경 안의 «같은 날» 포인트를 놓치면 안 된다
+const twoDays = assignTo(
+  [{ key: 'x', lat: 37.763900, lng: 128.899900, t: at(2026, 8, 24, 10, 0) }],
+  [
+    ...existing,
+    { id: 2, title: null, lat: 37.763890, lng: 128.899890, order_index: 1, first_shot_at: '2026-08-24T09:00:00' },
+  ],
+  50,
+)
+assert.equal(twoDays.joins.length, 1)
+assert.equal(twoDays.joins[0]!.point.id, 2, '날짜가 맞는 포인트로 가야 한다')
+
+// 날짜를 모르는 포인트(사진이 없거나 shot_at 이 없는)는 막지 않는다
+const undated = assignTo(
+  [{ key: 'y', lat: 37.763900, lng: 128.899900, t: at(2026, 8, 24, 10, 0) }],
+  [{ id: 3, title: null, lat: 37.763847, lng: 128.899886, order_index: 0, first_shot_at: null }],
+  50,
+)
+assert.equal(undated.joins.length, 1, '날짜를 모르는 포인트는 막을 근거가 없다')
 
 // ── scatter: 결정적 — 같은 시드는 같은 배치 ──────────────────────────────
 const s1 = scatter(14, 9301)

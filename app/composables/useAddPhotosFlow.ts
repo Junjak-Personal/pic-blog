@@ -52,7 +52,15 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
 
   /** 기존 포인트를 배정 알고리즘이 받는 최소 형태로 좁힌다 */
   const existing = computed<ExistingPoint[]>(() =>
-    points.value.map((p) => ({ id: p.id, title: p.title, lat: p.lat, lng: p.lng, order_index: p.order_index })),
+    points.value.map((p) => ({
+      id: p.id,
+      title: p.title,
+      lat: p.lat,
+      lng: p.lng,
+      order_index: p.order_index,
+      // 날짜가 다르면 같은 자리라도 합류시키지 않는다 (cluster.ts 의 dayOf)
+      first_shot_at: p.first_shot_at,
+    })),
   )
 
   /** 반경을 바꾸면 여기서 그 자리 재계산된다. 지도 뷰포트는 건드리지 않는다. */
@@ -100,7 +108,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     )
     const scan = await scanFiles(files, (done, total) => {
       scanProgress.value = { done, total }
-    }, existingKeys, opts.limit)
+    }, { inPost: existingKeys, limit: opts.limit })
     scanned.value = scan.passed
     skipped.value = scan.skipped
     stage.value = 'preview'

@@ -50,7 +50,7 @@ function clearMarkers() {
   markers = []
 }
 
-/** 클러스터 중심을 이은 선. gap 클러스터로 들어가는 구간만 따로 뺀다. */
+/** 클러스터 중심을 이은 선. 시간·날짜로 끊긴 구간만 따로 뺀다 — 실선으로 이으면 지도가 옆 패널과 다른 말을 한다. */
 function routeFeatures() {
   const solid: [number, number][][] = []
   const gap: [number, number][][] = []
@@ -58,7 +58,7 @@ function routeFeatures() {
     const a = props.clusters[i - 1]!
     const b = props.clusters[i]!
     const seg: [number, number][] = [toLngLat(a), toLngLat(b)]
-    ;(b.gap ? gap : solid).push(seg)
+    ;(b.gap || b.dayBreak ? gap : solid).push(seg)
   }
   return { solid, gap }
 }
@@ -100,7 +100,7 @@ function render() {
     el.className = 'map-marker'
     el.setAttribute('aria-label', `포인트 ${i + 1} · 사진 ${c.shots.length}장`)
     el.innerHTML = `<span class="body">${String(i + 1).padStart(2, '0')}</span><span class="tail"></span>`
-    if (c.gap) {
+    if (c.gap || c.dayBreak) {
       const badge = document.createElement('span')
       badge.className = 'clock'
       badge.innerHTML =
@@ -198,7 +198,7 @@ onBeforeUnmount(clearMarkers)
         <span class="clock-sample">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2" /><circle cx="12" cy="12" r="9" /></svg>
         </span>
-        <span class="mono">시간 공백으로 끊김</span>
+        <span class="mono">날짜·시간으로 끊김</span>
       </div>
     </div>
   </MapFrame>
