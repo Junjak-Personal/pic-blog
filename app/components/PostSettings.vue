@@ -221,8 +221,8 @@ function confirmRecluster() {
           <p class="mono dlg-note">사진과 촬영 정보는 그대로 남습니다. 포인트 안 사진 순서는 촬영 시각 순으로 돌아갑니다.</p>
 
           <div class="dlg-actions">
-            <AlertDialogCancel class="btn ghost mono">취소</AlertDialogCancel>
-            <AlertDialogAction class="btn danger mono" @click="confirmRecluster">
+            <AlertDialogCancel class="btn foot ghost mono">취소</AlertDialogCancel>
+            <AlertDialogAction class="btn foot danger mono" @click="confirmRecluster">
               {{ atRisk.length ? '바꾸고 지우기' : '범위 바꾸기' }}
             </AlertDialogAction>
           </div>
@@ -324,9 +324,7 @@ function confirmRecluster() {
 
 .dlg-note { font-size: 10px; line-height: 1.7; color: var(--faint); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.btn { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 15px; border-radius: var(--radius); font-size: 12px; cursor: pointer; }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.danger { background: var(--danger-fill); color: var(--ink); font-weight: 600; }
+/* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
 
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }

@@ -363,19 +363,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .right { display: flex; align-items: center; gap: 14px; flex: none; }
 .skipped { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--faint); }
 
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.btn.primary { background: var(--mid); color: var(--s0); }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.big { padding: 12px 20px; font-size: 12px; }
+/* 버튼은 base.css 의 .btn 한 벌을 쓴다 */
 
 /* 완료 화면 */
 .tick {

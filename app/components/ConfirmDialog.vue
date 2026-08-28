@@ -39,11 +39,11 @@ const { pending, open } = useConfirmState()
         </AlertDialogDescription>
 
         <div class="dlg-actions">
-          <AlertDialogCancel class="btn ghost mono" @click="settleConfirm(false)">
+          <AlertDialogCancel class="btn foot ghost mono" @click="settleConfirm(false)">
             {{ pending?.cancelLabel ?? '취소' }}
           </AlertDialogCancel>
           <AlertDialogAction
-            class="btn mono"
+            class="btn foot mono"
             :class="pending?.danger ? 'danger' : 'primary'"
             @click="settleConfirm(true)"
           >
@@ -77,21 +77,7 @@ const { pending, open } = useConfirmState()
 .dlg-title { font-size: 17px; letter-spacing: -0.01em; color: var(--ink); }
 .dlg-desc { font-size: 13px; line-height: 1.7; color: var(--mid); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-.btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 0 15px;
-  border-radius: var(--radius);
-  font-size: 12px;
-  cursor: pointer;
-}
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.primary { background: var(--mid); color: var(--s0); font-weight: 600; }
-/* 밝은 빨강 위의 검정은 잘 안 읽힌다 — 면은 어둡게, 글자는 밝게 (tokens.css) */
-.btn.danger { background: var(--danger-fill); color: var(--ink); font-weight: 600; }
+/* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
 
 @media (max-width: 900px) {
   /* 엄지로 누른다 — 두 버튼이 폭을 나눠 갖고 44px */

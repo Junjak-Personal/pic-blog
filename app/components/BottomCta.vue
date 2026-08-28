@@ -74,8 +74,14 @@ onMounted(() => {
     justify-content: center;
     gap: 7px;
     border-radius: var(--radius);
-    /* 기본값일 뿐이다 — 쓰는 쪽이 .btn 처럼 더 구체적인 규칙을 갖고 있으면 그쪽이 이긴다 */
-    font-size: 13px;
+    /*
+     * 🔴 여기가 CTA 글자 크기의 SSOT 다. .btn 은 base.css 의 전역(0,1,0)이고 이 규칙은
+     *    (0,2,0)이라 여기가 이긴다 — 화면마다 따로 올리지 않는다.
+     *    11px 은 헤더·툴바용 크기다. 그대로 두면 상자만 크고 글자가 작아 보인다
+     *    (편집 화면이 그래서 혼자 15px 로 올려 쓰고 있었다). 하단 CTA 는 그 화면에서
+     *    가장 큰 버튼이므로 셋 다 같은 크기로 간다.
+     */
+    font-size: 15px;
   }
 }
 </style>

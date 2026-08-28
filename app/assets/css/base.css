@@ -137,6 +137,40 @@ select:focus-visible {
   }
 }
 
+/*
+ * 버튼 한 벌. 여섯 화면이 각자 적고 있었고 이미 갈리기 시작했다 — 여백이 8px 14px 대
+ * 8px 13px, 비활성 투명도가 0.4 대 0.45, ghost 의 hover 는 한 곳에만 있었다.
+ * 「빨간 버튼 글자가 안 보인다」를 고칠 때도 같은 규칙을 두 파일에서 고쳐야 했다.
+ *
+ * 모양은 둘뿐이다: 기본은 헤더·툴바용(작고 가로로 눕는 것), .dlg 는 판 바닥에 서는 것.
+ * 화면마다의 사정(폭을 나눠 갖기, 특정 화면만 더 크게)은 그 화면의 scoped 규칙이
+ * 계속 맡는다 — 여기보다 명시도가 높아 그대로 이긴다.
+ */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--mid); color: var(--s0); }
+.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
+.btn.ghost:hover:not(:disabled) { border-color: rgba(146, 178, 169, 0.45); color: var(--ink); }
+/* 크게 — 빈 화면 한가운데의 「사진 선택」처럼 그 화면의 유일한 행동일 때 */
+.btn.big { padding: 12px 20px; font-size: 12px; }
+/* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.
+   🔴 이름이 .dlg 면 안 된다 — 그건 다이얼로그 «상자»가 이미 쓰는 클래스라 버튼이 상자
+      스타일(padding 22px · 바탕 --s1)을 그대로 먹는다. 실제로 한 번 그렇게 깨졌다. */
+.btn.foot { justify-content: center; min-height: 40px; padding: 0 15px; font-size: 12px; }
+/* 「확인」과 「삭제」는 되돌리기 어려운 쪽이라 취소보다 무겁게 */
+.btn.foot.primary, .btn.danger { font-weight: 600; }
+/* --danger 는 어두운 바탕 «위의 글자»용 밝은 빨강이다 — 채우는 면은 tokens.css 참고 */
+.btn.danger { background: var(--danger-fill); color: var(--ink); }
+
 /* 데이터 텍스트 — 좌표 · 시각 · 거리 · 파일명 */
 .mono {
   font-family: var(--font-mono);

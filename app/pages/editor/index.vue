@@ -144,20 +144,6 @@ async function logout() {
 
 .top-actions { display: flex; align-items: center; gap: 9px; flex: none; }
 
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.btn.primary { background: var(--mid); color: var(--s0); }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.ghost:hover { border-color: rgba(146, 178, 169, 0.45); color: var(--ink); }
-.btn.big { padding: 12px 20px; font-size: 12px; }
 
 /* 이 화면에서 굴러가는 유일한 칸 (레이아웃 셸 주석 참고) */
 .list {

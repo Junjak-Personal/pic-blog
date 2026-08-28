@@ -1469,19 +1469,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .toggle-label { font-size: 13px; color: var(--mid); }
 .rule { width: 1px; height: 22px; background: rgba(177, 199, 193, 0.16); }
 
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: var(--radius);
-  padding: 8px 13px;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.btn.primary { background: var(--mid); color: var(--s0); }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn:disabled { opacity: 0.4; cursor: default; }
+/* 버튼은 base.css 의 .btn 한 벌을 쓴다 (여백이 여기만 8px 13px 이었는데 14px 로 맞춘다) */
 
 /*
  * 헤더 두 갈래. 둘 다 렌더하고 CSS 로 하나만 보인다 —
@@ -1920,10 +1908,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
   .topbar { height: calc(56px + var(--top-inset)); gap: 0; padding: var(--top-inset) 12px 0; }
-
-  /* 하단 CTA 의 저장은 이 화면에서 가장 큰 버튼이다. .btn 의 11px 은 헤더용 크기라
-     상자만 크고 글자가 작아 보인다 — BottomCta 의 규칙은 .btn 에 밀리므로 여기서 올린다. */
-  .cta .btn { font-size: 15px; }
 
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }

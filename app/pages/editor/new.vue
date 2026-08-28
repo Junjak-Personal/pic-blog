@@ -373,20 +373,7 @@ async function skip() {
 
 .top-actions { display: flex; align-items: center; gap: 14px; flex: none; }
 
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.btn.primary { background: var(--mid); color: var(--s0); }
-.btn.primary:disabled { opacity: 0.45; cursor: default; }
-.btn.ghost { border: 1px solid rgba(177, 199, 193, 0.2); color: var(--mid); }
-.btn.big { padding: 12px 20px; font-size: 12px; }
+/* 버튼은 base.css 의 .btn 한 벌을 쓴다 */
 
 /* 검사 결과 바 */
 .scanbar {
