@@ -5,6 +5,7 @@
 import exifr from 'exifr'
 // 판정 키는 shared 가 SSOT 다 — 여기서 다시 내보내 스캔 쪽 임포트를 한 곳으로 모은다
 import { photoKey } from '#shared/utils/photo'
+import { headerOf, sourceName, type PhotoSource } from '~/utils/native'
 
 export { photoKey }
 
@@ -15,7 +16,8 @@ export interface ScannedPhoto {
    * 파일 순번을 섞어 만들면 «묶음을 이어서 고를 때» 0번끼리 부딪힌다.
    */
   key: string
-  file: File
+  /** 원본을 «읽는 법». 웹은 File, 네이티브 껍데기는 토큰이다 (utils/native.ts) */
+  src: PhotoSource
   name: string
   lat: number
   lng: number
@@ -121,37 +123,55 @@ function cameraName(make: string | null, model: string | null) {
   return model ?? make
 }
 
-async function scanOne(file: File): Promise<ScannedPhoto | SkippedPhoto> {
+async function scanOne(src: PhotoSource): Promise<ScannedPhoto | SkippedPhoto> {
+  const name = sourceName(src)
   let gps: { latitude: number; longitude: number } | undefined
   let raw: RawExif = {}
 
+  /*
+   * 원본 전체가 아니라 «앞부분»만 읽는다. 웹에서는 File 이 그대로 와서 exifr 가 알아서
+   * 부분만 읽고, 껍데기에서는 브리지가 헤더만 건네준다 — 전 장을 다 넘기면 200장에
+   * 17초가 드는데 검사에는 헤더면 충분하다.
+   */
+  let head: Blob
   try {
-    gps = await exifr.gps(file)
+    head = await headerOf(src)
   } catch {
-    return { name: file.name, reason: 'exif-error' }
+    return { name, reason: 'exif-error' }
+  }
+
+  try {
+    gps = await exifr.gps(head)
+  } catch {
+    return { name, reason: 'exif-error' }
   }
 
   if (!gps || !isFinite(gps.latitude) || !isFinite(gps.longitude)) {
-    return { name: file.name, reason: 'no-gps' }
+    return { name, reason: 'no-gps' }
   }
 
   try {
     // 촬영값이 없어도 GPS 만 있으면 통과다 — 이쪽 실패는 전체를 막지 않는다
-    raw = (await exifr.parse(file, ['DateTimeOriginal', 'Make', 'Model', 'FNumber', 'ExposureTime', 'ISO'])) ?? {}
+    raw = (await exifr.parse(head, ['DateTimeOriginal', 'Make', 'Model', 'FNumber', 'ExposureTime', 'ISO'])) ?? {}
   } catch {
     raw = {}
   }
 
-  // shot_at 폴백 사슬: DateTimeOriginal → file.lastModified
+  /*
+   * shot_at 폴백 사슬: DateTimeOriginal → File.lastModified.
+   * 네이티브 쪽에는 lastModified 가 없다 — 사진첩 에셋에 대응하는 값이 아니라서
+   * 억지로 만들면 「없는 시각」을 지어내는 게 된다. 그때는 현재 시각으로 두고,
+   * 클러스터링이 그 사진을 제 자리에 못 놓는 것을 감수한다.
+   */
   const original = raw.DateTimeOriginal instanceof Date && !isNaN(raw.DateTimeOriginal.getTime())
     ? raw.DateTimeOriginal
-    : new Date(file.lastModified)
+    : new Date(src.kind === 'file' ? src.file.lastModified : Date.now())
 
   const shotAt = toLocalIso(original)
   return {
     key: photoKey({ shotAt, lat: gps.latitude, lng: gps.longitude }),
-    file,
-    name: file.name,
+    src,
+    name,
     lat: gps.latitude,
     lng: gps.longitude,
     t: original.getTime(),
@@ -181,7 +201,7 @@ export interface ScanOptions {
  * 좌표 없는 사진도, 중복도 조용히 버리지 않는다 — 제외 파일명이 그대로 UI 에 뜬다 (설계문서 §8).
  */
 export async function scanFiles(
-  files: readonly File[],
+  sources: readonly PhotoSource[],
   onProgress?: (done: number, total: number) => void,
   opts: ScanOptions = {},
 ): Promise<ScanResult> {
@@ -193,8 +213,8 @@ export async function scanFiles(
   const seen = new Set<string>(picked)
 
   // 상한을 넘는 몫은 EXIF 를 읽기도 «전»에 잘라낸다 — 읽어봐야 어차피 안 쓴다
-  const take = files.slice(0, limit)
-  for (const f of files.slice(limit)) skipped.push({ name: f.name, reason: 'over-limit' })
+  const take = sources.slice(0, limit)
+  for (const s of sources.slice(limit)) skipped.push({ name: sourceName(s), reason: 'over-limit' })
   onProgress?.(0, take.length)
 
   for (let i = 0; i < take.length; i++) {

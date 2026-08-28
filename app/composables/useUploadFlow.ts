@@ -9,6 +9,7 @@ import { clusterAt, DEFAULT_RADIUS, RADII } from '#shared/utils/cluster'
 import { formatRange } from '#shared/utils/format'
 import { outputExt, resizePhoto } from '~/utils/resize'
 import { scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
+import { releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
 
 /**
  * idle → scanning → picked → (더 고르면 scanning 으로 되돌아감) → preview → uploading → done
@@ -59,11 +60,11 @@ export function useUploadFlow() {
   const dayCount = computed(() => clusters.value.filter((c) => c.dayBreak).length)
 
   /** 한 묶음을 고른다 — 앞서 고른 것을 «버리지 않고 더한다». */
-  async function selectFiles(files: readonly File[]) {
+  async function selectFiles(sources: readonly PhotoSource[]) {
     errorMessage.value = null
     stage.value = 'scanning'
-    scanProgress.value = { done: 0, total: files.length }
-    const scan = await scanFiles(files, (done, total) => {
+    scanProgress.value = { done: 0, total: sources.length }
+    const scan = await scanFiles(sources, (done, total) => {
       scanProgress.value = { done, total }
     }, { picked: new Set(scanned.value.map((s) => s.key)) })
     // 촬영 시각 순은 클러스터링의 전제다 — 묶음을 이어 붙이면 순서가 섞이므로 여기서 다시 정렬한다
@@ -81,6 +82,7 @@ export function useUploadFlow() {
   }
 
   function reset() {
+    void releaseSources(scanned.value.map((s) => s.src))
     scanned.value = []
     skipped.value = []
     failed.value = []
@@ -173,6 +175,8 @@ export function useUploadFlow() {
       if (id != null) await uploadOne(shot, id)
     }
 
+    // 껍데기가 원본 사본을 앱 캐시에 남긴다 — 200장이면 550MB 다. 재시도가 없을 때만 놓는다.
+    if (!failed.value.length) void releaseSources(shots.map((s) => s.src))
     stage.value = 'done'
   }
 
@@ -180,11 +184,11 @@ export function useUploadFlow() {
   async function uploadOne(shot: ScannedPhoto, id: number) {
     let display: Blob, thumb: Blob, w: number, h: number, dExt: string, tExt: string
     try {
-      const d = await resizePhoto(shot.file)
+      const d = await resizePhoto(shot.src)
       ;({ blob: display, w, h, ext: dExt } = d.display)
       ;({ blob: thumb, ext: tExt } = d.thumb)
     } catch {
-      failed.value.push({ key: shot.key, name: shot.name, bytes: shot.file.size, reason: '변환 실패' })
+      failed.value.push({ key: shot.key, name: shot.name, bytes: sourceSize(shot.src), reason: '변환 실패' })
       return
     }
 
@@ -225,6 +229,7 @@ export function useUploadFlow() {
     const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
     if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
     failed.value = []
+    void releaseSources(scanned.value.map((s) => s.src))
   }
 
   return {

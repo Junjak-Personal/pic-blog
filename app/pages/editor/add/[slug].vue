@@ -9,6 +9,7 @@ import BottomCta from '~/components/BottomCta.vue'
 import type { PostDetail } from '#shared/types/db'
 import { formatDate, formatTime, localIso } from '#shared/utils/format'
 import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
+import { pickPhotos } from '~/utils/native'
 
 definePageMeta({ layout: 'editor' })
 
@@ -22,10 +23,10 @@ const points = computed(() => post.value?.points ?? [])
 const flow = useAddPhotosFlow(slug, points)
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 
-function onPick(e: Event) {
-  const input = e.target
-  if (!(input instanceof HTMLInputElement) || !input.files?.length) return
-  void flow.selectFiles([...input.files])
+/** 껍데기면 PhotoKit, 아니면 파일 입력 — pickPhotos 가 가른다 */
+async function pick() {
+  const sources = await pickPhotos(fileInput.value, MAX_PER_SELECTION)
+  if (sources.length) await flow.selectFiles(sources)
 }
 
 /**
@@ -45,7 +46,7 @@ async function confirm() {
 /** 완료 화면 → 다음 묶음. 위 주석대로 여기서는 기다리는 것이 없다. */
 function continueAdd() {
   flow.reset()
-  fileInput.value?.click()
+  void pick()
 }
 
 /** 재시도가 다 붙으면 완료 화면으로 — 빠진 사진이 없으니 result 의 숫자가 그대로 맞다 */
@@ -83,7 +84,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
          다른 단계에서는 ref 가 null 이었고, 「원본으로 다시 선택」·「이어서 추가」가
          reset() 으로 단계만 바꿔놓고 정작 선택기를 못 열었다 (다시 그리는 건 다음 틱이다).
     -->
-    <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
+    <input ref="fileInput" type="file" accept="image/*" multiple hidden>
 
     <header class="topbar">
       <div class="left">
@@ -139,7 +140,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     <section v-if="flow.stage.value === 'idle'" class="empty">
       <h3>추가할 사진을 선택하세요</h3>
       <p>기존 포인트 중심에서 반경 안이고 «같은 날»이면 그 포인트에 합류하고, 아니면 새 포인트가 만들어집니다.</p>
-      <button type="button" class="btn primary mono big" @click="fileInput?.click()">사진 선택</button>
+      <button type="button" class="btn primary mono big" @click="pick()">사진 선택</button>
       <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
       <p class="mono pick-hint">
         한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
@@ -160,7 +161,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       <h3>선택한 사진에 위치 정보가 없습니다</h3>
       <p>좌표 없는 사진은 어떤 반경에서도 포인트가 되지 않습니다.</p>
       <SkippedList :files="flow.skipped.value" />
-      <button type="button" class="btn primary mono" @click="flow.reset(); fileInput?.click()">원본으로 다시 선택</button>
+      <button type="button" class="btn primary mono" @click="flow.reset(); pick()">원본으로 다시 선택</button>
     </section>
 
     <div v-else-if="flow.stage.value === 'preview'" class="preview">

@@ -8,6 +8,7 @@ import type { Point } from '#shared/types/db'
 import { assignTo, DEFAULT_RADIUS, RADII, type ClusterInput, type ExistingPoint } from '#shared/utils/cluster'
 import { outputExt, resizePhoto } from '~/utils/resize'
 import { photoKey, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
+import { releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
 
 export type AddStage = 'idle' | 'scanning' | 'preview' | 'uploading' | 'done'
 
@@ -81,6 +82,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
   )
 
   function reset() {
+    void releaseSources(scanned.value.map((s) => s.src))
     scanned.value = []
     skipped.value = []
     failed.value = []
@@ -93,10 +95,10 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     stage.value = 'idle'
   }
 
-  async function selectFiles(files: readonly File[]) {
+  async function selectFiles(sources: readonly PhotoSource[]) {
     reset()
     stage.value = 'scanning'
-    scanProgress.value = { done: 0, total: files.length }
+    scanProgress.value = { done: 0, total: sources.length }
     // 이 기록에 이미 들어 있는 사진들 — 같은 사진을 또 올리는 걸 여기서 막는다.
     // 서버를 새로 부르지 않는다: 편집 화면이 이미 사진마다 shot_at·좌표를 들고 있다.
     const existingKeys = new Set(
@@ -106,7 +108,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
           .map((ph) => photoKey({ shotAt: ph.shot_at!, lat: ph.lat, lng: ph.lng })),
       ),
     )
-    const scan = await scanFiles(files, (done, total) => {
+    const scan = await scanFiles(sources, (done, total) => {
       scanProgress.value = { done, total }
     }, { inPost: existingKeys, limit: opts.limit })
     scanned.value = scan.passed
@@ -198,6 +200,8 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
       const id = created.photoIds[shot.key]
       if (id != null) await uploadOne(shot, id)
     }
+    // 껍데기가 남긴 원본 사본을 놓는다 — 재시도가 없을 때만
+    if (!failed.value.length) void releaseSources(shots.map((s) => s.src))
     result.value = {
       photos: shots.length,
       joined: assignment.value.joinedShots,
@@ -212,11 +216,11 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
   async function uploadOne(shot: ScannedPhoto, id: number) {
     let display: Blob, thumb: Blob, w: number, h: number, dExt: string, tExt: string
     try {
-      const d = await resizePhoto(shot.file)
+      const d = await resizePhoto(shot.src)
       ;({ blob: display, w, h, ext: dExt } = d.display)
       ;({ blob: thumb, ext: tExt } = d.thumb)
     } catch {
-      failed.value.push({ key: shot.key, name: shot.name, bytes: shot.file.size, reason: '변환 실패' })
+      failed.value.push({ key: shot.key, name: shot.name, bytes: sourceSize(shot.src), reason: '변환 실패' })
       return
     }
 
@@ -251,6 +255,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
     if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
     failed.value = []
+    void releaseSources(scanned.value.map((s) => s.src))
   }
 
   return {

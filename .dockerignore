@@ -15,6 +15,9 @@ node_modules
 .data
 dist
 
+# 네이티브 껍데기 — 서버 이미지와 무관하고 빌드 산출물까지 1GB 다
+app-ios
+
 # 저장소 부산물
 .git
 .gitignore

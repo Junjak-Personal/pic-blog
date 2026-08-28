@@ -12,6 +12,7 @@ import RadiusSlider from '~/components/RadiusSlider.vue'
  */
 import { formatDate, formatGap, formatTime, localIso } from '#shared/utils/format'
 import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
+import { pickPhotos } from '~/utils/native'
 
 definePageMeta({ layout: 'editor' })
 
@@ -45,10 +46,10 @@ function formatBytes(bytes: number) {
     : `${Math.round(bytes / 1024)} KB`
 }
 
-function onPick(e: Event) {
-  const input = e.target
-  if (!(input instanceof HTMLInputElement) || !input.files?.length) return
-  void flow.selectFiles([...input.files])
+/** 껍데기면 PhotoKit, 아니면 파일 입력 — pickPhotos 가 가른다 */
+async function pick() {
+  const sources = await pickPhotos(fileInput.value, MAX_PER_SELECTION)
+  if (sources.length) await flow.selectFiles(sources)
 }
 
 async function confirm() {
@@ -78,7 +79,7 @@ async function skip() {
          누르는 순간(picked · preview) ref 가 null 이라 선택기가 열리지 않는다.
          add/[slug].vue 에서 실제로 그렇게 깨졌던 자리다.
     -->
-    <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onPick">
+    <input ref="fileInput" type="file" accept="image/*" multiple hidden>
 
     <!-- 단계 표시 + 확정 버튼 -->
     <header class="topbar">
@@ -125,7 +126,7 @@ async function skip() {
       v-if="flow.stage.value === 'picked' && flow.scanned.value.length"
       :note="`사진 ${flow.scanned.value.length}장 선택됨`"
     >
-      <button type="button" class="btn ghost mono" @click="fileInput?.click()">사진 더 선택</button>
+      <button type="button" class="btn ghost mono" @click="pick()">사진 더 선택</button>
       <button type="button" class="btn primary mono" @click="flow.toBoundary()">
         포인트 경계 지정
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
@@ -150,7 +151,7 @@ async function skip() {
       </span>
       <h3>사진을 선택하세요</h3>
       <p>사진을 올리면 EXIF 의 GPS 좌표로 포인트가 만들어지고, 촬영 시각 순으로 동선이 이어집니다.</p>
-      <button type="button" class="btn primary mono big" @click="fileInput?.click()">
+      <button type="button" class="btn primary mono big" @click="pick()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 9l5 -5l5 5" /><path d="M12 4l0 12" /></svg>
         사진 선택
       </button>
@@ -204,7 +205,7 @@ async function skip() {
         <h3>올릴 수 있는 사진이 없습니다</h3>
         <p>스크린샷이나 메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다. 같은 사진이 두 번 들어간 경우도 한 장만 남깁니다.</p>
         <SkippedList :files="flow.skipped.value" />
-        <button type="button" class="btn primary mono" @click="flow.reset(); fileInput?.click()">
+        <button type="button" class="btn primary mono" @click="flow.reset(); pick()">
           원본으로 다시 선택
         </button>
       </section>
@@ -222,7 +223,7 @@ async function skip() {
         <p>더 올릴 사진이 남았으면 이어서 고르세요. 다 골랐으면 다음 단계에서 포인트 경계를 정합니다.</p>
         <SkippedList v-if="flow.skipped.value.length" :files="flow.skipped.value" />
         <div class="actions wide-only">
-          <button type="button" class="btn ghost mono" @click="fileInput?.click()">사진 더 선택</button>
+          <button type="button" class="btn ghost mono" @click="pick()">사진 더 선택</button>
           <button type="button" class="btn primary mono" @click="flow.toBoundary()">
             포인트 경계 지정
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>

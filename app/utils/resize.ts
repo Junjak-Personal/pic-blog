@@ -3,6 +3,8 @@
  * display(2048px) + thumb(400px) WebP 만 만든다. 원본은 보관하지 않는다 (설계문서 §5.3).
  */
 
+import { bytesOf, type PhotoSource } from '~/utils/native'
+
 export const DISPLAY_MAX = 2048
 export const THUMB_MAX = 400
 
@@ -79,9 +81,13 @@ async function draw(bitmap: ImageBitmap, max: number) {
 /**
  * 🔴 `imageOrientation: 'from-image'` 가 없으면 canvas 가 EXIF Orientation 을 무시해서
  *    아이폰 세로 사진이 전부 눕는다. 이 옵션이 이 파일에서 제일 중요한 한 줄이다.
+ *
+ * 원본 바이트는 «여기서» 가져온다. 껍데기 경로에서는 브리지가 그때 한 장을 건네주고,
+ * 이 함수를 벗어나면 참조가 끊겨 회수된다 — 전 장을 미리 받아두면 200장 × 2.75MB 가
+ * 메모리에 쌓인다 (설계문서: 107MB 로 iOS 탭이 죽은 적이 있다).
  */
-export async function resizePhoto(file: File): Promise<ResizedPhoto> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+export async function resizePhoto(src: PhotoSource): Promise<ResizedPhoto> {
+  const bitmap = await createImageBitmap(await bytesOf(src), { imageOrientation: 'from-image' })
   try {
     return {
       display: await draw(bitmap, DISPLAY_MAX),

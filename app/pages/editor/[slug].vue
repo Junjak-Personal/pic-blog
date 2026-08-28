@@ -38,6 +38,7 @@ import {
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
 import { askConfirm } from '~/composables/useConfirm'
 import { skipNotice, summarizeSkipped } from '~/utils/exif'
+import { pickPhotos, type PhotoSource } from '~/utils/native'
 import { usePickMode } from '~/composables/usePickMode'
 
 /**
@@ -467,27 +468,28 @@ const pointAddBlocked = computed(() =>
 /** 제외된 사진 안내 — 템플릿에서 두 번(v-if 와 보간) 부르지 않도록 여기서 한 번 만든다 */
 const pointAddNotice = computed(() => skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT))
 
-/** 어느 그룹에 붙일지 — 파일 선택기를 여는 사이에 들고 있는다 */
+/**
+ * 어느 그룹에 붙일지 정하고 바로 고르게 한다.
+ * 🔴 pickPhotos 앞에 await 를 두면 안 된다 — 사용자 제스처 안에서 선택기가 열려야
+ *    사파리가 막지 않는다 (껍데기 경로는 네이티브 피커라 무관하지만 웹 경로가 그렇다).
+ */
 function onAddToPoint(groupId: number) {
   const d = pointDrafts.value.find((x) => x.id === groupId)
   if (!d || d.id < 0 || pointAddBlocked.value) return
   addTargetId.value = groupId
-  pointAddInput.value?.click()
+  void onPointAdd(pickPhotos(pointAddInput.value, MAX_PER_POINT))
 }
 
-async function onPointAdd(e: Event) {
-  const input = e.target
-  if (!(input instanceof HTMLInputElement) || !input.files?.length) return
-  const files = [...input.files]
-  // 같은 파일을 다시 골라도 change 가 뜨게 비워둔다
-  input.value = ''
+async function onPointAdd(picking: Promise<PhotoSource[]>) {
+  const sources = await picking
+  if (!sources.length) return
 
   const targetId = addTargetId.value
   const d = targetId === null ? null : pointDrafts.value.find((x) => x.id === targetId)
   if (!d) return
 
   errorMessage.value = null
-  await pointAddFlow.selectFiles(files)
+  await pointAddFlow.selectFiles(sources)
   if (!pointAddFlow.scanned.value.length) {
     errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
     pointAddFlow.reset()
@@ -1339,7 +1341,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       포인트별 사진 추가가 쓰는 파일 선택기. 단계와 무관하게 늘 DOM 에 있어야 한다 —
       2단계 안에 두면 클릭 시점에 ref 가 아직 안 잡히는 경우가 생긴다.
     -->
-    <input ref="pointAddInput" type="file" accept="image/*" multiple hidden @change="onPointAdd">
+    <input ref="pointAddInput" type="file" accept="image/*" multiple hidden>
 
     <!-- 2단계에서 사진을 크게 보는 창. 그 포인트 안에서만 좌우로 넘어간다 -->
     <PhotoLightbox
