@@ -21,6 +21,8 @@ const activeId = ref<number | null>(null)
 const detailOpen = ref(false)
 const stageEl = useTemplateRef<HTMLElement>('stageEl')
 const mapEl = useTemplateRef<InstanceType<typeof TripMap>>('mapEl')
+/** 잘린 제목 전체를 보여주는 판. 네이티브 <dialog> — 포커스 가둠·ESC·배경은 브라우저가 한다 */
+const titleDlg = useTemplateRef<HTMLDialogElement>('titleDlg')
 const stageHeight = ref(0)
 
 /**
@@ -227,7 +229,21 @@ useHead(() => ({
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" /></svg>
           <span class="mono">기록</span>
         </NuxtLink>
-        <h1 class="title">{{ post.title }}</h1>
+        <!--
+          제목은 한 줄로 자른다. 잘린 전체는 눌러서 본다 — 목록·상단바 어디서도 제목이
+          두 줄로 흐르지 않게 하되, 전체를 볼 길은 남긴다.
+          모바일 롱프레스 툴팁을 안 쓰는 이유: 텍스트 위 롱프레스는 iOS 선택·확대경과 겹친다.
+        -->
+        <h1 class="title-h">
+          <button type="button" class="title" @click="titleDlg?.showModal()">
+            <!--
+              🔴 자르는 것은 이 span 이다. button 에 text-overflow: ellipsis 를 걸면 «안 먹는다» —
+                 버튼 내용은 익명 상자라 말줄임표가 안 붙고, 글자가 양쪽으로 넘쳐 앞이 잘린다.
+                 (390px 에서 실측: 자연 폭 304 · 상자 265 인데 「…」 없이 앞머리가 사라졌다.)
+            -->
+            <span class="title-text">{{ post.title }}</span>
+          </button>
+        </h1>
       </div>
 
       <!-- 모바일 전용: 통계는 접고 아이콘으로 연다 -->
@@ -315,6 +331,14 @@ useHead(() => ({
       </Transition>
     </div>
 
+    <!-- 제목 전체. form method="dialog" 라 닫기에 스크립트가 필요 없다 -->
+    <dialog ref="titleDlg" class="titledlg" aria-label="기록 제목">
+      <p class="titledlg-text">{{ post.title }}</p>
+      <form method="dialog">
+        <button type="submit" class="mono titledlg-close">닫기</button>
+      </form>
+    </dialog>
+
     <PhotoLightbox
       v-if="activePoint && activeBadge"
       :photos="activePoint.photos"
@@ -375,13 +399,44 @@ useHead(() => ({
    아래 미디어쿼리는 가로 여백만 손본다. */
 .back { display: flex; align-items: center; gap: 7px; color: var(--deep); flex: none; }
 .back .mono { font-size: 11px; letter-spacing: 0.08em; }
+/* h1 은 의미를 지키고, 자르기·누르기는 안쪽 버튼이 맡는다 —
+   inline-block 인 버튼을 h1 이 직접 자르면 말줄임표 없이 잘리기만 한다 */
+.title-h { display: flex; min-width: 0; }
 .title {
+  display: flex;
+  min-width: 0;
   font-size: 18px;
   letter-spacing: -0.02em;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: left;
+  cursor: pointer;
+}
+/* 자르기는 버튼이 아니라 여기서 한다 (위 마크업 주석 참고) */
+.title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title:hover { color: var(--mid); }
+
+/* 제목 전체 판 — 네이티브 <dialog> (top layer · ::backdrop · ESC 는 브라우저 몫) */
+.titledlg {
+  margin: auto;
+  width: min(520px, calc(100vw - 32px));
+  background: var(--s1);
+  color: var(--ink);
+  border: 1px solid rgba(146, 178, 169, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.titledlg::backdrop { background: rgba(4, 4, 8, 0.7); backdrop-filter: blur(3px); }
+.titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
+.titledlg-close {
+  display: block;
+  margin: 16px 0 0 auto;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--mid);
+  cursor: pointer;
 }
 /* wrap — 합계가 아래 줄을 통째로 쓴다. 두 줄이어도 11px×2 + 여백이라 56px 상단바 안이다 */
 .stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 11px; color: var(--deep); flex: none; }
@@ -491,6 +546,8 @@ useHead(() => ({
     right: 0;
     z-index: 6;
     flex-wrap: wrap;
+    /* 데스크탑 상단바에서는 오른쪽으로 몰지만, 여기서는 판이 화면 폭을 다 쓰므로 왼쪽부터 읽는다 */
+    justify-content: flex-start;
     gap: 8px 14px;
     padding: 10px 14px;
     background: var(--s0);
