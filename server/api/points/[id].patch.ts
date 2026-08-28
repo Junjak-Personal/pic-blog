@@ -1,4 +1,5 @@
 import type { PointRow } from '#shared/types/db'
+import { centroid } from '#shared/utils/cluster'
 import {
   cleanExpenses, cleanLinks, isCurrency, isSafeUrl,
   MAX_AMOUNT, MAX_EXPENSES, MAX_ITEM, MAX_LINK_LABEL, MAX_LINKS, MAX_URL,
@@ -7,9 +8,14 @@ import {
 
 /**
  * 포인트 편집 저장 — 편집 3단계 「포인트별 기록」.
- * 타이틀 · 태그 · 콘텐츠 · 대표 썸네일 · 기타 정보(링크 · 소비 금액)를 받는다.
- * lat/lng 는 확정된 앵커, first_shot_at 은 EXIF 원본, order_index 는 촬영 시각 순 고정이라
- * 여기서 읽지 않는다 (설계문서 §7.2). 사진의 소속·순서는 regroup 엔드포인트가 소유한다.
+ * 타이틀 · 태그 · 콘텐츠 · 대표 썸네일 · 기타 정보(링크 · 소비 금액) · 앵커를 받는다.
+ * first_shot_at 은 EXIF 원본, order_index 는 촬영 시각 순 고정이라 여기서 읽지 않는다
+ * (설계문서 §7.2). 사진의 소속·순서는 regroup 엔드포인트가 소유한다.
+ *
+ * 🔴 앵커(lat/lng)는 «좌표를 직접 받지 않는다». 거리로 안 묶이는 것을 맥락으로 묶으면
+ *    평균이 아무도 안 간 자리에 찍히기 때문에 옮길 길이 필요하지만, 임의의 점을 받으면
+ *    「좌표는 EXIF 측량값」이라는 근간이 무너진다. 그래서 «무엇으로 잡을지»만 받고
+ *    좌표는 서버가 이 포인트의 사진에서 직접 계산한다 — 사진 평균이거나 사진 한 장의 좌표다.
  */
 const MAX_TITLE = 200
 const MAX_BODY = 2000
@@ -152,11 +158,43 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  /*
+   * 앵커 — 'centroid' 이거나 { photoId }. 좌표 자체는 받지 않는다 (위 🔴).
+   * 사진이 하나도 없는 포인트는 존재할 수 없으므로 photos 는 항상 비어 있지 않다.
+   */
+  let anchor: { lat: number; lng: number } | null = null
+  if ('anchor' in b && b.anchor != null) {
+    const v = b.anchor
+    const photos = db
+      .prepare<[number], { id: number; lat: number; lng: number }>(
+        `SELECT id, lat, lng FROM photo WHERE point_id = ?`,
+      )
+      .all(point.id)
+    if (!photos.length) bad('anchor: 사진이 없는 포인트입니다')
+
+    if (v === 'centroid') {
+      anchor = centroid(photos)
+    } else if (typeof v === 'object' && v !== null) {
+      const pid = (v as Record<string, unknown>).photoId
+      if (typeof pid !== 'number' || !Number.isInteger(pid)) bad('anchor.photoId: 정수여야 합니다')
+      const own = photos.find((ph) => ph.id === pid)
+      // 남의 사진 좌표를 받으면 그 포인트가 가본 적 없는 자리로 간다
+      if (!own) bad('anchor.photoId: 이 포인트의 사진이 아닙니다')
+      anchor = { lat: own.lat, lng: own.lng }
+    } else {
+      bad("anchor: 'centroid' 이거나 { photoId } 여야 합니다")
+    }
+  }
+
   const now = new Date().toISOString()
   const run = db.transaction(() => {
     db.prepare<[string | null, string | null, string, number | null, string, string, number]>(
       `UPDATE point SET title = ?, body = ?, tags = ?, cover_photo_id = ?, links = ?, expenses = ? WHERE id = ?`,
     ).run(title, body, tags, coverPhotoId, links, expenses, point.id)
+    if (anchor) {
+      db.prepare<[number, number, number]>(`UPDATE point SET lat = ?, lng = ? WHERE id = ?`)
+        .run(anchor.lat, anchor.lng, point.id)
+    }
     // 첫 포인트의 대표가 곧 기록의 커버다 — 목록(1a) 썸네일이 따라가야 한다
     syncPostCover(point.post_id)
     // 목록(1a)의 정렬·표시가 post.updated_at 을 본다 — 포인트만 고쳐도 포스트가 갱신돼야 한다

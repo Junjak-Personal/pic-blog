@@ -40,6 +40,17 @@
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
 
+/* 항목 위의 상태 한 줄 — 「지금 어디인지」를 누르기 전에 알려준다. 누를 수 없는 글이라
+   DropdownMenuItem 이 아니다 (항목이면 방향키가 여기에도 멈춘다). */
+.ovf-head {
+  padding: 6px 12px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 4px;
+}
+
 /*
  * BottomCta 는 fixed 라 문서 흐름에서 자리를 차지하지 않는다. 그 아래 깔리는 내용을
  * 페이지마다 손으로 74px 씩 적어두면 CTA 높이가 바뀔 때 전부 어긋난다 — 한 곳에서 센다.

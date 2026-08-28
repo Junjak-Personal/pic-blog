@@ -20,8 +20,11 @@ import { vSk } from '~/utils/img'
  * 「빈 포인트」는 존재할 수 없다. 새 포인트는 사진을 끌어내야만 생기고, 마지막 한 장이
  * 빠져나간 그룹은 그 자리에서 사라진다 — 지도에 좌표만 남은 유령을 만들지 않기 위해서다.
  */
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import type { Photo } from '#shared/types/db'
 import { formatTime } from '#shared/utils/format'
+import { centroid } from '#shared/utils/cluster'
+import { distanceM } from '#shared/utils/geo'
 import { useTileDrag, type DragFrom, type DragOver } from '~/composables/useTileDrag'
 
 export interface BoardGroup {
@@ -29,6 +32,10 @@ export interface BoardGroup {
   id: number
   title: string
   photos: Photo[]
+  /** 지금 지도에 찍히는 자리. 아직 저장 안 된 새 포인트는 null — 저장할 때 사진 평균으로 잡힌다. */
+  anchor: { lat: number; lng: number } | null
+  /** 이 포인트의 대표 사진. null 이면 첫 사진 (지도 마커와 같은 규칙). */
+  coverPhotoId: number | null
 }
 
 const props = defineProps<{
@@ -42,6 +49,8 @@ const emit = defineEmits<{
   drop: [from: DragFrom, over: DragOver]
   removePhoto: [id: number]
   pickCover: [id: number]
+  /** 이 포인트를 어느 자리에 찍을지 */
+  setAnchor: [groupId: number, kind: 'centroid' | 'cover']
   add: []
 }>()
 
@@ -71,12 +80,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 
 const totalPhotos = computed(() => props.groups.reduce((n, g) => n + g.photos.length, 0))
 
-/** 그룹의 대표 시각 — 서버의 first_shot_at 과 같은 규칙(가장 이른 촬영 시각)이다 */
-function headTime(g: BoardGroup) {
-  const times = g.photos.map((p) => p.shot_at).filter((t): t is string => t !== null).sort()
-  return times[0] ? formatTime(times[0]) : '시각 없음'
-}
-
 /** 끌고 있는 칸인지 — 원본은 흐려두고 고스트가 손끝을 따라간다 */
 function isSource(photoId: number) {
   return drag.dragging.value && drag.from.value?.photoId === photoId
@@ -90,6 +93,51 @@ function isCaret(groupId: number, index: number) {
   if (!f || f.groupId !== groupId) return true
   const at = props.groups.find((g) => g.id === groupId)?.photos.findIndex((p) => p.id === f.photoId) ?? -1
   return index !== at && index !== at + 1
+}
+
+/* ── 포인트 자리 ───────────────────────────────────────────────────────────
+ * 기본은 사진 평균이다. 거리로 안 묶이는 것을 «맥락»으로 묶으면 (멀리 떨어진 두 곳을
+ * 한 포인트로) 평균이 아무도 안 간 중간에 찍히므로, 대표 사진 자리로 옮길 길을 둔다.
+ */
+type Spot = { lat: number; lng: number }
+
+/** 같은 자리로 볼 거리 — GPS 흔들림보다 작다 */
+const SAME_M = 0.5
+
+function centroidOf(g: BoardGroup): Spot | null {
+  return g.photos.length ? centroid(g.photos) : null
+}
+
+/** 대표 사진의 좌표. 지정이 없으면 첫 사진 — 지도 마커가 쓰는 규칙과 같다. */
+function coverOf(g: BoardGroup): Spot | null {
+  const p = g.photos.find((ph) => ph.id === g.coverPhotoId) ?? g.photos[0]
+  return p ? { lat: p.lat, lng: p.lng } : null
+}
+
+/** 지금 찍히는 자리. 저장 전 새 포인트는 앵커가 없으므로 저장될 값(평균)을 보여준다. */
+function anchorOf(g: BoardGroup): Spot | null {
+  return g.anchor ?? centroidOf(g)
+}
+
+function gapM(a: Spot | null, b: Spot | null) {
+  return a && b ? distanceM([a.lat, a.lng], [b.lat, b.lng]) : 0
+}
+
+function isAt(g: BoardGroup, target: Spot | null) {
+  return !!target && gapM(anchorOf(g), target) < SAME_M
+}
+
+/** 누르면 몇 m 움직이는지 — 0 이면 이미 그 자리라 표시하지 않는다 */
+function moveLabel(g: BoardGroup, target: Spot | null) {
+  const d = gapM(anchorOf(g), target)
+  return d < SAME_M ? null : `${d < 1000 ? Math.round(d) + 'm' : (d / 1000).toFixed(1) + 'km'} 이동`
+}
+
+/** 지금 어느 규칙으로 찍혀 있는가 — 어느 쪽도 아니면 「처음 잡힌 자리」다 */
+function anchorNow(g: BoardGroup) {
+  if (isAt(g, centroidOf(g))) return '사진 평균 자리'
+  if (isAt(g, coverOf(g))) return '대표 사진 자리'
+  return '처음 잡힌 자리'
 }
 
 /**
@@ -169,7 +217,42 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <span class="mono gnum">{{ String(gi + 1).padStart(2, '0') }}</span>
           <span class="gname">{{ g.title }}</span>
           <span v-if="g.id < 0" class="mono badge-new">새 포인트</span>
-          <span class="mono gmeta">{{ g.photos.length }}장 · {{ headTime(g) }}</span>
+          <span class="mono gmeta">{{ g.photos.length }}장</span>
+
+          <!--
+            포인트를 어느 자리에 찍을지. 여기 있던 촬영 시각은 뺐다 — 그룹의 시각은
+            «첫 타일의 시각»과 같은 값이라 칸마다 이미 적혀 있다.
+
+            목록 스타일(.ovf-*)은 menu.css 에 있다. 포털이 내용을 body 로 옮기므로
+            scoped 가 닿지 않는다 — OverflowMenu 와 같은 이유로 같은 것을 쓴다.
+          -->
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger
+              class="spotbtn"
+              :aria-label="`${g.title} 포인트 자리 — 지금 ${anchorNow(g)}`"
+              :data-testid="`board-spot-${gi}`"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent class="ovf-content" align="end" :side-offset="6" :collision-padding="12">
+                <!-- 누르기 «전»에 지금 어디인지 알아야 판단이 된다 -->
+                <div class="ovf-head mono">지금 {{ anchorNow(g) }}</div>
+                <DropdownMenuItem class="ovf-item" :data-testid="`board-spot-avg-${gi}`" @select="emit('setAnchor', g.id, 'centroid')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+                  사진 평균 자리로
+                  <span v-if="isAt(g, centroidOf(g))" class="ovf-state">지금 여기</span>
+                  <span v-else-if="moveLabel(g, centroidOf(g))" class="ovf-state">{{ moveLabel(g, centroidOf(g)) }}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem class="ovf-item" :data-testid="`board-spot-cover-${gi}`" @select="emit('setAnchor', g.id, 'cover')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+                  대표 사진 자리로
+                  <span v-if="isAt(g, coverOf(g))" class="ovf-state">지금 여기</span>
+                  <span v-else-if="moveLabel(g, coverOf(g))" class="ovf-state">{{ moveLabel(g, coverOf(g)) }}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
         </header>
 
         <div class="tiles">
@@ -326,6 +409,26 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 }
 .badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgba(214, 178, 106, 0.16); color: var(--route); }
 .gmeta { flex: none; font-size: 10px; color: var(--faint); }
+
+/* 포인트 자리 — 헤더 높이(44px) 안에 들어가는 아이콘 버튼 */
+.spotbtn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--deep);
+  cursor: pointer;
+}
+.spotbtn:hover { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.spotbtn[data-state='open'] { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+
+@media (max-width: 900px) {
+  .spotbtn { width: 40px; height: 40px; }
+}
 
 /* grid 가 아니라 flex-wrap 이다 — 끼어들 자리 표식(.caret)이 칸 사이에 실제로 끼어야 한다 */
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; align-items: flex-start; }

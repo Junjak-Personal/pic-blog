@@ -25,6 +25,8 @@ import type { Photo, Point, PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
+import { centroid } from '#shared/utils/cluster'
+import { distanceM } from '#shared/utils/geo'
 import {
   cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
   MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
@@ -44,6 +46,9 @@ interface ExpenseDraft {
   currency: CurrencyCode
 }
 
+/** 앵커를 무엇으로 잡을지. 좌표는 서버가 이 포인트의 사진에서 직접 계산한다 (§7.2 유지). */
+type AnchorPick = 'centroid' | 'cover'
+
 interface PointDraft {
   /** 서버 포인트 id. 🔴 음수면 2단계에서 사진을 끌어내 만든 «아직 없는» 포인트다. */
   id: number
@@ -56,6 +61,11 @@ interface PointDraft {
   coverId: number | null
   links: PointLink[]
   expenses: ExpenseDraft[]
+  /**
+   * 지도에 찍힐 자리를 다시 잡았는가. null 이면 손대지 않은 것이다.
+   * 좌표가 아니라 «규칙»을 든다 — 저장 전에 대표 사진을 바꾸면 'cover' 가 그걸 따라간다.
+   */
+  anchor: AnchorPick | null
 }
 
 const MAX_BODY = 2000
@@ -112,6 +122,9 @@ const boardGroups = computed<BoardGroup[]>(() =>
     id: d.id,
     title: d.title.trim() || (d.id < 0 ? '새 포인트' : `포인트 ${i + 1}`),
     photos: photosOf(d.ids),
+    // 고른 규칙까지 반영한 «지금 찍힐» 자리 — 보드가 「지금 어디인지」를 이 값으로 말한다
+    anchor: draftAnchor(d),
+    coverPhotoId: d.coverId,
   })),
 )
 
@@ -166,6 +179,7 @@ const changes = computed(() => {
     if (d.coverId !== base.cover_photo_id) n++
     if (!sameLinks(d, base)) n++
     if (!sameExpenses(d, base)) n++
+    if (anchorMoved(d)) n++
   }
   return n
 })
@@ -211,6 +225,7 @@ function hydrate() {
     coverId: pt.cover_photo_id,
     links: pt.links.map((l) => ({ ...l })),
     expenses: pt.expenses.map((e) => ({ ...e, amount: String(e.amount) })),
+    anchor: null,
   }))
   if (!pointDrafts.value.some((d) => d.id === activeId.value)) {
     activeId.value = pointDrafts.value[0]?.id ?? null
@@ -317,6 +332,7 @@ async function onBoardDrop(from: DragFrom, over: DragOver) {
       coverId: null,
       links: [],
       expenses: [],
+      anchor: null,
     })
     resort()
     return
@@ -483,6 +499,74 @@ function badAmount(e: ExpenseDraft) {
 /** 편집 중에도 합계를 보여준다 — 화폐가 섞이면 화폐마다 한 줄 */
 const activeTotals = computed(() => (activeDraft.value ? totalsOf(outExpenses(activeDraft.value)) : []))
 
+/* ── 포인트 자리 (앵커) ────────────────────────────────────────────────────
+ * 기본은 사진들의 평균이고 만들어질 때 한 번 정해진다. 거리로 안 묶이는 것을 맥락으로
+ * 묶으면 평균이 아무도 안 간 중간에 찍히므로, 2단계에서 대표 사진 자리로 옮길 수 있다.
+ * 좌표는 서버가 계산한다 — 여기서는 «무엇으로 잡을지»만 들고 미리보기를 그린다.
+ */
+
+/** 그 포인트의 대표 사진 — 지정이 없으면 첫 사진 (지도 마커와 같은 규칙) */
+function coverPhotoOf(d: PointDraft) {
+  const photos = photosOf(d.ids)
+  return photos.find((p) => p.id === d.coverId) ?? photos[0] ?? null
+}
+
+/** 고른 규칙이 가리키는 자리. 안 골랐으면 지금 서버에 저장된 자리다. */
+function draftAnchor(d: PointDraft) {
+  if (d.anchor === 'centroid') {
+    const photos = photosOf(d.ids)
+    return photos.length ? centroid(photos) : null
+  }
+  if (d.anchor === 'cover') {
+    const p = coverPhotoOf(d)
+    return p ? { lat: p.lat, lng: p.lng } : null
+  }
+  const base = basePoint(d.id)
+  if (base) return { lat: base.lat, lng: base.lng }
+  // 아직 저장 안 된 포인트 — 저장될 값(사진 평균)을 미리 보여준다
+  const photos = photosOf(d.ids)
+  return photos.length ? centroid(photos) : null
+}
+
+/** 자리가 실제로 «움직였는가». 이미 그 자리를 고른 것은 변경이 아니다. */
+function anchorMoved(d: PointDraft) {
+  if (!d.anchor) return false
+  const now = draftAnchor(d)
+  const base = basePoint(d.id)
+  const photos = photosOf(d.ids)
+  const from = base
+    ? { lat: base.lat, lng: base.lng }
+    : (photos.length ? centroid(photos) : null)
+  if (!now || !from) return false
+  return distanceM([from.lat, from.lng], [now.lat, now.lng]) >= 0.5
+}
+
+/** 3단계 헤더에 뜨는 좌표 — 2단계에서 자리를 다시 잡았으면 그 값이 먼저다 */
+const activeSpot = computed(() => (activeDraft.value ? draftAnchor(activeDraft.value) : null))
+
+/**
+ * 그 좌표가 «무엇»인지. 예전엔 언제나 「EXIF 원본」이라고 붙였는데, 자리를 옮길 수 있게 된
+ * 지금은 옮긴 포인트에서 거짓말이 된다. 촬영 시각은 그대로 EXIF 라 그건 건드리지 않는다.
+ */
+const activeSpotNote = computed(() => {
+  const d = activeDraft.value
+  const spot = activeSpot.value
+  if (!d || !spot) return null
+  const near = (t: { lat: number; lng: number } | null) =>
+    !!t && distanceM([spot.lat, spot.lng], [t.lat, t.lng]) < 0.5
+  const photos = photosOf(d.ids)
+  if (near(photos.length ? centroid(photos) : null)) return '사진 평균 자리'
+  const cp = coverPhotoOf(d)
+  if (near(cp ? { lat: cp.lat, lng: cp.lng } : null)) return '대표 사진 자리'
+  return '처음 잡힌 자리'
+})
+
+/** 2단계 — 이 포인트를 어느 자리에 찍을지 */
+function onSetAnchor(groupId: number, kind: AnchorPick) {
+  const d = pointDrafts.value.find((x) => x.id === groupId)
+  if (d) d.anchor = kind
+}
+
 function addTag() {
   const t = tagInput.value.trim()
   tagInput.value = ''
@@ -602,12 +686,13 @@ async function save() {
         d.tags.join('\n') !== base.tags.join('\n') ||
         d.coverId !== base.cover_photo_id ||
         !sameLinks(d, base) ||
-        !sameExpenses(d, base)
+        !sameExpenses(d, base) ||
+        anchorMoved(d)
       // 새 포인트인데 적은 것이 하나도 없으면 보낼 것도 없다
       if (!dirty) continue
       if (
         !base && !d.title.trim() && !d.body.trim() && !d.tags.length && d.coverId === null
-        && !outLinks(d).length && !outExpenses(d).length
+        && !outLinks(d).length && !outExpenses(d).length && !anchorMoved(d)
       ) continue
       await $fetch(`/api/points/${d.id}`, {
         method: 'PATCH',
@@ -618,6 +703,12 @@ async function save() {
           cover_photo_id: d.coverId,
           links: outLinks(d),
           expenses: outExpenses(d),
+          // 'cover' 는 여기서 실제 사진 id 로 굳힌다 — 서버가 그 사진의 좌표를 쓴다
+          anchor: !anchorMoved(d)
+            ? null
+            : d.anchor === 'centroid'
+              ? 'centroid'
+              : { photoId: coverPhotoOf(d)?.id ?? null },
         },
       })
     }
@@ -804,6 +895,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           @drop="onBoardDrop"
           @remove-photo="onRemovePhoto"
           @pick-cover="onPickCover"
+          @set-anchor="onSetAnchor"
           @add="onAddPhotos"
         />
       </div>
@@ -860,9 +952,12 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
               <span class="mono">
                 {{ formatDateTime(activePoint.first_shot_at) || '시각 없음' }}
-                · {{ activePoint.lat.toFixed(5) }}, {{ activePoint.lng.toFixed(5) }}
+                <template v-if="activeSpot">
+                  · {{ activeSpot.lat.toFixed(5) }}, {{ activeSpot.lng.toFixed(5) }}
+                </template>
               </span>
-              <span class="mono lock-note">EXIF 원본</span>
+              <!-- 시각은 언제나 EXIF 다. 좌표는 2단계에서 다시 잡을 수 있어 무엇인지 적는다. -->
+              <span class="mono lock-note">시각 EXIF · 자리 {{ activeSpotNote ?? '—' }}</span>
             </span>
             <!-- 아직 저장 전인 포인트는 앵커가 없다 — 저장할 때 담긴 사진들의 평균 좌표로 정해진다 -->
             <span v-else class="lockrow fresh">
