@@ -188,6 +188,21 @@ const MODE_TAG: Record<AnchorMode, string> = { centroid: '사진 평균', cover:
 /** 소리로 읽히는 말 — 꼬리표보다 길어도 된다 */
 const MODE_NOW: Record<AnchorMode, string> = { centroid: '사진 평균 자리', cover: '대표 사진 자리', origin: '처음 잡힌 자리' }
 
+/**
+ * 이 포인트에 사진을 «지금» 붙일 수 있는가 — 못 붙이면 그 이유를 돌려준다.
+ *
+ * 🔴 못 붙이는 칸을 «감추지» 않는다. 새 포인트에서만 칸이 통째로 사라지면 「왜 여기만
+ *    없지」가 되고, 다른 곳처럼 흐린 칸이 있었다면 눌러 보기라도 했을 것이다.
+ * 🔴 이유는 칸 «안»에 글자로 적는다. title 툴팁은 disabled 버튼에서 아예 안 뜨고
+ *    (브라우저가 hover 이벤트를 안 보낸다) 터치에는 애초에 툴팁이 없다.
+ *    실제로 「저장 중입니다」가 그렇게 아무 데도 안 보이고 있었다.
+ */
+function addBlockedFor(g: BoardGroup) {
+  // 서버에 아직 없는 포인트다 — 사진을 붙일 대상 id 자체가 없다
+  if (g.id < 0) return '저장 후 추가'
+  return props.addBlocked
+}
+
 /** 이 포인트의 대표 사진인가 — 3단계 배지와 같은 규칙(pointThumb) */
 function isPointCover(g: BoardGroup, photoId: number) {
   return repPhotos.value.get(g.id)?.id === photoId
@@ -368,20 +383,20 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <!--
             사진 칸과 «같은 크기»의 추가 칸. 그룹 맨 뒤에 둔다 — 하단에 버튼 하나로 두면
             어느 포인트에 들어가는지가 안 보인다. 여기 있으면 자리가 곧 대상이다.
-            🔴 새 포인트(음수 id)는 서버에 아직 없어서 붙일 수 없다.
+            못 붙이는 동안에도 «자리는 지킨다» — 이유는 addBlockedFor 가 칸 안에 적는다.
           -->
           <button
-            v-if="g.id > 0"
             type="button"
             class="addtile"
-            :disabled="!!props.addBlocked"
-            :title="props.addBlocked ?? undefined"
-            :aria-label="`${g.title} 포인트에 사진 추가`"
+            :disabled="!!addBlockedFor(g)"
+            :aria-label="addBlockedFor(g)
+              ? `${g.title}에 사진 추가 — ${g.id < 0 ? '새 포인트는 저장한 뒤에 붙일 수 있습니다' : addBlockedFor(g)}`
+              : `${g.title}에 사진 추가`"
             :data-testid="`board-add-${gi}`"
             @click="emit('addToPoint', g.id)"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-            <span class="mono">사진 추가</span>
+            <span class="mono addlabel">{{ addBlockedFor(g) ?? '사진 추가' }}</span>
           </button>
         </div>
       </section>
@@ -539,7 +554,10 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   cursor: pointer;
 }
 .addtile:hover:not(:disabled) { border-color: var(--acc); color: var(--ink); background: rgba(146, 178, 169, 0.08); }
-.addtile:disabled { opacity: 0.4; cursor: default; }
+/* 0.4 는 이유를 읽을 수 없을 만큼 흐리다 — 누를 수 없다는 것만 말하고 글자는 남긴다 */
+.addtile:disabled { border-style: dotted; color: var(--faint); cursor: default; }
+/* 이유가 「사진 추가」보다 길다 — 두 줄까지 접히게 두고 가운데로 맞춘다 */
+.addlabel { padding: 0 6px; text-align: center; line-height: 1.45; }
 
 .caret {
   flex: none;
