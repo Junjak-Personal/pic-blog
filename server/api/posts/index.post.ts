@@ -73,6 +73,8 @@ export default defineEventHandler(async (event): Promise<CreatePostResult> => {
     if (firstPhotoId != null) {
       db.prepare(`UPDATE post SET cover_photo_id = ? WHERE id = ?`).run(firstPhotoId, postId)
     }
+    // 포인트 대표도 첫 사진으로 박아둔다 — NULL(「지정 없음」)이라는 상태를 만들지 않는다
+    fillPointCovers(postId)
 
     return { slug, postId, photoIds }
   })

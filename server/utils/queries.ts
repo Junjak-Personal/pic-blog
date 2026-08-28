@@ -23,6 +23,28 @@ function routeKm(points: ReadonlyArray<{ lat: number; lng: number }>) {
 }
 
 /**
+ * 대표 썸네일이 비어 있는 포인트를 그 포인트의 «첫 사진»으로 채운다.
+ *
+ * 예전에는 NULL 이 「지정 없음 = 첫 사진을 쓴다」는 뜻이었고 화면이 그걸 「기본」이라
+ * 따로 불렀는데, 보는 사람에게는 둘 다 그냥 대표 사진이라 나눌 이유가 없었다.
+ * 값을 명시적으로 박아 그 개념을 없앤다.
+ *
+ * 🔴 동작은 «바뀌지 않는다». 읽는 쪽(pointThumb)이 이미 NULL 을 첫 사진으로 되짚고
+ *    있었으므로 이 UPDATE 는 화면에 뜨는 사진을 하나도 바꾸지 않는다 — 저장된 값이
+ *    화면과 같아질 뿐이다. 그래서 몇 번을 돌려도 안전하다.
+ */
+export function fillPointCovers(postId?: number) {
+  const db = useDb()
+  const where = postId == null ? '' : ' AND pt.post_id = @postId'
+  db.prepare(
+    `UPDATE point AS pt
+        SET cover_photo_id = (SELECT ph.id FROM photo ph WHERE ph.point_id = pt.id ORDER BY ph.order_index, ph.id LIMIT 1)
+      WHERE pt.cover_photo_id IS NULL
+        AND EXISTS (SELECT 1 FROM photo ph WHERE ph.point_id = pt.id)${where}`,
+  ).run(postId == null ? {} : { postId })
+}
+
+/**
  * 포스트 커버가 «성립하는지» 확인하고, 아니면 규칙대로 다시 세운다.
  *
  * 커버는 사용자가 편집 2단계에서 직접 고른다 (「커버 지정」). 그 선택이 SSOT 이므로
@@ -40,6 +62,8 @@ function routeKm(points: ReadonlyArray<{ lat: number; lng: number }>) {
  */
 export function syncPostCover(postId: number) {
   const db = useDb()
+  // 커버를 건드리는 모든 경로가 여기를 지난다 — 포인트 대표도 같이 채워둔다
+  fillPointCovers(postId)
 
   // 지금 커버가 이 기록의 살아 있는 사진이면 그대로 둔다 (사용자가 고른 값일 수 있다)
   const current = db

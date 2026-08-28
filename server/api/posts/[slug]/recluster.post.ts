@@ -115,6 +115,8 @@ export default defineEventHandler(async (event) => {
     db.prepare<[number, string, number]>(
       `UPDATE post SET cluster_radius = ?, updated_at = ? WHERE id = ?`,
     ).run(nextRadius, new Date().toISOString(), post.id)
+    // 포인트를 통째로 새로 만들었다 — 대표는 각 포인트의 첫 사진이다
+    fillPointCovers(post.id)
   })
 
   run()

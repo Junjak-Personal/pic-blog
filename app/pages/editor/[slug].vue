@@ -189,8 +189,14 @@ const changes = computed(() => {
 
 hydrate()
 
-onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
-onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('keydown', onPickEsc)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  window.removeEventListener('keydown', onPickEsc)
+})
 
 onBeforeRouteLeave(async () => {
   if (deleting.value || changes.value === 0) return true
@@ -397,11 +403,41 @@ function onPickCover(id: number) {
   draftCoverId.value = id
 }
 
-/** 3단계 — 그 «포인트»의 대표 썸네일. 이미 대표인 사진을 다시 누르면 「지정 없음」으로 돌아간다. */
-function pickThumb(photoId: number) {
+/**
+ * 3단계 — 그 «포인트»의 대표 썸네일 고르는 중.
+ *
+ * 2단계의 「커버 지정」과 같은 모드다. 사진을 그냥 누르는 것은 «크게 보기»여야 하고,
+ * 상시로 「클릭 = 대표」면 확인하려고 누른 순간 대표가 바뀐다.
+ */
+const thumbPicking = ref(false)
+
+/**
+ * 3단계 사진 클릭 — 고르는 중이면 대표로, 아니면 크게 본다.
+ *
+ * 🔴 「다시 누르면 지정 해제」를 없앴다. 해제하면 coverId 가 null 이 되고 화면은
+ *    「첫 사진」으로 되돌아가는데, 사용자에게는 그것도 그냥 대표 사진이라 「기본」과
+ *    「대표」를 나눠 보여줄 이유가 없었다. 첫 사진으로 되돌리고 싶으면 첫 사진을 고른다.
+ */
+function onPickClick(index: number, photoId: number) {
   const d = activeDraft.value
   if (!d) return
-  d.coverId = d.coverId === photoId ? null : photoId
+  if (!thumbPicking.value) {
+    onOpenPhoto(d.id, index)
+    return
+  }
+  thumbPicking.value = false
+  d.coverId = photoId
+}
+
+/** 포인트를 옮기면 고르던 것은 끝난다 — 다른 포인트의 사진에 그대로 이어지면 놀란다 */
+function selectPoint(id: number) {
+  thumbPicking.value = false
+  activeId.value = id
+}
+
+/** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 (2단계 보드와 같은 처방) */
+function onPickEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') thumbPicking.value = false
 }
 
 /** 지정이 없을 때 실제로 쓰이는 사진 — 3단계 픽커가 「기본」 표시를 붙일 자리 */
@@ -942,7 +978,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               class="prow"
               :class="{ on: pt.id === activeId }"
               :data-testid="`editor-point-row-${i}`"
-              @click="activeId = pt.id"
+              @click="selectPoint(pt.id)"
             >
               <span class="mono pnum">{{ String(i + 1).padStart(2, '0') }}</span>
               <img
@@ -999,27 +1035,43 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           <div class="split">
             <div class="grid-col">
               <div class="pick-head">
-                <span class="mono flabel">대표 썸네일</span>
-                <span class="mono hint">지도 마커와 목록에 뜨는 사진 · 다시 누르면 기본값</span>
+                <span class="mono flabel">사진 {{ activePhotos.length }}</span>
+                <span class="mono hint">
+                  <template v-if="thumbPicking">대표로 쓸 사진을 고르세요 · Esc 로 취소</template>
+                  <template v-else>눌러서 크게 보기</template>
+                </span>
               </div>
-              <div class="scroll-y picks">
+              <div class="scroll-y picks" :class="{ picking: thumbPicking }">
                 <button
                   v-for="(ph, i) in activePhotos"
                   :key="ph.id"
                   type="button"
                   class="pick"
                   :class="{ on: ph.id === activeThumbId }"
-                  :aria-pressed="ph.id === activeThumbId"
-                  :aria-label="`${i + 1}번 사진을 대표로`"
-                  @click="pickThumb(ph.id)"
+                  :aria-label="thumbPicking ? `${i + 1}번 사진을 대표로` : `${i + 1}번 사진 크게 보기`"
+                  :data-testid="`editor-pick-${i}`"
+                  @click="onPickClick(i, ph.id)"
                 >
                   <img v-sk class="pickimg sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy">
-                  <span v-if="ph.id === activeThumbId" class="mono pickbadge">
-                    {{ activeDraft.coverId === null ? '기본' : '대표' }}
-                  </span>
+                  <!-- 「기본」과 「대표」를 나누지 않는다 — 보는 사람에게는 둘 다 그냥 대표 사진이다 -->
+                  <span v-if="ph.id === activeThumbId" class="mono pickbadge">대표</span>
                 </button>
               </div>
-              <p class="mono pick-note">사진을 옮기거나 지우는 것은 2단계에서 합니다</p>
+              <!-- 대표 지정은 사진 «아래»에 둔다. 2단계의 「커버 지정」과 같은 모드다. -->
+              <div class="pick-foot">
+                <button
+                  type="button"
+                  class="minibtn mono"
+                  :class="{ armed: thumbPicking }"
+                  :aria-pressed="thumbPicking"
+                  data-testid="editor-thumb-pick"
+                  @click="thumbPicking = !thumbPicking"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+                  {{ thumbPicking ? '고르는 중…' : '대표 지정' }}
+                </button>
+                <span class="mono pick-note">지도 마커와 목록에 뜨는 사진 · 옮기고 지우는 것은 2단계에서</span>
+              </div>
             </div>
 
             <div class="scroll-y side">
@@ -1602,7 +1654,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   background: var(--ink);
   color: var(--s0);
 }
-.pick-note { flex: none; font-size: 10px; color: var(--faint); }
+/* 버튼 좌 · 설명 우. 좁아지면 설명이 아래로 내려간다 */
+.pick-foot { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.pick-note { flex: 1; min-width: 0; font-size: 10px; color: var(--faint); }
+/* 고르는 중 — 다음에 누를 것이 「버튼」이 아니라 「사진」이라는 걸 색으로 말한다 (2단계와 같다) */
+.picks.picking .pick:hover { box-shadow: inset 0 0 0 2px var(--acc); }
 
 /* 🔴 .field 는 flex: 1 이다 (태그+콘텐츠 둘뿐이던 시절의 값). 그대로 두면 링크·소비까지
    남는 높이를 나눠 가져 링크 아래에 빈 칸이 크게 뜬다 — 늘어나는 건 콘텐츠 하나뿐이다. */

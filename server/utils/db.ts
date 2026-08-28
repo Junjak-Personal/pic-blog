@@ -103,5 +103,14 @@ export function useDb() {
   addColumnIfMissing(db, 'point', 'expenses', `TEXT NOT NULL DEFAULT '[]'`)
 
   handle = db
+
+  /*
+   * 이미 쌓여 있는 「지정 없음」(NULL)을 각 포인트의 첫 사진으로 메운다.
+   * 🔴 화면은 하나도 안 바뀐다 — 읽는 쪽이 이미 NULL 을 첫 사진으로 되짚고 있었다.
+   *    저장된 값이 화면과 같아질 뿐이라 몇 번을 돌려도 안전하고, 그래서 부팅마다 돌린다.
+   *    (handle 을 먼저 세운 뒤에 부른다 — fillPointCovers 가 useDb() 를 다시 부른다.)
+   */
+  fillPointCovers()
+
   return db
 }
