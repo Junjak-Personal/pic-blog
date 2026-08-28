@@ -9,9 +9,10 @@ import 'picker_theme.dart';
 ///
 /// 이것 하나만 갈아끼운다. 사진 그리드·끌어서 선택·선택 카운트·미리보기는 전부 원래
 /// 것을 그대로 쓴다 — 앨범 목록이 좁은 드롭다운이라 한눈에 안 들어온다는 것 말고는
-/// 이 피커에 아쉬운 점이 없었다. (iOS 기본 피커로 갈아탔다가 끌어서 선택이 없어서,
-/// 웹뷰에서 직접 그렸다가 1만 장짜리 사진첩을 브리지로 나르는 구조라서 둘 다 되돌아왔다.
-/// 자세한 경위는 picker_theme.dart 의 🔴 주석에 있다.)
+/// 이 피커에 아쉬운 점이 없었다.
+///
+/// 피커를 통째로 갈아엎으려던 두 시도와 그 결과는
+/// `_docs/active/planning/2026-08-28/native-shell.md` 에 있다.
 class AlbumGridPickerDelegate extends DefaultAssetPickerBuilderDelegate {
   AlbumGridPickerDelegate({
     required super.provider,
