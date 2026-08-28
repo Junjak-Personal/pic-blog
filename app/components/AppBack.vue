@@ -18,9 +18,16 @@ const props = withDefaults(defineProps<{
    * 그냥 두면 2단계에서 ← 를 눌렀을 때 고른 사진을 통째로 버리고 페이지를 떠난다.
    */
   intercept?: () => void
+  /**
+   * 넓은 화면에도 남긴다. 기본은 「모바일 전용」이다 — 데스크탑에는 「목록」 같은 명시
+   * 링크가 따로 있으니까. 그 링크를 걷어낸 화면(편집·업로드)은 이걸 켜서 ← 를 남긴다.
+   * OverflowMenu 의 always 와 같은 관용구다.
+   */
+  always?: boolean
 }>(), {
   label: '뒤로',
   intercept: undefined,
+  always: false,
 })
 
 const router = useRouter()
@@ -36,7 +43,7 @@ function back() {
 </script>
 
 <template>
-  <button type="button" class="appback" :aria-label="props.label" @click="back">
+  <button type="button" class="appback" :class="{ always: props.always }" :aria-label="props.label" @click="back">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
   </button>
 </template>
@@ -44,6 +51,21 @@ function back() {
 <style scoped>
 /* 데스크탑에는 명시 링크가 따로 있다 — 모바일에서만 나타난다 */
 .appback { display: none; }
+/* 그 명시 링크가 없는 화면은 넓은 화면에도 ← 를 남긴다 (아래 모바일 규칙과 같은 모양) */
+.appback.always {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--mid);
+  cursor: pointer;
+}
+.appback.always:hover { background: rgb(var(--acc-rgb) / 0.12); color: var(--ink); }
 
 @media (max-width: 900px) {
   .appback {

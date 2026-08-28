@@ -88,7 +88,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 
     <header class="topbar">
       <div class="left">
-        <AppBack :fallback="`/editor/${slug}`" label="편집으로" />
+        <AppBack always :fallback="`/editor/${slug}`" label="편집으로" />
         <span class="hd-name">사진 추가</span>
         <span class="badge mono">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /></svg>
@@ -106,7 +106,6 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 8.5l.5 -.5" /><path d="M14.121 14.111a3 3 0 1 0 -4.242 -4.24" /><path d="M3 3l18 18" /></svg>
           {{ flow.skipped.value.length }}장 제외 — {{ summarizeSkipped(flow.skipped.value) }}
         </span>
-        <button type="button" class="btn ghost mono" @click="back">취소</button>
         <button
           v-if="flow.stage.value === 'preview' && flow.scanned.value.length"
           type="button"
@@ -328,13 +327,13 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .page { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 .topbar {
-  height: 60px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 24px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
   background: rgb(var(--acc-rgb) / 0.06);
   /*
@@ -345,7 +344,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(60px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: linear-gradient(rgb(var(--acc-rgb) / 0.06), rgb(var(--acc-rgb) / 0.06)), var(--s0);
 }
 .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
@@ -598,7 +597,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 @media (max-width: 900px) {
   /* 헤더는 한 줄 — [←] [화면 이름] 뿐이다. wrap 을 켜고 .left 에 100% 를 주면
      「취소」가 둘째 줄 «좌측»으로 떨어진다(103px 헤더). 실제로 그렇게 접혀 있었다. */
-  .topbar { height: calc(56px + var(--top-inset)); gap: 10px; padding: var(--top-inset) 14px 0; }
+  .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); gap: 10px; padding: var(--top-inset) var(--topbar-x-sm) 0; }
   .left { gap: 8px; }
   /* 확정은 하단 CTA, 뒤로는 좌측 ← 로 갔다 — new.vue 와 같은 처방으로 우측 묶음은 비운다 */
   .right { display: none; }

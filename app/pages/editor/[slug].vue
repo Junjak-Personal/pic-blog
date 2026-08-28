@@ -894,47 +894,48 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <!-- 데스크탑 -->
       <div class="hd-desktop">
         <div class="top-left">
-          <span class="badge mono">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-            편집 중
-          </span>
-          <span v-if="changes" class="mono state dirty">변경 {{ changes }}건 · 저장 안 됨</span>
+          <!--
+            ← 목록으로. 예전엔 「편집 중」 배지가 이 자리에 있었는데, 누를 수 없는 것이
+            헤더에서 유일하게 버튼처럼 생겨 있었다. 나가는 길은 오른쪽 「목록」 버튼이
+            맡고 있었지만 그건 헤더 오른쪽을 한 칸 더 먹었다 — 왼쪽 ← 하나로 합친다.
+          -->
+          <AppBack fallback="/editor" label="기록 목록으로" always />
+          <!--
+            무엇을 편집 중인지가 먼저다. 예전엔 정작 «기록 이름»이 없었다 —
+            2·3단계로 넘어가면 타이틀 입력도 안 보여서 어느 기록을 열어둔 건지
+            화면 어디에도 안 적혀 있었다.
+          -->
+          <h1 class="hd-title">
+            <button type="button" class="hd-title-btn" data-testid="editor-title-open-wide" @click="titleDlg?.showModal()">
+              <span class="hd-title-text">{{ draftTitle || '기록 편집' }}</span>
+            </button>
+          </h1>
           <span v-if="errorMessage" class="mono err">{{ errorMessage }}</span>
         </div>
 
         <div class="top-right">
-          <span class="toggle-wrap">
-            <button
-              type="button"
-              class="toggle"
-              role="switch"
-              :aria-checked="draftPublic"
-              :class="{ on: draftPublic }"
-              aria-label="공개 여부"
-              @click="draftPublic = !draftPublic"
-            >
-              <span class="knob" />
-            </button>
-            <span class="toggle-label">공개</span>
-          </span>
-          <span class="rule" />
-          <NuxtLink to="/editor" class="btn ghost mono">목록</NuxtLink>
+          <!--
+            공개 토글은 여기 없다 — 1단계 「기본 정보」에 같은 스위치가 있다.
+            한 값을 두 자리에서 만지면 어느 쪽이 진짜인지 알 수 없다.
+            되돌릴 수 없는 것(기록 삭제)은 메뉴 안이다. 저장 옆에 두면 손이 미끄러진다.
+          -->
+          <OverflowMenu label="기록 메뉴" always testid="editor-menu-wide">
+            <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
+              변경 취소
+              <span class="ovf-state">{{ changes ? `${changes}건` : '없음' }}</span>
+            </DropdownMenuItem>
+            <div class="ovf-sep" />
+            <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
+              기록 삭제
+            </DropdownMenuItem>
+          </OverflowMenu>
           <button type="button" class="btn ghost mono" :disabled="!changes" @click="revert">취소</button>
           <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
             {{ saving ? '저장 중' : '저장' }}
           </button>
-          <!--
-            되돌릴 수 없는 것은 메뉴 안으로. 저장·취소와 나란히 두면 손이 미끄러질 자리다.
-            always — 넓은 화면에는 펼친 버튼이 따로 있는 게 이 메뉴의 기본이지만,
-            삭제는 펼쳐둘 자리가 없다.
-          -->
-          <OverflowMenu label="기록 메뉴" always testid="editor-menu-wide">
-          <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
-            기록 삭제
-          </DropdownMenuItem>
-          </OverflowMenu>
         </div>
       </div>
 
@@ -1396,13 +1397,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 /* 상단바 */
 .topbar {
-  height: 60px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 24px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
   background: rgb(var(--acc-rgb) / 0.06);
   /*
@@ -1413,26 +1414,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(60px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: linear-gradient(rgb(var(--acc-rgb) / 0.06), rgb(var(--acc-rgb) / 0.06)), var(--s0);
 }
 .top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 14px; flex: none; }
 
-.badge {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--acc);
-  color: var(--s0);
-  border-radius: 6px;
-  padding: 4px 9px;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-}
-.state { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
-.state.dirty { color: var(--deep); }
+
 .err {
   font-size: 10.5px;
   color: var(--danger);
@@ -1441,36 +1429,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   white-space: nowrap;
 }
 
-.toggle-wrap { display: flex; align-items: center; gap: 9px; }
-.toggle {
-  position: relative;
-  width: 42px;
-  height: 24px;
-  flex: none;
-  border-radius: 999px;
-  background: rgb(var(--mid-rgb) / 0.18);
-  border: 1px solid var(--hair);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-/* 앱에 남은 유일한 스위치다 (목록의 공개 토글은 여기 1단계로 흡수됐다).
-   링은 트랙 모양을 따라간다 — base.css 의 36px 규칙에서 role="switch" 를 뺀 이유다. */
-.toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.toggle.on { background: rgb(var(--acc-rgb) / 0.9); border-color: var(--acc); }
-.knob {
-  position: absolute;
-  left: 3px;
-  top: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--mid);
-  display: block;
-  transition: transform 0.15s;
-}
-.toggle.on .knob { background: var(--s0); transform: translateX(18px); }
-.toggle-label { font-size: 13px; color: var(--mid); }
-.rule { width: 1px; height: 22px; background: rgb(var(--mid-rgb) / 0.16); }
 
 /* 버튼은 base.css 의 .btn 한 벌을 쓴다 (여백이 여기만 8px 13px 이었는데 14px 로 맞춘다) */
 
@@ -1890,7 +1848,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 헤더 갈래 전환 — 데스크탑 마크업은 통째로 빠지고 모바일 것이 들어온다 */
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
-  .topbar { height: calc(56px + var(--top-inset)); gap: 0; padding: var(--top-inset) 12px 0; }
+  .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); gap: 0; padding: var(--top-inset) var(--topbar-x-sm) 0; }
 
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }

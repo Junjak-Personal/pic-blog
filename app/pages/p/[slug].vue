@@ -3,6 +3,7 @@
  * 포스트 뷰 — 아트보드 1b. 공개 경로라 절대 잠기지 않는다.
  * 지도 + 목록 → 마커 선택 → 스캐터 상세 → 사진 확대, 네 층이 한 화면에서 겹친다.
  */
+import AppBack from '~/components/AppBack.vue'
 import MapSkeleton from '~/components/MapSkeleton.vue'
 // 날짜 탭이 지도를 그 날짜 범위로 다시 담아야 해서 fit() 을 직접 부른다 — 타입 때문에 명시적 임포트
 import TripMap from '~/components/TripMap.vue'
@@ -27,11 +28,13 @@ const stageHeight = ref(0)
 
 /**
  * 시트 높이를 JS 가 소유한다 — CSS 에 같은 상수를 또 쓰면 지도 오프셋 계산과 어긋난다.
- * 데스크탑은 아트보드 1b 의 720px, 화면이 낮으면 80% 로 줄인다.
+ * 데스크탑은 언제나 무대의 80% 다. 예전엔 아트보드 1b 의 720px 로 «천장»을 씌웠는데,
+ * 세로가 긴 화면에서는 시트가 화면에 비해 납작해 보였다 — 사진이 주인공인 판이라
+ * 비율로 따라가는 쪽이 맞다. 모바일은 전체를 덮는다.
  */
 const sheetHeight = computed(() => {
   if (!stageHeight.value) return 0
-  return isMobile.value ? stageHeight.value : Math.min(720, stageHeight.value * 0.8)
+  return isMobile.value ? stageHeight.value : Math.round(stageHeight.value * 0.8)
 })
 const photoIndex = ref<number | null>(null)
 const isMobile = ref(false)
@@ -179,10 +182,7 @@ useHead(() => ({
   <main v-if="status === 'pending'" class="page">
     <header class="topbar">
       <div class="left">
-        <NuxtLink to="/" class="back">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" /></svg>
-          <span class="mono">기록</span>
-        </NuxtLink>
+        <AppBack always fallback="/" label="기록 목록으로" />
         <span class="sk sk-title" aria-hidden="true" />
       </div>
     </header>
@@ -225,10 +225,7 @@ useHead(() => ({
   <main v-else class="page">
     <header class="topbar">
       <div class="left">
-        <NuxtLink to="/" class="back">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" /></svg>
-          <span class="mono">기록</span>
-        </NuxtLink>
+        <AppBack always fallback="/" label="기록 목록으로" />
         <!--
           제목은 한 줄로 자른다. 잘린 전체는 눌러서 본다 — 목록·상단바 어디서도 제목이
           두 줄로 흐르지 않게 하되, 전체를 볼 길은 남긴다.
@@ -372,13 +369,13 @@ useHead(() => ({
 }
 
 .topbar {
-  height: 56px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 24px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid var(--hair);
   position: relative;
   z-index: 5;
@@ -390,15 +387,10 @@ useHead(() => ({
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(56px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: var(--s0);
 }
 .left { display: flex; align-items: center; gap: 18px; min-width: 0; }
-/* 이 화면의 주 뒤로가기다. 높이는 base.css 의 `.topbar a { min-height: 36px }` 가
-   폭에 상관없이 정한다 — 예전엔 20px 이라 사실상 못 눌렀다.
-   아래 미디어쿼리는 가로 여백만 손본다. */
-.back { display: flex; align-items: center; gap: 7px; color: var(--deep); flex: none; }
-.back .mono { font-size: 11px; letter-spacing: 0.08em; }
 /* h1 은 의미를 지키고, 자르기·누르기는 안쪽 버튼이 맡는다 —
    inline-block 인 버튼을 h1 이 직접 자르면 말줄임표 없이 잘리기만 한다 */
 .title-h { display: flex; min-width: 0; }
@@ -440,7 +432,8 @@ useHead(() => ({
 }
 /* wrap — 합계가 아래 줄을 통째로 쓴다. 두 줄이어도 11px×2 + 여백이라 56px 상단바 안이다 */
 .stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 11px; color: var(--deep); flex: none; }
-/* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다 */
+/* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다
+   (base.css 가 display 를 :where() 에 두고 있어 이 한 줄이 그대로 이긴다) */
 .stats-toggle { display: none; }
 .stat { display: flex; align-items: center; gap: 6px; }
 /* 아래 줄 전체 — 앞 줄과 선으로 끊어 「이건 다른 종류의 값」임을 보인다 */
@@ -490,7 +483,7 @@ useHead(() => ({
   display: grid;
   place-items: center;
   width: 56px;
-  height: 56px;
+  height: var(--topbar-h);
   border-radius: 16px;
   background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
@@ -515,11 +508,10 @@ useHead(() => ({
      🔴 높이는 고정이다. 예전엔 통계가 상단바 안에서 한 줄 더 차지해서, ⓘ 를 누를 때마다
         헤더가 자라고 그만큼 지도·레일이 아래로 밀렸다 — 여닫을 때마다 화면이 출렁였다.
         상세 시트의 ⓘ 판과 같은 처리를 쓴다: 흐름에서 빼서(absolute) 덮는다. */
-  .topbar { height: calc(50px + var(--top-inset)); min-height: 0; padding: var(--top-inset) 14px 0; gap: 10px; flex-wrap: nowrap; }
+  .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); min-height: 0; padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; flex-wrap: nowrap; }
   .title { font-size: 15px; }
   .left { flex: 1; min-width: 0; gap: 12px; }
 
-  .back { min-height: 36px; padding-right: 4px; }
   .stats-toggle {
     display: grid;
     place-items: center;

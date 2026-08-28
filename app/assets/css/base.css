@@ -119,11 +119,26 @@ select:focus-visible {
   padding-bottom: 0;
   /* 줄높이가 남아 38px 로 뜨는 것들이 있었다 — 높이는 이 규칙이 정한다 */
   line-height: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * 🔴 display 만 :where() 로 «명시도 0» 에 둔다. 이유가 있다.
+ *
+ * 위 선택자는 (0,2,1)이라 컴포넌트의 scoped 규칙(대개 (0,2,0))을 이긴다. 크기·정렬은
+ * 그게 맞다 — 헤더 컨트롤 높이를 여기가 정해야 하니까. 그런데 display 까지 이기면
+ * 「이 버튼은 좁은 화면에서만 나온다」고 적어둔 화면들이 조용히 무시된다.
+ * 실제로 그렇게 샜다: 상세의 ⓘ(.stats-toggle)와 모든 ⋯ 메뉴(.ovf-trigger)가
+ * 데스크탑 헤더에 떠 있었다 — 둘 다 display: none 이라고 적어 둔 채로.
+ *
+ * :where() 는 안에 무엇이 들어가든 명시도가 0 이다. 그래서 아무 컴포넌트나
+ * 「나는 여기서 안 보인다」고 말하면 언제나 그 말이 이긴다.
+ */
+:where(.topbar button:not([role='switch']), .topbar a) {
   /* 높이를 고정했으니 내용도 두 축 중앙에 놓아야 한다. 인라인 링크로 두면
      글자가 상자 위쪽에 붙어 「빈 테두리」처럼 보인다. */
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 @media (max-width: 900px) {

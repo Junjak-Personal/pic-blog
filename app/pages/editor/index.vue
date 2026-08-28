@@ -27,7 +27,7 @@ async function logout() {
   <div class="page">
     <header class="topbar">
       <div class="brand">
-        <AppBack fallback="/" label="홈으로" />
+        <AppBack always fallback="/" label="홈으로" />
         <!-- 마크가 홈 링크를 겸한다. PWA standalone 에는 브라우저 뒤로가기가 없어서
              화면마다 상위로 가는 경로가 하나씩은 있어야 한다. -->
         <NuxtLink to="/" class="home" aria-label="pic·blog 홈">
@@ -110,13 +110,13 @@ async function logout() {
 .page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .topbar {
-  height: 60px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 32px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid var(--hair);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
@@ -126,7 +126,7 @@ async function logout() {
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(60px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: var(--s0);
 }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -277,7 +277,7 @@ async function logout() {
   display: grid;
   place-items: center;
   width: 60px;
-  height: 60px;
+  height: var(--topbar-h);
   border-radius: 16px;
   background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
@@ -287,7 +287,7 @@ async function logout() {
 .empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
 
 @media (max-width: 900px) {
-  .topbar { height: calc(54px + var(--top-inset)); padding: var(--top-inset) 16px 0; gap: 10px; }
+  .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; }
   /* 모바일 헤더 = [뒤로] [화면 이름] [주 액션]. 브랜드는 통째로 접는다 —
      어느 화면인지가 브랜드보다 중요하고, 홈은 뒤로가기가 가리킨다.
      .home 까지 숨기는 이유: 안이 비면 0x0 으로 찌부러져 보이지도 눌리지도 않는

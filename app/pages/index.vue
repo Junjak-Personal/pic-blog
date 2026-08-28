@@ -8,12 +8,8 @@ import SiteFooter from '~/components/SiteFooter.vue'
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'
 
-type Sort = 'recent' | 'range' | 'points'
-
 const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { loggedIn } = useUserSession()
-
-const sort = ref<Sort>('recent')
 
 /**
  * 로고 3연타로 편집 화면에 들어간다.
@@ -46,22 +42,14 @@ function tapBrand() {
 
 onBeforeUnmount(() => { if (tapTimer) clearTimeout(tapTimer) })
 
-const SORTS: { key: Sort; label: string }[] = [
-  { key: 'recent', label: '최신' },
-  { key: 'range', label: '기간' },
-  { key: 'points', label: '포인트 수' },
-]
-
-const sorted = computed(() => {
-  const list = [...posts.value]
-  if (sort.value === 'points') return list.sort((a, b) => b.point_count - a.point_count)
-  if (sort.value === 'range') {
-    const span = (p: PostSummary) =>
-      p.started_at && p.ended_at ? Date.parse(p.ended_at) - Date.parse(p.started_at) : 0
-    return list.sort((a, b) => span(b) - span(a))
-  }
-  return list.sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))
-})
+/**
+ * 최신순 고정이다. 「기간 / 포인트 수」로 바꾸는 세그먼티드 컨트롤이 있었는데 걷어냈다 —
+ * 여행 기록은 최근 것부터 보는 게 기본이고, 실제로 다른 순서를 고른 적이 없다.
+ * 고정 폭 문자열(YYYY-MM-DD…)이라 사전순 비교가 곧 시각 순이다.
+ */
+const sorted = computed(() =>
+  [...posts.value].sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? '')),
+)
 
 const totals = computed(() => ({
   posts: posts.value.length,
@@ -91,18 +79,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         <span class="mono kicker">travel log</span>
       </div>
       <div class="right">
-        <nav v-if="posts.length" class="sorts" aria-label="정렬">
-          <button
-            v-for="s in SORTS"
-            :key="s.key"
-            type="button"
-            class="mono sort"
-            :class="{ on: sort === s.key }"
-            @click="sort = s.key"
-          >
-            {{ s.label }}
-          </button>
-        </nav>
         <span v-if="posts.length" class="mono totals">
           {{ totals.posts }} 기록 · {{ totals.points }} 포인트 · {{ totals.photos }}장
         </span>
@@ -187,13 +163,13 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .topbar {
-  height: 68px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 32px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid var(--hair);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
@@ -203,7 +179,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(68px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: var(--s0);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
@@ -214,6 +190,9 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   /* 터치 타깃 — 3연타를 하려면 넉넉해야 한다 */
   width: 36px;
   height: 36px;
+  /* 36px 타깃 안에서 마크가 가운데 오므로 왼쪽에 6px 이 남는다 — 그만큼 당겨야
+     마크의 «획»이 상단바 여백선(--topbar-x)에서 시작한다. 「기록 관리」 헤더의
+     같은 마크는 버튼이 아니라 링크라 보정 없이 이미 여백선에 붙어 있다. */
   margin-left: -6px;
   border: 0;
   background: none;
@@ -233,28 +212,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .kicker { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--deep); }
 
 .right { display: flex; align-items: center; gap: 22px; }
-/*
- * 세그먼티드 컨트롤 — 「텍스트만 있는 버튼 금지」는 묶음 단위로 지킨다.
- * 낱개에 테두리를 두르면 세 개의 독립 버튼처럼 읽혀 「하나만 고른다」가 안 보인다.
- * 대신 트랙이 테두리·배경을 갖고, 고른 칸만 안에서 채워진다.
- */
-.sorts {
-  display: flex;
-  gap: 2px;
-  border-radius: var(--radius);
-  background: rgb(var(--acc-rgb) / 0.06);
-  /* 테두리 대신 inset 그림자 — border 를 쓰면 트랙이 2px 자라 옆의 36px 컨트롤과 어긋난다 */
-  box-shadow: inset 0 0 0 1px rgb(var(--mid-rgb) / 0.2);
-}
-.sort {
-  font-size: 11px;
-  color: var(--deep);
-  padding: 0 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.sort:hover { color: var(--mid); }
-.sort.on { background: var(--mid); color: var(--s0); }
 .totals { font-size: 11px; color: var(--deep); }
 .editor-link {
   /* 헤더 버튼은 높이가 36px 로 고정된다(base.css). 글자가 11px 이면 상자 안이
@@ -432,10 +389,10 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   }
   .grid::-webkit-scrollbar { width: 0; }
 
-  .topbar { height: calc(54px + var(--top-inset)); padding: var(--top-inset) 16px 0; gap: 10px; }
+  .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; }
   /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
   .wordmark { display: none; }
-  .kicker, .sorts { display: none; }
+  .kicker { display: none; }
   /* 지도가 이 화면의 주인공이다. 카드가 커서 지도가 눌려 보인다는 지적을 받아 띠를 키웠다 */
   .map-strip { height: 246px; }
 

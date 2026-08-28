@@ -83,9 +83,11 @@ async function skip() {
 
     <!-- 단계 표시 + 확정 버튼 -->
     <header class="topbar">
-      <!-- 모바일은 다른 화면과 같은 ← 아이콘. 데스크탑은 우측 「뒤로」 텍스트 버튼이 맡는다.
+      <!-- 뒤로는 왼쪽 ← 하나다. 데스크탑에만 있던 우측 「뒤로」 텍스트 버튼은 걷어냈다 —
+           같은 일을 하는 길이 헤더 양 끝에 하나씩 있었다.
            2단계에서는 ← 가 페이지를 떠나는 게 아니라 1단계로 돌아간다 (고른 사진을 버리지 않는다) -->
       <AppBack
+        always
         fallback="/editor"
         :label="flow.stage.value === 'preview' ? '사진 선택으로' : '기록 목록으로'"
         :intercept="flow.stage.value === 'preview' ? flow.backToPick : undefined"
@@ -103,7 +105,6 @@ async function skip() {
       </ol>
 
       <div class="top-actions">
-        <NuxtLink to="/editor" class="btn ghost mono wide-only">뒤로</NuxtLink>
         <!-- 라벨은 «되돌아가는 곳»이다. 「사진 더 선택」이면 1단계의 같은 이름 버튼(선택기를 여는)과 헷갈린다 -->
         <button v-if="flow.stage.value === 'preview'" type="button" class="btn ghost mono wide-only" @click="flow.backToPick()">
           사진 선택으로
@@ -380,13 +381,13 @@ async function skip() {
 
 /* 상단 단계바 */
 .topbar {
-  height: 60px;
+  height: var(--topbar-h);
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 0 24px;
+  padding: 0 var(--topbar-x);
   border-bottom: 1px solid var(--hair);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
@@ -396,10 +397,11 @@ async function skip() {
    * 브라우저에서는 인셋이 0 이라 원래 모습 그대로다.
    */
   padding-top: var(--top-inset);
-  height: calc(60px + var(--top-inset));
+  height: calc(var(--topbar-h) + var(--top-inset));
   background: var(--s0);
 }
-.steps { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
+/* ← 는 왼쪽 끝, 단계바는 오른쪽으로 민다. 확정 버튼이 있는 단계에서는 그 왼쪽에 선다 */
+.steps { display: flex; align-items: center; gap: 0; margin: 0 0 0 auto; padding: 0; list-style: none; }
 .step { display: flex; align-items: center; gap: 8px; }
 .bullet {
   display: grid;
@@ -640,7 +642,7 @@ async function skip() {
   display: grid;
   place-items: center;
   width: 60px;
-  height: 60px;
+  height: var(--topbar-h);
   border-radius: 16px;
   background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
@@ -656,7 +658,7 @@ async function skip() {
   display: grid;
   place-items: center;
   width: 60px;
-  height: 60px;
+  height: var(--topbar-h);
   border-radius: 50%;
   background: rgb(var(--acc-rgb) / 0.12);
   border: 1px solid rgb(var(--acc-rgb) / 0.4);
@@ -698,7 +700,7 @@ async function skip() {
 }
 /* 모바일 — 4단계 스텝바와 3분할 격자가 390px 에 들어갈 리 없다. 둘 다 푼다. */
 @media (max-width: 900px) {
-  .topbar { height: auto; flex-wrap: wrap; gap: 10px; padding: calc(10px + var(--top-inset)) 14px 10px; }
+  .topbar { height: auto; min-height: calc(var(--topbar-h-sm) + var(--top-inset)); flex-wrap: wrap; gap: 10px; padding: calc(10px + var(--top-inset)) var(--topbar-x-sm) 10px; }
   /* 스텝바: 지금 단계 라벨만 남기고 나머지는 동그라미만. 완료 단계 라벨까지
      남기면(.on 은 완료도 포함한다) 390px 에서 4번째 동그라미가 화면 밖으로 밀린다 */
   .step-label:not(.now) { display: none; }

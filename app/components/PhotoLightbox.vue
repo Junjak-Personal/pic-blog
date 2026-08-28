@@ -154,7 +154,7 @@ watch(() => props.photos, async () => {
         <header class="head">
           <span class="mono name">{{ fileName }}</span>
           <span class="mono count">{{ (props.index ?? 0) + 1 }} / {{ props.photos.length }}</span>
-          <span class="mono meta">{{ props.pointName }} · {{ formatDateTime(current?.shot_at ?? null) }}</span>
+          <span class="mono meta">{{ props.pointName }}</span>
           <DialogClose class="close" aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
           </DialogClose>
@@ -182,7 +182,12 @@ watch(() => props.photos, async () => {
               <div class="swiper-zoom-container">
                 <img v-sk class="sk" :src="ph.display_path" :alt="`${props.pointName} 사진 ${i + 1}`">
               </div>
-              <figcaption v-if="ph.w" class="mono cap">{{ ph.w }} × {{ ph.h }} {{ formatOf(ph.display_path) }}</figcaption>
+              <!-- 사진 밑 한 줄에 「언제」와 「무엇」을 양 끝으로 나눈다 —
+                   시각은 보는 사람의 값이고 크기·포맷은 파일의 값이라 섞으면 둘 다 안 읽힌다 -->
+              <figcaption class="mono cap">
+                <span class="cap-when">{{ formatDateTime(ph.shot_at) }}</span>
+                <span v-if="ph.w" class="cap-size">{{ ph.w }} × {{ ph.h }} {{ formatOf(ph.display_path) }}</span>
+              </figcaption>
             </SwiperSlide>
           </Swiper>
 
@@ -302,7 +307,18 @@ watch(() => props.photos, async () => {
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
 }
-.cap { font-size: 11px; color: var(--faint); }
+/* 사진 폭에 맞춰 양 끝 정렬 — 왼쪽은 촬영 시각, 오른쪽은 크기·포맷 */
+.cap {
+  align-self: stretch;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--faint);
+}
+.cap-when { color: var(--deep); }
 
 .nav {
   width: 38px;
@@ -324,6 +340,8 @@ watch(() => props.photos, async () => {
 @media (max-width: 900px) {
   .stage > .nav { display: none; }
   .stage { padding: 16px; }
+  /* 포인트 이름은 시트 헤더가 이미 말하고 있다 — 좁은 헤더에서는 뺀다.
+     파일명·번호는 남는다. 촬영 시각은 사진 밑 캡션이 맡는다. */
   .meta { display: none; }
   .foot {
     flex: none;
