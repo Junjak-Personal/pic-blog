@@ -466,13 +466,23 @@ const pointAddBusy = computed(() =>
   pointAddFlow.stage.value === 'scanning' || pointAddFlow.stage.value === 'uploading',
 )
 
-/** 지금 이 포인트에 사진을 붙일 수 있는가 — 못 하면 왜인지 말한다 */
-const pointAddBlocked = computed(() => {
-  if (!activeDraft.value) return '포인트를 먼저 고르세요'
-  if (activeDraft.value.id < 0) return '저장하지 않은 새 포인트입니다 — 먼저 저장하세요'
-  if (changes.value) return '저장하지 않은 변경이 있습니다 — 먼저 저장하세요'
-  return null
-})
+/**
+ * 못 붙이는 이유. 없으면 null.
+ * 🔴 「저장 안 된 변경이 있으면 막는다」를 쓰지 않는다. 2단계는 «구조를 바꾸는» 화면이라
+ *    드래그를 한 번만 해도 그 조건이 켜져서 기능이 거의 늘 잠긴다. 대신 아래 onPointAdd
+ *    가 hydrate() 로 초안을 갈아엎지 않고 새 사진만 초안에 «이어 붙인다».
+ */
+const pointAddBlocked = computed(() =>
+  saving.value ? '저장 중입니다' : null,
+)
+
+/** 어느 그룹에 붙일지 — 파일 선택기를 여는 사이에 들고 있는다 */
+function onAddToPoint(groupId: number) {
+  const d = pointDrafts.value.find((x) => x.id === groupId)
+  if (!d || d.id < 0 || pointAddBlocked.value) return
+  addTargetId.value = groupId
+  pointAddInput.value?.click()
+}
 
 async function onPointAdd(e: Event) {
   const input = e.target
@@ -481,11 +491,11 @@ async function onPointAdd(e: Event) {
   // 같은 파일을 다시 골라도 change 가 뜨게 비워둔다
   input.value = ''
 
-  const d = activeDraft.value
-  if (!d || pointAddBlocked.value) return
+  const targetId = addTargetId.value
+  const d = targetId === null ? null : pointDrafts.value.find((x) => x.id === targetId)
+  if (!d) return
 
   errorMessage.value = null
-  addTargetId.value = d.id
   await pointAddFlow.selectFiles(files)
   if (!pointAddFlow.scanned.value.length) {
     errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
@@ -497,10 +507,34 @@ async function onPointAdd(e: Event) {
     errorMessage.value = pointAddFlow.errorMessage.value
     return
   }
-  // 서버가 사진 id·순서를 정했다 — 초안을 그 위에 다시 세운다
+
+  /*
+   * 🔴 hydrate() 를 부르지 않는다 — 그건 초안을 통째로 서버 값으로 되돌려 여기까지 한
+   *    편집(드래그·이름·태그…)을 다 지운다. 서버가 새로 만든 사진만 골라 이어 붙인다.
+   *    「새로 생긴 것」은 초안 어디에도 없고 삭제 예약도 아닌 id 다.
+   */
+  const prevStart = dateOf(post.value?.started_at ?? null)
+  const prevEnd = dateOf(post.value?.ended_at ?? null)
+  const periodUntouched = draftStart.value === prevStart && draftEnd.value === prevEnd
+
   await refresh()
-  hydrate()
-  activeId.value = d.id
+
+  const known = new Set([...pointDrafts.value.flatMap((x) => x.ids), ...removedPhotoIds.value])
+  const fresh = (basePoint(d.id)?.photos ?? []).map((ph) => ph.id).filter((id) => !known.has(id))
+  d.ids.push(...fresh)
+
+  /*
+   * 기간은 서버가 새 사진까지 넣어 다시 계산한다 (photos 엔드포인트). 사용자가 손대지
+   * 않았을 때만 그 값을 따라간다 — 손으로 고쳐둔 값을 조용히 덮어쓰지 않는다.
+   */
+  if (periodUntouched) {
+    draftStart.value = dateOf(post.value?.started_at ?? null)
+    draftEnd.value = dateOf(post.value?.ended_at ?? null)
+  }
+
+  // 더 이른 사진이 들어오면 포인트 순서가 바뀐다 — 서버와 같은 규칙으로 다시 세운다
+  resort()
+  addTargetId.value = null
 }
 
 /** 지정이 없을 때 실제로 쓰이는 사진 — 3단계 픽커가 「기본」 표시를 붙일 자리 */
@@ -1014,14 +1048,20 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
       <!-- 2단계 — 사진 전체를 포인트별 그룹으로 -->
       <div v-else-if="step === 'points'" class="boardpane">
+        <!-- 상한을 넘겼거나 이미 있는 사진을 골랐을 때 — 조치가 따라붙는 줄이라 따로 띄운다 -->
+        <p v-if="skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT)" class="mono board-skip">
+          {{ skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT) }}
+        </p>
         <PointGroupBoard
           :groups="boardGroups"
           :cover-id="coverId"
+          :add-blocked="pointAddBlocked"
           @drop="onBoardDrop"
           @remove-photo="onRemovePhoto"
           @pick-cover="onPickCover"
           @set-anchor="onSetAnchor"
           @open-photo="onOpenPhoto"
+          @add-to-point="onAddToPoint"
           @add="onAddPhotos"
         />
       </div>
@@ -1134,39 +1174,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   {{ thumbPicking ? '고르는 중…' : '대표 지정' }}
                 </button>
 
-                <!--
-                  이 포인트에 «직접» 붙인다 — 좌표로 배정하지 않는다.
-                  2단계의 「사진 추가」는 반경으로 어느 포인트에 갈지 정하는데, 여기는
-                  거리로 안 묶이는 것을 맥락으로 묶는 자리라 그 반대가 필요하다.
-                -->
-                <button
-                  type="button"
-                  class="minibtn mono"
-                  :disabled="!!pointAddBlocked || pointAddBusy"
-                  :title="pointAddBlocked ?? undefined"
-                  data-testid="editor-point-add"
-                  @click="pointAddInput?.click()"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-                  사진 추가
-                </button>
-                <input
-                  ref="pointAddInput"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  @change="onPointAdd"
-                >
-
-                <span class="mono pick-note">
-                  <template v-if="pointAddBlocked">{{ pointAddBlocked }}</template>
-                  <template v-else>여기서 넣은 사진은 좌표와 상관없이 이 포인트로 들어갑니다 · 한 번에 {{ MAX_PER_POINT }}장</template>
-                </span>
+                <!-- 사진을 붙이는 것은 2단계 몫이다 — 여기는 대표만 고른다 -->
+                <span class="mono pick-note">지도 마커와 목록에 뜨는 사진 · 사진을 넣고 빼는 것은 2단계에서</span>
               </div>
-              <p v-if="skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT)" class="mono pick-skip">
-                {{ skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT) }}
-              </p>
             </div>
 
             <div class="scroll-y side">
@@ -1334,6 +1344,12 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         </section>
       </div>
     </template>
+
+    <!--
+      포인트별 사진 추가가 쓰는 파일 선택기. 단계와 무관하게 늘 DOM 에 있어야 한다 —
+      2단계 안에 두면 클릭 시점에 ref 가 아직 안 잡히는 경우가 생긴다.
+    -->
+    <input ref="pointAddInput" type="file" accept="image/*" multiple hidden @change="onPointAdd">
 
     <!-- 2단계에서 사진을 크게 보는 창. 그 포인트 안에서만 좌우로 넘어간다 -->
     <PhotoLightbox
@@ -1596,7 +1612,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 /* 2단계 — 보드 한 판이 전부다. 좌우 분할이 없다: 그룹이 세로로 길게 이어지는 화면이라
    옆 칸을 두면 사진 칸이 좁아지고, 좁아지면 드래그 조준이 어려워진다. */
-.boardpane { flex: 1; display: flex; min-height: 0; padding: 14px 24px 18px; }
+.boardpane { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 14px 24px 18px; }
 
 /* 본문 2열 */
 .body { flex: 1; display: grid; grid-template-columns: 348px 1fr; min-height: 0; }
@@ -1759,7 +1775,16 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .pick-foot { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .pick-note { flex: 1 1 100%; min-width: 0; font-size: 10px; color: var(--faint); }
 /* 제외된 사진 안내 — 조치가 따라붙는 줄이라 눈에 띄게 (2단계 추가 화면과 같은 색) */
-.pick-skip { flex: none; font-size: 10.5px; line-height: 1.6; color: var(--route); }
+.board-skip {
+  flex: none;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(214, 178, 106, 0.34);
+  border-radius: var(--radius);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--route);
+}
 /* 고르는 중 — 다음에 누를 것이 「버튼」이 아니라 「사진」이라는 걸 색으로 말한다 (2단계와 같다) */
 .picks.picking .pick:hover { box-shadow: inset 0 0 0 2px var(--acc); }
 

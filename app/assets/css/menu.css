@@ -31,6 +31,10 @@
 .ovf-item svg { flex: none; color: var(--deep); }
 .ovf-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
 .ovf-item[data-disabled] { opacity: 0.4; cursor: default; }
+/* 지금 그 상태인 항목 — 「무엇이 켜져 있는지」를 목록에서 바로 읽게 한다 */
+.ovf-item.current { color: var(--ink); }
+.ovf-item.current svg { color: var(--acc); }
+.ovf-item.current .ovf-state { color: var(--acc); }
 .ovf-item.danger { color: var(--danger); }
 .ovf-item.danger svg { color: var(--danger); }
 
