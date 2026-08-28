@@ -21,9 +21,17 @@ interface NativeApi {
   version: number
   /** 검사에 넘길 앞부분 크기 (바이트) */
   headerBytes: number
+  /**
+   * 고르고 나서 원본을 꺼내는 동안 껍데기가 부른다.
+   * 500장이면 그 구간만 여러 초라, 없으면 화면이 통째로 조용하다.
+   */
+  onPickProgress: ((done: number, total: number) => void) | null
   pick: (limit: number) => Promise<NativePhoto[]>
-  /** limit 를 주면 앞부분만. 없으면 전체. */
-  readBlob: (token: string, limit?: number) => Promise<Blob>
+  /**
+   * limit  — 원본의 앞부분만 (검사)
+   * render — PhotoKit 이 그 크기로 그린 JPEG (변환)
+   */
+  readBlob: (token: string, opts?: { limit?: number; render?: number }) => Promise<Blob>
   release: (tokens: readonly string[]) => Promise<void>
 }
 
@@ -71,15 +79,24 @@ export function headerOf(src: PhotoSource): Promise<Blob> {
   if (src.kind === 'file') return Promise.resolve(src.file)
   const api = nativeBridge()
   if (!api) return Promise.reject(new Error('네이티브 다리가 없습니다'))
-  return api.readBlob(src.photo.token, api.headerBytes)
+  return api.readBlob(src.photo.token, { limit: api.headerBytes })
 }
 
-/** 변환(리사이즈)에 줄 것 — 픽셀이 필요하므로 전체 바이트. 한 장씩 받고 바로 버린다. */
-export function bytesOf(src: PhotoSource): Promise<Blob> {
+/**
+ * 변환(리사이즈)에 줄 것. 한 장씩 받고 바로 버린다.
+ *
+ * 껍데기에서는 원본을 통째로 넘기지 않고 PhotoKit 에 renderMax 로 그려 달라고 한다.
+ * 48MP 원본을 넘기면 장당 519ms 인데 2048px 로 그리면 147ms 다 — 브리지가 257→100,
+ * 디코딩이 213→15 로 같이 무너지고, 원본이 24MP 든 48MP 든 결과가 같아진다 (실측).
+ *
+ * 🔴 크기는 «부르는 쪽»이 준다. 앱이 자기 상수를 갖는 순간 「화면 크기」가 두 곳에 생긴다 —
+ *    DISPLAY_MAX 는 resize.ts 하나뿐이어야 한다. (여기서 import 하면 순환이 된다.)
+ */
+export function bytesOf(src: PhotoSource, renderMax?: number): Promise<Blob> {
   if (src.kind === 'file') return Promise.resolve(src.file)
   const api = nativeBridge()
   if (!api) return Promise.reject(new Error('네이티브 다리가 없습니다'))
-  return api.readBlob(src.photo.token)
+  return api.readBlob(src.photo.token, { render: renderMax })
 }
 
 /** 업로드가 끝난 사본을 껍데기에서 지운다. 웹 경로에서는 할 일이 없다. */
@@ -99,10 +116,21 @@ export async function releaseSources(sources: readonly PhotoSource[]) {
  * 🔴 input.click() 은 사용자 제스처 «안에서» 불려야 사파리가 막지 않는다. 이 함수는
  *    앞에 await 를 두지 않으므로 클릭 핸들러에서 바로 부르면 된다.
  */
-export function pickPhotos(input: HTMLInputElement | null, limit: number): Promise<PhotoSource[]> {
+export function pickPhotos(
+  input: HTMLInputElement | null,
+  limit: number,
+  /** 껍데기가 원본을 꺼내는 동안의 진행. 브라우저 경로에서는 불리지 않는다. */
+  onProgress?: (done: number, total: number) => void,
+): Promise<PhotoSource[]> {
   const api = nativeBridge()
   if (api) {
-    return api.pick(limit).then((photos) => photos.map((photo) => ({ kind: 'native', photo }) as const))
+    api.onPickProgress = onProgress ?? null
+    return api
+      .pick(limit)
+      .then((photos) => photos.map((photo) => ({ kind: 'native', photo }) as const))
+      .finally(() => {
+        api.onPickProgress = null
+      })
   }
   return new Promise((resolve) => {
     if (!input) {

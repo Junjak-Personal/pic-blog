@@ -7,10 +7,11 @@ import type { AddPhotosInput, CreatePostResult, UploadPhotoInput } from '#shared
 import type { Point } from '#shared/types/db'
 import { assignTo, DEFAULT_RADIUS, RADII, type ClusterInput, type ExistingPoint } from '#shared/utils/cluster'
 import { outputExt, resizePhoto } from '~/utils/resize'
-import { photoKey, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
-import { releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
+import { MAX_PER_SELECTION, photoKey, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
+import { pickPhotos, releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
 
-export type AddStage = 'idle' | 'scanning' | 'preview' | 'uploading' | 'done'
+/** loading = 껍데기가 사진첩에서 원본을 꺼내는 구간 (useUploadFlow 의 같은 이름과 같은 뜻) */
+export type AddStage = 'idle' | 'loading' | 'scanning' | 'preview' | 'uploading' | 'done'
 
 interface FailedPhoto {
   key: string
@@ -37,6 +38,8 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
   const skipped = ref<SkippedPhoto[]>([])
   const radius = ref<number>(DEFAULT_RADIUS)
   const scanProgress = ref({ done: 0, total: 0 })
+  /** 껍데기가 원본을 꺼내는 동안의 진행 (loading 단계) */
+  const loadProgress = ref({ done: 0, total: 0 })
   const uploaded = ref(0)
   const totalPhotos = ref(0)
   const failed = ref<FailedPhoto[]>([])
@@ -93,6 +96,23 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     result.value = null
     radius.value = DEFAULT_RADIUS
     stage.value = 'idle'
+  }
+
+  /**
+   * 고르기부터 검사까지 한 번에.
+   * 🔴 pickPhotos 앞에 await 를 두면 안 된다 (사파리의 제스처 규칙 — useUploadFlow 와 같다).
+   */
+  async function pick(input: HTMLInputElement | null) {
+    const picking = pickPhotos(input, opts.limit ?? MAX_PER_SELECTION, (done, total) => {
+      stage.value = 'loading'
+      loadProgress.value = { done, total }
+    })
+    const sources = await picking
+    if (sources.length) {
+      await selectFiles(sources)
+      return
+    }
+    if (stage.value === 'loading') stage.value = 'idle'
   }
 
   async function selectFiles(sources: readonly PhotoSource[]) {
@@ -260,8 +280,8 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
 
   return {
     stage, scanned, skipped, radius, assignment, radiusTable, totalAfter,
-    scanProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage, result,
-    selectFiles, confirm, retryFailed, skipFailed, reset,
+    scanProgress, loadProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage, result,
+    pick, selectFiles, confirm, retryFailed, skipFailed, reset,
   }
 }
 

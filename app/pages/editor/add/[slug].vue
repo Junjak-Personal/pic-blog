@@ -9,7 +9,6 @@ import BottomCta from '~/components/BottomCta.vue'
 import type { PostDetail } from '#shared/types/db'
 import { formatDate, formatTime, localIso } from '#shared/utils/format'
 import { MAX_PER_SELECTION, skipNotice, summarizeSkipped } from '~/utils/exif'
-import { pickPhotos } from '~/utils/native'
 
 definePageMeta({ layout: 'editor' })
 
@@ -23,10 +22,9 @@ const points = computed(() => post.value?.points ?? [])
 const flow = useAddPhotosFlow(slug, points)
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 
-/** 껍데기면 PhotoKit, 아니면 파일 입력 — pickPhotos 가 가른다 */
-async function pick() {
-  const sources = await pickPhotos(fileInput.value, MAX_PER_SELECTION)
-  if (sources.length) await flow.selectFiles(sources)
+/** 껍데기면 PhotoKit, 아니면 파일 입력 — flow.pick 이 가르고 진행률까지 맡는다 */
+function pick() {
+  void flow.pick(fileInput.value)
 }
 
 /**
@@ -63,8 +61,12 @@ async function skip() {
   await back()
 }
 
+/*
+ * 🔴 여기도 replace 다. 사진 추가가 끝났거나 취소된 뒤에 이 화면으로 되돌아올 이유가 없다 —
+ *    편집에서 뒤로 가면 「사진 추가」가 아니라 그 앞(목록)으로 가야 한다.
+ */
 function back() {
-  return router.push(`/editor/${slug.value}`)
+  return router.replace(`/editor/${slug.value}`)
 }
 
 /** 방금 마친 추가의 결과. flow.result 는 업로드가 끝난 그 순간의 값이다 (composable 의 🔴). */
@@ -146,6 +148,14 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
         한 번에 {{ MAX_PER_SELECTION }}장까지 · 아이폰은 사진첩에서 옮기는 데 시간이 걸립니다.
         고른 뒤 화면이 잠시 조용해도 기다려 주세요.
       </p>
+    </section>
+
+    <section v-else-if="flow.stage.value === 'loading'" class="empty">
+      <h3>사진을 가져오는 중</h3>
+      <p class="mono">{{ flow.loadProgress.value.done }} / {{ flow.loadProgress.value.total }}</p>
+      <div class="bar">
+        <span class="bar-fill" :style="{ width: `${(flow.loadProgress.value.done / Math.max(1, flow.loadProgress.value.total)) * 100}%` }" />
+      </div>
     </section>
 
     <section v-else-if="flow.stage.value === 'scanning'" class="empty">

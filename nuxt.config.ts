@@ -65,6 +65,22 @@ export default defineNuxtConfig({
        * 30일 뒤에 한 번 끊긴다. 쓰기 경로의 유일한 인증이라 무기한으로 두지 않는다.
        */
       maxAge: 60 * 60 * 24 * 30,
+      cookie: {
+        /*
+         * 🔴 개발일 때만 Secure 를 푼다. 운영은 반드시 켜져 있어야 한다 —
+         *    이 쿠키가 쓰기 경로의 유일한 인증이다.
+         *
+         * h3 의 useSession 기본값이 secure: true 인데, Secure 쿠키는 «신뢰 출처»에만
+         * 저장된다. http://localhost 는 신뢰 출처로 쳐주지만 http://192.168.x.x 는
+         * 아니라서, 폰에서 개발 서버(--host 0.0.0.0)에 붙으면 로그인이 200 으로
+         * 성공해도 브라우저가 쿠키를 버린다 — 곧바로 잠금 화면으로 되돌아온다.
+         * 네이티브 껍데기를 실기에서 확인하려면 그 경로가 열려 있어야 한다.
+         *
+         * 값은 «빌드 시점»에 굳는다. nuxt build 는 NODE_ENV=production 이므로
+         * 배포되는 이미지에는 언제나 true 가 들어간다.
+         */
+        secure: process.env.NODE_ENV === 'production',
+      },
     },
     public: {
       /*
