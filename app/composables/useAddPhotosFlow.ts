@@ -18,7 +18,19 @@ interface FailedPhoto {
   reason: string
 }
 
-export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
+/**
+ * 「이 포인트로」 강제 모드.
+ * 편집 3단계에서 한 포인트에 사진을 직접 붙일 때 쓴다 — 좌표로 배정하지 않고,
+ * 고른 사진이 «전부» 그 포인트로 들어간다 (멀리서 찍힌 사진도 맥락으로 묶을 수 있게).
+ */
+export interface AddPhotosOptions {
+  /** 값이 있으면 배정을 건너뛰고 이 포인트에 붙인다 */
+  pointId?: Ref<number | null>
+  /** 한 번에 처리할 사진 수 상한 */
+  limit?: number
+}
+
+export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: AddPhotosOptions = {}) {
   const stage = ref<AddStage>('idle')
   const scanned = ref<ScannedPhoto[]>([])
   const skipped = ref<SkippedPhoto[]>([])
@@ -88,7 +100,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
     )
     const scan = await scanFiles(files, (done, total) => {
       scanProgress.value = { done, total }
-    }, existingKeys)
+    }, existingKeys, opts.limit)
     scanned.value = scan.passed
     skipped.value = scan.skipped
     stage.value = 'preview'
@@ -132,20 +144,28 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>) {
     }
     const notNull = (p: UploadPhotoInput | null): p is UploadPhotoInput => p !== null
 
-    const body: AddPhotosInput = {
-      joins: assignment.value.joins
-        .map((j) => ({ pointId: j.point.id, photos: j.shots.map(pick).filter(notNull) }))
-        .filter((j) => j.photos.length > 0),
-      news: assignment.value.news
-        .map((c) => ({
-          lat: c.lat,
-          lng: c.lng,
-          title: null,
-          first_shot_at: byKey.get(c.shots[0]!.key)?.shotAt ?? null,
-          photos: c.shots.map(pick).filter(notNull),
-        }))
-        .filter((p) => p.photos.length > 0),
-    }
+    /*
+     * 「이 포인트로」 모드에서는 배정을 아예 하지 않는다. 좌표가 얼마나 떨어져 있든
+     * 고른 사진 전부가 그 포인트로 간다 — 거리로는 안 묶이는 것을 맥락으로 묶는 자리다.
+     * (서버의 joins 경로가 이미 「중심 좌표는 건드리지 않고 뒤에 붙인다」를 한다.)
+     */
+    const forced = opts.pointId?.value ?? null
+    const body: AddPhotosInput = forced !== null
+      ? { joins: [{ pointId: forced, photos: shots.map(pick).filter(notNull) }], news: [] }
+      : {
+          joins: assignment.value.joins
+            .map((j) => ({ pointId: j.point.id, photos: j.shots.map(pick).filter(notNull) }))
+            .filter((j) => j.photos.length > 0),
+          news: assignment.value.news
+            .map((c) => ({
+              lat: c.lat,
+              lng: c.lng,
+              title: null,
+              first_shot_at: byKey.get(c.shots[0]!.key)?.shotAt ?? null,
+              photos: c.shots.map(pick).filter(notNull),
+            }))
+            .filter((p) => p.photos.length > 0),
+        }
 
     if (!body.joins.length && !body.news.length) {
       errorMessage.value = '추가할 사진이 없습니다'

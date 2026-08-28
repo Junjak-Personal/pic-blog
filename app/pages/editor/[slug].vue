@@ -35,6 +35,7 @@ import {
 } from '#shared/utils/extras'
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
 import { askConfirm } from '~/composables/useConfirm'
+import { skipNotice, summarizeSkipped } from '~/utils/exif'
 
 /**
  * 편집 중의 금액은 «문자열»이다.
@@ -73,6 +74,12 @@ const MAX_BODY = 2000
 const MAX_TAGS = 20
 /** 마지막으로 고른 화폐를 기억한다 — 한 여행에서는 대개 같은 화폐로만 적는다 */
 const CURRENCY_KEY = 'pic-blog:currency'
+/**
+ * 3단계에서 한 포인트에 한 번에 붙일 수 있는 사진 수.
+ * 2단계의 50장보다 훨씬 작다 — 여기는 「이 자리에 몇 장 더」를 위한 자리이지
+ * 기록을 채우는 자리가 아니고, 올리는 동안 화면이 잠기기 때문이다.
+ */
+const MAX_PER_POINT = 10
 
 definePageMeta({ layout: 'editor' })
 
@@ -438,6 +445,62 @@ function selectPoint(id: number) {
 /** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 (2단계 보드와 같은 처방) */
 function onPickEsc(e: KeyboardEvent) {
   if (e.key === 'Escape') thumbPicking.value = false
+}
+
+/* ── 3단계 · 이 포인트에 사진 붙이기 ───────────────────────────────────────
+ * 2단계의 「사진 추가」는 반경으로 배정한다. 여기는 그 반대다 — 고른 사진이 좌표와
+ * 무관하게 «지금 보고 있는 포인트»로 들어간다. 거리로는 안 묶이는 것을 맥락으로
+ * 묶으려면 그 길이 필요하다.
+ *
+ * 🔴 저장 안 된 변경이 있으면 막는다. 올리고 나면 서버 데이터를 새로 받아야 하는데
+ *    (사진 id·순서를 서버가 정한다) 그 새로고침이 초안을 덮어쓴다 — 반경 변경이
+ *    같은 이유로 같은 조건을 건다.
+ */
+const addTargetId = ref<number | null>(null)
+const pointAddFlow = useAddPhotosFlow(slug, computed(() => post.value?.points ?? []), {
+  pointId: addTargetId,
+  limit: MAX_PER_POINT,
+})
+const pointAddInput = useTemplateRef<HTMLInputElement>('pointAddInput')
+const pointAddBusy = computed(() =>
+  pointAddFlow.stage.value === 'scanning' || pointAddFlow.stage.value === 'uploading',
+)
+
+/** 지금 이 포인트에 사진을 붙일 수 있는가 — 못 하면 왜인지 말한다 */
+const pointAddBlocked = computed(() => {
+  if (!activeDraft.value) return '포인트를 먼저 고르세요'
+  if (activeDraft.value.id < 0) return '저장하지 않은 새 포인트입니다 — 먼저 저장하세요'
+  if (changes.value) return '저장하지 않은 변경이 있습니다 — 먼저 저장하세요'
+  return null
+})
+
+async function onPointAdd(e: Event) {
+  const input = e.target
+  if (!(input instanceof HTMLInputElement) || !input.files?.length) return
+  const files = [...input.files]
+  // 같은 파일을 다시 골라도 change 가 뜨게 비워둔다
+  input.value = ''
+
+  const d = activeDraft.value
+  if (!d || pointAddBlocked.value) return
+
+  errorMessage.value = null
+  addTargetId.value = d.id
+  await pointAddFlow.selectFiles(files)
+  if (!pointAddFlow.scanned.value.length) {
+    errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
+    pointAddFlow.reset()
+    return
+  }
+  await pointAddFlow.confirm()
+  if (pointAddFlow.errorMessage.value) {
+    errorMessage.value = pointAddFlow.errorMessage.value
+    return
+  }
+  // 서버가 사진 id·순서를 정했다 — 초안을 그 위에 다시 세운다
+  await refresh()
+  hydrate()
+  activeId.value = d.id
 }
 
 /** 지정이 없을 때 실제로 쓰이는 사진 — 3단계 픽커가 「기본」 표시를 붙일 자리 */
@@ -1070,8 +1133,40 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
                   {{ thumbPicking ? '고르는 중…' : '대표 지정' }}
                 </button>
-                <span class="mono pick-note">지도 마커와 목록에 뜨는 사진 · 옮기고 지우는 것은 2단계에서</span>
+
+                <!--
+                  이 포인트에 «직접» 붙인다 — 좌표로 배정하지 않는다.
+                  2단계의 「사진 추가」는 반경으로 어느 포인트에 갈지 정하는데, 여기는
+                  거리로 안 묶이는 것을 맥락으로 묶는 자리라 그 반대가 필요하다.
+                -->
+                <button
+                  type="button"
+                  class="minibtn mono"
+                  :disabled="!!pointAddBlocked || pointAddBusy"
+                  :title="pointAddBlocked ?? undefined"
+                  data-testid="editor-point-add"
+                  @click="pointAddInput?.click()"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                  사진 추가
+                </button>
+                <input
+                  ref="pointAddInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  @change="onPointAdd"
+                >
+
+                <span class="mono pick-note">
+                  <template v-if="pointAddBlocked">{{ pointAddBlocked }}</template>
+                  <template v-else>여기서 넣은 사진은 좌표와 상관없이 이 포인트로 들어갑니다 · 한 번에 {{ MAX_PER_POINT }}장</template>
+                </span>
               </div>
+              <p v-if="skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT)" class="mono pick-skip">
+                {{ skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT) }}
+              </p>
             </div>
 
             <div class="scroll-y side">
@@ -1275,7 +1370,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       동작 중에는 화면을 막는다. 저장이 도는 동안 사진을 계속 끌 수 있으면
       서버로 나간 초안과 화면이 갈린다. 재클러스터링은 포인트 자체를 갈아치우므로 더 그렇다.
     -->
-    <BusyOverlay v-if="saving" label="저장 중" />
+    <BusyOverlay
+      v-if="pointAddBusy"
+      :label="pointAddFlow.stage.value === 'scanning'
+        ? `사진을 검사하는 중 ${pointAddFlow.scanProgress.value.done} / ${pointAddFlow.scanProgress.value.total}`
+        : `이 포인트에 올리는 중 ${pointAddFlow.uploadPercent.value}%`"
+    />
+    <BusyOverlay v-else-if="saving" label="저장 중" />
     <BusyOverlay v-else-if="reclustering" label="포인트를 다시 묶는 중" />
     <BusyOverlay v-else-if="deleting" label="기록을 지우는 중" />
   </div>
@@ -1656,7 +1757,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 /* 버튼 좌 · 설명 우. 좁아지면 설명이 아래로 내려간다 */
 .pick-foot { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-.pick-note { flex: 1; min-width: 0; font-size: 10px; color: var(--faint); }
+.pick-note { flex: 1 1 100%; min-width: 0; font-size: 10px; color: var(--faint); }
+/* 제외된 사진 안내 — 조치가 따라붙는 줄이라 눈에 띄게 (2단계 추가 화면과 같은 색) */
+.pick-skip { flex: none; font-size: 10.5px; line-height: 1.6; color: var(--route); }
 /* 고르는 중 — 다음에 누를 것이 「버튼」이 아니라 「사진」이라는 걸 색으로 말한다 (2단계와 같다) */
 .picks.picking .pick:hover { box-shadow: inset 0 0 0 2px var(--acc); }
 

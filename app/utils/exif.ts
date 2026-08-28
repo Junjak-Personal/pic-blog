@@ -47,7 +47,7 @@ export const SKIP_REASONS: Record<SkippedPhoto['reason'], string> = {
   'exif-error': 'EXIF 읽기 실패',
   'duplicate': '같은 사진 중복',
   'already-in-post': '이 기록에 이미 있음',
-  'over-limit': `한 번에 ${MAX_PER_SELECTION}장까지`,
+  'over-limit': '한 번에 처리할 수를 넘음',
 }
 
 function countBy(files: readonly SkippedPhoto[], reason: SkippedPhoto['reason']) {
@@ -58,11 +58,11 @@ function countBy(files: readonly SkippedPhoto[], reason: SkippedPhoto['reason'])
  * 사용자가 «다음에 무엇을 해야 하는지»까지 말해주는 한 줄.
  * 사유별 개수(summarizeSkipped)는 그 자체로 사실이지만, 상한과 중복은 조치가 따라붙는다.
  */
-export function skipNotice(files: readonly SkippedPhoto[]): string | null {
+export function skipNotice(files: readonly SkippedPhoto[], limit = MAX_PER_SELECTION): string | null {
   const notes: string[] = []
   const over = countBy(files, 'over-limit')
   if (over) {
-    notes.push(`한 번에 ${MAX_PER_SELECTION}장까지 처리합니다 — 나머지 ${over}장은 이 묶음을 올린 뒤 이어서 올리면 됩니다`)
+    notes.push(`한 번에 ${limit}장까지 처리합니다 — 나머지 ${over}장은 이 묶음을 올린 뒤 이어서 올리면 됩니다`)
   }
   const dup = countBy(files, 'already-in-post')
   if (dup) notes.push(`이미 올라간 사진 ${dup}장은 제외했습니다`)
@@ -171,6 +171,8 @@ export async function scanFiles(
   files: readonly File[],
   onProgress?: (done: number, total: number) => void,
   existingKeys?: ReadonlySet<string>,
+  /** 한 번에 처리할 상한. 포인트별 추가처럼 더 작게 잡는 자리가 있다. */
+  limit = MAX_PER_SELECTION,
 ): Promise<ScanResult> {
   const passed: ScannedPhoto[] = []
   const skipped: SkippedPhoto[] = []
@@ -178,8 +180,8 @@ export async function scanFiles(
   const seen = new Set<string>()
 
   // 상한을 넘는 몫은 EXIF 를 읽기도 «전»에 잘라낸다 — 읽어봐야 어차피 안 쓴다
-  const take = files.slice(0, MAX_PER_SELECTION)
-  for (const f of files.slice(MAX_PER_SELECTION)) skipped.push({ name: f.name, reason: 'over-limit' })
+  const take = files.slice(0, limit)
+  for (const f of files.slice(limit)) skipped.push({ name: f.name, reason: 'over-limit' })
   onProgress?.(0, take.length)
 
   for (let i = 0; i < take.length; i++) {
