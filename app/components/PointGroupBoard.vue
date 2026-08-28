@@ -51,6 +51,8 @@ const emit = defineEmits<{
   pickCover: [id: number]
   /** 이 포인트를 어느 자리에 찍을지 */
   setAnchor: [groupId: number, kind: 'centroid' | 'cover']
+  /** 사진을 크게 본다 — 그 포인트 안에서만 좌우로 넘긴다 */
+  openPhoto: [groupId: number, index: number]
   add: []
 }>()
 
@@ -65,10 +67,18 @@ const drag = useTileDrag((from, over) => emit('drop', from, over))
  */
 const picking = ref(false)
 
-function onTileClick(photoId: number) {
-  if (!picking.value) return
-  picking.value = false
-  emit('pickCover', photoId)
+function onTileClick(groupId: number, index: number, photoId: number) {
+  if (picking.value) {
+    picking.value = false
+    emit('pickCover', photoId)
+    return
+  }
+  // 🔴 방금 끈 제스처의 뒤따르는 click 은 「보기」가 아니다 (useTileDrag 의 dragged)
+  if (drag.dragged.value) {
+    drag.dragged.value = false
+    return
+  }
+  emit('openPhoto', groupId, index)
 }
 
 /** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 */
@@ -182,7 +192,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
       </span>
       <span class="mono hint">
         <template v-if="picking">커버로 쓸 사진을 고르세요 · Esc 로 취소</template>
-        <template v-else>끌어서 다른 포인트로 · 터치는 꾹 눌러서</template>
+        <template v-else>눌러서 크게 보기 · 끌어서 다른 포인트로 (터치는 꾹 눌러서)</template>
       </span>
       <div class="acts">
         <button
@@ -266,7 +276,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
               @pointermove="drag.onPointerMove"
               @pointerup="drag.onPointerUp"
               @pointercancel="drag.cancel"
-              @click="onTileClick(ph.id)"
+              @click="onTileClick(g.id, i, ph.id)"
             >
               <img v-sk class="thumb sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
               <span class="mono ord">{{ String(i + 1).padStart(2, '0') }}</span>
@@ -276,7 +286,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
                 type="button"
                 class="kill"
                 :aria-label="`${i + 1}번 사진 삭제`"
-                @click="emit('removePhoto', ph.id)"
+                @click.stop="emit('removePhoto', ph.id)"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
               </button>

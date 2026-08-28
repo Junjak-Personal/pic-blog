@@ -5,6 +5,7 @@ import PointGroupBoard, { type BoardGroup } from '~/components/PointGroupBoard.v
 import OverflowMenu from '~/components/OverflowMenu.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import BusyOverlay from '~/components/BusyOverlay.vue'
+import PhotoLightbox from '~/components/PhotoLightbox.vue'
 import CurrencySelect from '~/components/CurrencySelect.vue'
 /**
  * 포스트 편집 — 세 페이즈.
@@ -552,6 +553,30 @@ function onSetAnchor(groupId: number, kind: AnchorPick) {
   if (d) d.anchor = kind
 }
 
+/*
+ * 2단계 라이트박스 — 칸을 누르면 사진을 크게 본다.
+ * 공개 화면과 «같은» PhotoLightbox 를 쓴다. 다만 앞뒤 포인트 이름을 주지 않아서
+ * (prev/next = null) 그 포인트의 사진 안에서만 좌우로 움직인다 — 편집 중에는
+ * 지금 보고 있는 묶음을 확인하는 게 목적이지 기록 전체를 훑는 게 아니다.
+ */
+const lightbox = ref<{ groupId: number; index: number } | null>(null)
+
+const lightboxPhotos = computed(() => {
+  const d = lightbox.value && pointDrafts.value.find((x) => x.id === lightbox.value!.groupId)
+  return d ? photosOf(d.ids) : []
+})
+
+const lightboxName = computed(() => {
+  const id = lightbox.value?.groupId
+  const i = pointDrafts.value.findIndex((d) => d.id === id)
+  if (i < 0) return ''
+  return pointDrafts.value[i]!.title.trim() || `포인트 ${i + 1}`
+})
+
+function onOpenPhoto(groupId: number, index: number) {
+  lightbox.value = { groupId, index }
+}
+
 function addTag() {
   const t = tagInput.value.trim()
   tagInput.value = ''
@@ -897,6 +922,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           @remove-photo="onRemovePhoto"
           @pick-cover="onPickCover"
           @set-anchor="onSetAnchor"
+          @open-photo="onOpenPhoto"
           @add="onAddPhotos"
         />
       </div>
@@ -1161,6 +1187,18 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         </section>
       </div>
     </template>
+
+    <!-- 2단계에서 사진을 크게 보는 창. 그 포인트 안에서만 좌우로 넘어간다 -->
+    <PhotoLightbox
+      v-if="lightbox"
+      :photos="lightboxPhotos"
+      :point-name="lightboxName"
+      :index="lightbox.index"
+      :prev-name="null"
+      :next-name="null"
+      @close="lightbox = null"
+      @move="lightbox = lightbox ? { ...lightbox, index: $event } : null"
+    />
 
     <!--
       네이티브 <dialog> 다. 포커스 가둠 · ESC · ::backdrop · top layer 를 브라우저가 주고,

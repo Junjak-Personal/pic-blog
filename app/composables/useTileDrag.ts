@@ -48,6 +48,13 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
   const over = ref<DragOver | null>(null)
   /** true = 실제로 끌고 있는 중. from 만 있고 이게 false 면 아직 롱프레스를 기다리는 상태다 */
   const dragging = ref(false)
+  /**
+   * 방금 «끈» 제스처인가.
+   * 🔴 포인터를 캡처한 칸에서는 드래그가 끝난 뒤에도 click 이 한 번 따라온다. 그걸
+   *    그냥 두면 사진을 옮길 때마다 라이트박스가 열린다 — 그 한 번은 삼켜야 한다.
+   *    시간이 아니라 플래그로 삼키고, 다음 pointerdown 에서 푼다 (utils/tip.ts 와 같은 처방).
+   */
+  const dragged = ref(false)
 
   let ghost: HTMLElement | null = null
   /** 자동 스크롤 대상. null 이면 «문서 자체»를 굴린다 — 아래 scrollTargetOf 참고. */
@@ -152,6 +159,8 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
 
   function onPointerDown(e: PointerEvent, source: DragFrom) {
     if (e.button !== 0) return
+    // 새 제스처다 — 지난 드래그의 플래그가 남아 엉뚱한 클릭을 삼키지 않게 먼저 푼다
+    dragged.value = false
 
     const target = e.target as HTMLElement
     // 손잡이는 「끌라고 있는 것」이라 기다리지 않는다. 이걸 잡고도 1초를 기다려야 하면
@@ -207,6 +216,7 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     const o = over.value
     const was = dragging.value
     cancel()
+    dragged.value = was
     if (was && f && o) onDrop(f, o)
   }
 
@@ -234,5 +244,5 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
 
   onBeforeUnmount(cancel)
 
-  return { from, over, dragging, onPointerDown, onPointerMove, onPointerUp, onTouchMove, cancel }
+  return { from, over, dragging, dragged, onPointerDown, onPointerMove, onPointerUp, onTouchMove, cancel }
 }
