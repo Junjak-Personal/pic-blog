@@ -243,6 +243,8 @@ function confirmRecluster() {
 .settings { flex: 1; min-height: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 22px; }
 .block { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
 
+/* 날짜는 「2026. 05. 02.」 한 덩어리라 본문 입력만큼 클 이유가 없다 — 글자와 여백을 줄인다 */
+.period .input { padding: 8px 10px; font-size: 13px; }
 /* 기간 — 두 날짜 입력이 한 줄. 좁아지면 「EXIF 값으로」가 아래로 내려간다 */
 .period { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
 /* 두 날짜가 «한 줄»을 반씩 나눠 갖는다 — 190px 고정이면 680px 블록 안에서 왼쪽에 몰려
@@ -346,8 +348,12 @@ function confirmRecluster() {
   .dash { display: none; }
   /* 「EXIF 값으로」는 자기 줄로 내려간다 — 날짜 둘 사이에 끼면 셋 다 못 읽는다 */
   .revert { flex: 1 1 100%; }
-  /* date 입력은 iOS 에서 16px 미만이면 초점을 잡을 때 화면이 확대된다 */
-  .period .input { min-height: 44px; font-size: 16px; }
+  /*
+   * 🔴 글자는 16px 아래로 못 내린다. iOS 는 16px 미만인 입력에 초점이 가면 화면을
+   *    강제로 확대하고, date 입력도 예외가 아니다 (base.css 의 같은 이유).
+   *    그래서 좁히는 것은 «좌우 여백»뿐이다.
+   */
+  .period .input { min-height: 44px; font-size: 16px; padding-left: 8px; padding-right: 8px; }
   .revert { min-height: 44px; }
   .dlg-actions .btn { flex: 1; min-height: 44px; }
 }

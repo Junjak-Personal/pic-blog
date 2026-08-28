@@ -249,8 +249,3 @@ img.sk { border-radius: 0; }
 .eltip.on { opacity: 1; }
 
 /* 꾹 누르는 동안 브라우저가 자기 콜아웃(링크 미리보기·글자 선택)을 띄우면 툴팁과 겹친다 */
-.has-tip {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}

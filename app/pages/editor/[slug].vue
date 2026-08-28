@@ -102,6 +102,8 @@ const deleting = ref(false)
 const errorMessage = ref<string | null>(null)
 /** 새 포인트의 임시 id — 서버 id 와 절대 겹치지 않게 음수로 센다 */
 const nextTempId = ref(-1)
+/** 상단바에서 잘린 제목의 전체를 띄우는 판 */
+const titleDlg = useTemplateRef<HTMLDialogElement>('titleDlg')
 
 const photoById = computed(
   () => new Map((post.value?.points ?? []).flatMap((p) => p.photos).map((ph) => [ph.id, ph])),
@@ -544,23 +546,6 @@ function anchorMoved(d: PointDraft) {
 /** 3단계 헤더에 뜨는 좌표 — 2단계에서 자리를 다시 잡았으면 그 값이 먼저다 */
 const activeSpot = computed(() => (activeDraft.value ? draftAnchor(activeDraft.value) : null))
 
-/**
- * 그 좌표가 «무엇»인지. 예전엔 언제나 「EXIF 원본」이라고 붙였는데, 자리를 옮길 수 있게 된
- * 지금은 옮긴 포인트에서 거짓말이 된다. 촬영 시각은 그대로 EXIF 라 그건 건드리지 않는다.
- */
-const activeSpotNote = computed(() => {
-  const d = activeDraft.value
-  const spot = activeSpot.value
-  if (!d || !spot) return null
-  const near = (t: { lat: number; lng: number } | null) =>
-    !!t && distanceM([spot.lat, spot.lng], [t.lat, t.lng]) < 0.5
-  const photos = photosOf(d.ids)
-  if (near(photos.length ? centroid(photos) : null)) return '사진 평균 자리'
-  const cp = coverPhotoOf(d)
-  if (near(cp ? { lat: cp.lat, lng: cp.lng } : null)) return '대표 사진 자리'
-  return '처음 잡힌 자리'
-})
-
 /** 2단계 — 이 포인트를 어느 자리에 찍을지 */
 function onSetAnchor(groupId: number, kind: AnchorPick) {
   const d = pointDrafts.value.find((x) => x.id === groupId)
@@ -805,7 +790,23 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <!-- 모바일 -->
       <div class="hd-mobile">
         <AppBack fallback="/editor" label="기록 목록으로" />
-        <h1 class="hd-title">{{ draftTitle || '기록 편집' }}</h1>
+        <!--
+          잘린 제목은 «눌러서» 전체를 본다. 롱프레스 툴팁은 쓰지 않는다 — 텍스트 위
+          롱프레스는 iOS 선택·확대경과 같은 제스처라 서로 잡아먹는다 (utils/tip.ts 의 🔴).
+          h1 은 남기고 자르기·누르기는 안쪽 button 이 맡는다 — h1 이 inline-block 버튼을
+          직접 자르면 말줄임표 없이 잘리기만 한다.
+          공개 상세(p/[slug].vue)와 같은 마크업이다.
+        -->
+        <h1 class="hd-title">
+          <!--
+            🔴 자르는 것은 «버튼 안의 span» 이다. button 에 직접 text-overflow 를 걸면
+               말줄임표가 안 붙고(버튼 내부는 익명 상자다), 버튼 기본 가운데 정렬까지
+               겹쳐 글자가 양쪽으로 넘쳐 «앞»이 잘린다 — 「:마, 카미코치…」로 보였다.
+          -->
+          <button type="button" class="hd-title-btn" data-testid="editor-title-open" @click="titleDlg?.showModal()">
+            <span class="hd-title-text">{{ draftTitle || '기록 편집' }}</span>
+          </button>
+        </h1>
         <OverflowMenu label="기록 메뉴" testid="editor-menu-narrow">
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
@@ -950,14 +951,17 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             >
             <span v-if="activePoint" class="lockrow">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
-              <span class="mono">
+              <!--
+                꼬리표를 뗐다. 「자리가 무엇인지」는 2단계 메뉴가 「지금 …」으로 말하고,
+                여기서까지 되풀이하면 좁은 화면에서 이 줄이 가로로 넘친다.
+                못 고친다는 신호는 자물쇠 아이콘이 이미 하고 있다.
+              -->
+              <span class="mono locktext">
                 {{ formatDateTime(activePoint.first_shot_at) || '시각 없음' }}
                 <template v-if="activeSpot">
                   · {{ activeSpot.lat.toFixed(5) }}, {{ activeSpot.lng.toFixed(5) }}
                 </template>
               </span>
-              <!-- 시각은 언제나 EXIF 다. 좌표는 2단계에서 다시 잡을 수 있어 무엇인지 적는다. -->
-              <span class="mono lock-note">시각 EXIF · 자리 {{ activeSpotNote ?? '—' }}</span>
             </span>
             <!-- 아직 저장 전인 포인트는 앵커가 없다 — 저장할 때 담긴 사진들의 평균 좌표로 정해진다 -->
             <span v-else class="lockrow fresh">
@@ -1158,6 +1162,17 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       </div>
     </template>
 
+    <!--
+      네이티브 <dialog> 다. 포커스 가둠 · ESC · ::backdrop · top layer 를 브라우저가 주고,
+      닫기는 form method="dialog" 라 스크립트가 0줄이다.
+    -->
+    <dialog ref="titleDlg" class="titledlg" aria-label="기록 제목">
+      <p class="titledlg-text">{{ draftTitle || '기록 편집' }}</p>
+      <form method="dialog">
+        <button type="submit" class="mono titledlg-close">닫기</button>
+      </form>
+    </dialog>
+
     <!-- 모바일: 저장은 화면 아래에서 손이 닿는 곳에 둔다 -->
     <BottomCta v-if="post">
       <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
@@ -1280,17 +1295,48 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .hd-mobile { display: none; }
 
 /* 모바일 헤더 — [뒤로] [편집 대상] [메뉴] */
-.hd-title {
-  flex: 1;
+.hd-title { flex: 1; min-width: 0; display: flex; }
+/* h1 이 직접 자르면 안쪽 inline-block 버튼은 말줄임표 없이 잘리기만 한다 */
+.hd-title-btn {
+  display: flex;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: left;
+  cursor: pointer;
+}
+.hd-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hd-title-btn:hover { color: var(--mid); }
+
+/* 제목 전체 판 — 네이티브 <dialog> (top layer · ::backdrop · ESC 는 브라우저 몫).
+   공개 상세(p/[slug].vue)와 같은 값을 쓴다. */
+.titledlg {
+  margin: auto;
+  width: min(520px, calc(100vw - 32px));
+  background: var(--s1);
+  color: var(--ink);
+  border: 1px solid rgba(146, 178, 169, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.titledlg::backdrop { background: rgba(4, 4, 8, 0.7); backdrop-filter: blur(3px); }
+.titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
+.titledlg-close {
+  display: block;
+  margin: 16px 0 0 auto;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(177, 199, 193, 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--mid);
+  cursor: pointer;
 }
 
 /* 단계 탭 */
@@ -1469,7 +1515,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   color: var(--faint);
   white-space: nowrap;
 }
-.lockrow .lock-note { margin-left: 4px; }
+/* 좁아지면 줄이 넘치는 대신 말줄임표로 접힌다 — 가로 스크롤은 만들지 않는다 */
+.locktext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* 아직 저장 전인 포인트 — 좌표가 없다는 걸 색으로도 구분한다 */
 .lockrow.fresh { border-color: rgba(214, 178, 106, 0.42); color: var(--route); white-space: normal; }
 

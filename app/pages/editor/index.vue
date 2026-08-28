@@ -317,7 +317,9 @@ async function logout() {
   .list { gap: 10px; padding: 16px; }
 
   /* 커버 | 본문 | 연필 세 칸을 한 줄에 — 64+44+간격 을 빼고 남는 폭이 제목 몫이다 */
-  .row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; align-items: start; }
+  /* 세 칸을 세로 가운데로. start 는 제목이 두 줄까지 흐르던 시절의 값이라, 한 줄로
+     고정된 지금은 행 높이를 정하는 연필 버튼(44px) 때문에 아래만 벌어진다. */
+  .row { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 12px; align-items: center; }
   /*
    * 한 줄로 자른다. 예전엔 두 줄까지 흘려보냈는데 — 제목 칸이 186px 뿐이라 잘리면
    * 「2026.04.14 – 04.15 …」 가 된다는 이유였다 — 제목이 긴 행만 81px 로 자라
@@ -328,6 +330,13 @@ async function logout() {
   .summary { display: none; }
   .meta { font-size: 10px; line-height: 1.5; }
   .edit { align-self: center; width: 44px; height: 44px; }
-  .cover { width: 64px; height: 48px; }
+  /*
+   * 커버 높이 = 연필 버튼 높이(44px). 행 높이는 어차피 그 터치 타깃이 정하므로
+   * 여기에 맞추면 위아래 여백이 같아진다 — 48px 이던 예전 값은 7px 길어서
+   * 아래만 벌어져 보였다.
+   * 🔴 height: auto 로 두면 안 된다. 세로 사진(267×400)이 64px 폭에서 96px 로 자라
+   *    행이 122px 이 된다 — object-fit: cover 가 잘라주려면 높이가 «정해져» 있어야 한다.
+   */
+  .cover { width: 64px; height: 44px; }
 }
 </style>
