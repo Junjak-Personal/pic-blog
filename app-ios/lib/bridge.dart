@@ -55,8 +55,20 @@ String bootstrapJs() => '''
     /* 고르고 나서 원본을 꺼내는 동안 네이티브가 부른다. 페이지가 채워 넣는다. */
     onPickProgress: null,
     headerBytes: $kHeaderBytes,
-    /* 고른 사진의 «목록»을 준다 — 바이트가 아니다 (위 🔴) */
-    pick: (limit) => send('pick', { limit }).then((m) => m.photos),
+    /* 방금 고르기에서 «원본을 못 꺼낸» 사진 이름. pick 이 끝난 뒤에 읽는다. */
+    lastPickFailed: [],
+    /*
+     * 고른 사진의 «목록»을 준다 — 바이트가 아니다 (위 🔴).
+     *
+     * 🔴 반환 모양을 바꾸지 마라. 껍데기는 «기기에 설치돼» 있고 웹은 따로 배포되므로
+     *    둘의 버전은 언제든 어긋난다. 한때 이것을 배열에서 { photos, failed } 로 바꿨다가,
+     *    옛 웹이 photos.map() 을 부르며 죽어 「사진을 가져오는 중」에서 멈췄다.
+     *    새 정보는 «따로 난 창»(lastPickFailed)으로 준다 — 모르는 쪽은 그냥 안 읽는다.
+     */
+    pick: (limit) => send('pick', { limit }).then((m) => {
+      window.picblogNative.lastPickFailed = m.failed || [];
+      return m.photos;
+    }),
     /*
      * limit  — 원본의 앞부분만 (검사: EXIF 는 헤더면 충분하다)
      * render — PhotoKit 이 그 크기로 그린 JPEG (변환: 원본을 통째로 넘기면 브리지가 비싸다)
@@ -101,7 +113,8 @@ class NativeBridge {
       switch (msg['cmd']) {
         case 'pick':
           final limit = (msg['limit'] as num?)?.toInt() ?? 200;
-          await _send(id, {'ok': true, 'photos': await _pick(context, limit)});
+          final photos = await _pick(context, limit);
+          await _send(id, {'ok': true, 'photos': photos, 'failed': _lastPickFailed});
         case 'read':
           await _send(id, {'ok': true, ...await _read(msg)});
         case 'release':
@@ -158,6 +171,13 @@ class NativeBridge {
      * 「되고 있는 건지 모르겠다」가 이 앱을 만든 이유 중 하나였다.
      */
     final out = <Map<String, Object?>>[];
+    /*
+     * 🔴 못 꺼낸 사진을 조용히 버리지 않는다 (설계문서 §8).
+     *    originFile 은 원본을 앱 캐시로 «통째로» 복사한다 — 360장이면 2GB 다. 저장 공간이
+     *    모자라면 여기서 null 이 돌아오는데, 예전에는 그냥 건너뛰어서 「고른 360장 중
+     *    340장만 올라갔다」가 아무 말 없이 일어날 수 있었다. 이름을 모아 페이지로 넘긴다.
+     */
+    final failed = <String>[];
     for (var i = 0; i < picked.length; i++) {
       final asset = picked[i];
       /*
@@ -165,7 +185,12 @@ class NativeBridge {
        *    그러면 이 앱을 만든 이유가 사라진다 — 웹뷰 파일 입력이 하던 그 변환이
        *    이름만 바꿔 돌아온다.
        */
-      final file = await asset.originFile;
+      File? file;
+      try {
+        file = await asset.originFile;
+      } catch (_) {
+        file = null;
+      }
       if (file != null) {
         final token = _token();
         _files[token] = (file: file, asset: asset);
@@ -174,11 +199,17 @@ class NativeBridge {
           'name': await asset.titleAsync,
           'size': await file.length(),
         });
+      } else {
+        failed.add(await asset.titleAsync);
       }
       await _pickProgress(i + 1, picked.length);
     }
+    _lastPickFailed = failed;
     return out;
   }
+
+  /// 방금 고르기에서 못 꺼낸 사진 이름들 — pick 응답에 함께 실린다
+  List<String> _lastPickFailed = const [];
 
   /// 답이 아니라 «중간 보고»다 — id 없이 페이지의 훅을 직접 부른다.
   Future<void> _pickProgress(int done, int total) =>

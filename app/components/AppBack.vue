@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
    * 한 화면 안에 단계가 있는 곳(새 기록 업로드)에서 ← 는 「이전 단계」여야 한다 —
    * 그냥 두면 2단계에서 ← 를 눌렀을 때 고른 사진을 통째로 버리고 페이지를 떠난다.
    */
-  intercept?: () => void
+  intercept?: () => void | Promise<void>
   /**
    * 넓은 화면에도 남긴다. 기본은 「모바일 전용」이다 — 데스크탑에는 「목록」 같은 명시
    * 링크가 따로 있으니까. 그 링크를 걷어낸 화면(편집·업로드)은 이걸 켜서 ← 를 남긴다.
@@ -43,7 +43,8 @@ const props = withDefaults(defineProps<{
  */
 function back() {
   if (props.intercept) {
-    props.intercept()
+    // 확인창을 띄우는 자리가 있어 비동기일 수 있다 — 기다리지 않고 맡긴다
+    void props.intercept()
     return
   }
   navigateTo(props.fallback)

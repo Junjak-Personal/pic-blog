@@ -26,7 +26,14 @@ interface NativeApi {
    * 500장이면 그 구간만 여러 초라, 없으면 화면이 통째로 조용하다.
    */
   onPickProgress: ((done: number, total: number) => void) | null
+  /**
+   * 🔴 반환은 «배열»이다. 껍데기는 기기에 설치돼 있고 웹은 따로 배포되므로 둘의 버전은
+   *    언제든 어긋난다 — 이 모양을 바꾸면 옛 웹이 새 앱에서(또는 그 반대로) 죽는다.
+   *    실제로 한 번 그렇게 「사진을 가져오는 중」에서 멈췄다. 새 정보는 아래처럼 따로 낸다.
+   */
   pick: (limit: number) => Promise<NativePhoto[]>
+  /** 방금 고르기에서 원본을 못 꺼낸 사진 이름. 옛 껍데기에는 없을 수 있다. */
+  lastPickFailed?: string[]
   /**
    * limit  — 원본의 앞부분만 (검사)
    * render — PhotoKit 이 그 크기로 그린 JPEG (변환)
@@ -116,31 +123,41 @@ export async function releaseSources(sources: readonly PhotoSource[]) {
  * 🔴 input.click() 은 사용자 제스처 «안에서» 불려야 사파리가 막지 않는다. 이 함수는
  *    앞에 await 를 두지 않으므로 클릭 핸들러에서 바로 부르면 된다.
  */
+/** 고른 결과. failed 는 껍데기가 «원본을 못 꺼낸» 사진 이름 — 조용히 버리지 않는다. */
+export interface PickResult {
+  sources: PhotoSource[]
+  failed: string[]
+}
+
 export function pickPhotos(
   input: HTMLInputElement | null,
   limit: number,
   /** 껍데기가 원본을 꺼내는 동안의 진행. 브라우저 경로에서는 불리지 않는다. */
   onProgress?: (done: number, total: number) => void,
-): Promise<PhotoSource[]> {
+): Promise<PickResult> {
   const api = nativeBridge()
   if (api) {
     api.onPickProgress = onProgress ?? null
     return api
       .pick(limit)
-      .then((photos) => photos.map((photo) => ({ kind: 'native', photo }) as const))
+      .then((photos) => ({
+        sources: photos.map((photo) => ({ kind: 'native', photo }) as const),
+        // 옛 껍데기에는 이 창이 없다 — 없으면 빈 배열로 읽는다
+        failed: api.lastPickFailed ?? [],
+      }))
       .finally(() => {
         api.onPickProgress = null
       })
   }
   return new Promise((resolve) => {
     if (!input) {
-      resolve([])
+      resolve({ sources: [], failed: [] })
       return
     }
-    const finish = (out: PhotoSource[]) => {
+    const finish = (sources: PhotoSource[]) => {
       input.removeEventListener('change', onChange)
       input.removeEventListener('cancel', onCancel)
-      resolve(out)
+      resolve({ sources, failed: [] })
     }
     const onChange = () => finish([...(input.files ?? [])].map((file) => ({ kind: 'file', file }) as const))
     // 고르지 않고 닫은 경우. 없으면 promise 가 영영 안 풀린다.

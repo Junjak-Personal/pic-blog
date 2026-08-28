@@ -61,12 +61,30 @@ async function skip() {
   await back()
 }
 
+/**
+ * 지금 나가면 하던 일이 사라지는가 — new.vue 의 같은 이름과 같은 뜻이다.
+ * 업로드 중이면 이미 서버에 붙은 사진과 안 붙은 사진이 갈린다.
+ */
+const busy = computed(() => ['loading', 'scanning', 'uploading'].includes(flow.stage.value))
+
 /*
  * 🔴 여기도 replace 다. 사진 추가가 끝났거나 취소된 뒤에 이 화면으로 되돌아올 이유가 없다 —
  *    편집에서 뒤로 가면 「사진 추가」가 아니라 그 앞(목록)으로 가야 한다.
  */
-function back() {
-  return router.replace(`/editor/${slug.value}`)
+async function back() {
+  if (busy.value) {
+    const ok = await askConfirm({
+      title: flow.stage.value === 'uploading' ? '올리는 중입니다' : '사진을 준비하는 중입니다',
+      body: flow.stage.value === 'uploading'
+        ? '지금 나가면 일부만 올라갑니다. 나머지는 다시 골라야 합니다.'
+        : '지금 나가면 고른 사진이 모두 사라집니다.',
+      confirmLabel: '나가기',
+      cancelLabel: '계속하기',
+      danger: true,
+    })
+    if (!ok) return
+  }
+  await router.replace(`/editor/${slug.value}`)
 }
 
 /** 방금 마친 추가의 결과. flow.result 는 업로드가 끝난 그 순간의 값이다 (composable 의 🔴). */
@@ -90,7 +108,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 
     <header class="topbar">
       <div class="left">
-        <AppBack always :fallback="`/editor/${slug}`" label="편집으로" />
+        <AppBack always :fallback="`/editor/${slug}`" label="편집으로" :intercept="back" />
         <span class="hd-name">사진 추가</span>
         <span class="badge mono">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /></svg>

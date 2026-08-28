@@ -107,9 +107,16 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
       stage.value = 'loading'
       loadProgress.value = { done, total }
     })
-    const sources = await picking
+    const { sources, failed } = await picking
     if (sources.length) {
       await selectFiles(sources)
+      /*
+       * 껍데기가 원본을 못 꺼낸 사진 — 조용히 사라지면 안 된다 (설계문서 §8).
+       * 검사에서 걸러진 것들과 같은 목록에 같은 방식으로 올린다.
+       */
+      if (failed.length) {
+        skipped.value = [...skipped.value, ...failed.map((n) => ({ name: n, reason: 'open-failed' as const }))]
+      }
       return
     }
     if (stage.value === 'loading') stage.value = 'idle'

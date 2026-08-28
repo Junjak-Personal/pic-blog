@@ -72,7 +72,21 @@ class _ShellState extends State<Shell> {
           await _web.runJavaScript(bootstrapJs());
           debugPrint('[diag] bridge ready on $url');
         },
-        onWebResourceError: (e) => debugPrint('[web] error ${e.errorCode} ${e.description}'),
+        /*
+         * 🔴 웹 콘텐츠 프로세스가 죽으면 WKWebView 는 «빈 화면을 그대로 둔다».
+         *    우리 배경이 어두워서 「검은 화면에서 안 바뀐다」로 보이고, 아무도 아무 말을
+         *    하지 않는다. 사진 수백 장을 한 번에 처리하면 실제로 그 압력에 죽을 수 있다.
+         *    그때는 다시 세운다 — 조용히 멈춰 있는 것보다 낫다.
+         *
+         *    (webview_flutter 는 이 사건을 별도 콜백이 아니라 errorType 으로 알려준다.)
+         */
+        onWebResourceError: (e) {
+          debugPrint('[web] error ${e.errorType} ${e.errorCode} ${e.description}');
+          if (e.errorType == WebResourceErrorType.webContentProcessTerminated) {
+            debugPrint('[web] 콘텐츠 프로세스가 죽었다 — 다시 세운다');
+            _web.loadRequest(Uri.parse(kSite));
+          }
+        },
       ))
       ..loadRequest(Uri.parse(kSite));
 

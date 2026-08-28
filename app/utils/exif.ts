@@ -5,7 +5,7 @@
 import exifr from 'exifr'
 // 판정 키는 shared 가 SSOT 다 — 여기서 다시 내보내 스캔 쪽 임포트를 한 곳으로 모은다
 import { photoKey } from '#shared/utils/photo'
-import { headerOf, sourceName, type PhotoSource } from '~/utils/native'
+import { bytesOf, headerOf, sourceName, type PhotoSource } from '~/utils/native'
 
 export { photoKey }
 
@@ -33,7 +33,7 @@ export interface ScannedPhoto {
 
 export interface SkippedPhoto {
   name: string
-  reason: 'no-gps' | 'exif-error' | 'duplicate' | 'already-in-post' | 'over-limit'
+  reason: 'no-gps' | 'exif-error' | 'duplicate' | 'already-in-post' | 'over-limit' | 'open-failed'
 }
 
 /**
@@ -60,6 +60,7 @@ export const SKIP_REASONS: Record<SkippedPhoto['reason'], string> = {
   'duplicate': '같은 사진 중복',
   'already-in-post': '이 기록에 이미 있음',
   'over-limit': '한 번에 처리할 수를 넘음',
+  'open-failed': '원본을 열지 못함',
 }
 
 function countBy(files: readonly SkippedPhoto[], reason: SkippedPhoto['reason']) {
@@ -148,7 +149,23 @@ async function scanOne(src: PhotoSource): Promise<ScannedPhoto | SkippedPhoto> {
   try {
     gps = await exifr.gps(head)
   } catch {
-    return { name, reason: 'exif-error' }
+    gps = undefined
+  }
+
+  /*
+   * 🔴 헤더에서 못 찾았다고 「위치 정보 없음」이라고 단정하면 안 된다.
+   *    껍데기 경로에서는 원본의 «앞부분»만 받는데(bridge.dart 의 kHeaderBytes), EXIF 가
+   *    어디 놓이는지는 카메라마다 다르다. 앞부분에 없었을 뿐인 사진을 좌표 없는 사진으로
+   *    몰면 조용히 틀린 이유를 대는 것이 된다 — 업로드가 금지된 사진으로 취급된다.
+   *    그래서 판정 전에 전체를 한 번 읽어본다. 대부분은 여기까지 오지 않는다.
+   */
+  if (!gps && src.kind === 'native') {
+    try {
+      head = await bytesOf(src)
+      gps = await exifr.gps(head)
+    } catch {
+      return { name, reason: 'exif-error' }
+    }
   }
 
   if (!gps || !isFinite(gps.latitude) || !isFinite(gps.longitude)) {

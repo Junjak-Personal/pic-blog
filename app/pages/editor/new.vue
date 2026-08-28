@@ -73,6 +73,41 @@ async function skip() {
   await flow.skipFailed()
   if (flow.createdSlug.value) await router.replace(`/editor/${flow.createdSlug.value}`)
 }
+
+/**
+ * 지금 나가면 하던 일이 사라지는가.
+ *
+ * 가져오기·검사는 고른 사진이 통째로 날아가고, 업로드는 «절반만 올라간 기록»이 남는다
+ * (매니페스트는 이미 서버에 갔으므로 사진 없는 포인트가 생긴다). 셋 다 묻고 나가야 한다.
+ */
+const busy = computed(() => ['loading', 'scanning', 'uploading'].includes(flow.stage.value))
+
+/**
+ * ← 의 행동. 단계마다 다르다.
+ *  2단계  → 페이지를 떠나지 않고 1단계로 (고른 사진을 버리지 않는다)
+ *  진행 중 → 묻는다
+ *  그 외  → 평소대로 뒤로
+ */
+async function onBack() {
+  if (flow.stage.value === 'preview') {
+    flow.backToPick()
+    return
+  }
+  if (busy.value) {
+    const ok = await askConfirm({
+      title: flow.stage.value === 'uploading' ? '올리는 중입니다' : '사진을 준비하는 중입니다',
+      body: flow.stage.value === 'uploading'
+        ? '지금 나가면 일부만 올라간 채로 기록이 남습니다. 사진 없는 포인트가 생길 수 있습니다.'
+        : '지금 나가면 고른 사진이 모두 사라집니다.',
+      confirmLabel: '나가기',
+      cancelLabel: '계속하기',
+      danger: true,
+    })
+    if (!ok) return
+  }
+  if (window.history.length > 1) router.back()
+  else await navigateTo('/editor')
+}
 </script>
 
 <template>
@@ -93,7 +128,7 @@ async function skip() {
         always
         fallback="/editor"
         :label="flow.stage.value === 'preview' ? '사진 선택으로' : '기록 목록으로'"
-        :intercept="flow.stage.value === 'preview' ? flow.backToPick : undefined"
+        :intercept="onBack"
       />
 
       <ol class="steps">

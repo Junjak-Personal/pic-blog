@@ -100,7 +100,27 @@ function pick(r: number) {
 }
 
 function confirmRecluster() {
-  if (pending.value !== null) emit('recluster', pending.value)
+  const r = pending.value
+  // 고른 값을 «먼저» 읽고 비운다 — 아래 cancelRecluster 의 🔴 와 같은 이유로 남겨두면 안 된다.
+  pending.value = null
+  dialogOpen.value = false
+  if (r !== null) emit('recluster', r)
+}
+
+/**
+ * 🔴 취소하면 «고른 값»도 지워야 한다.
+ *
+ *    안 지우면 shown(= pending ?? currentRadius) 이 고른 값을 계속 보여준다. 화면은
+ *    500m 인데 실제 반경은 200m 다. 게다가 원래 값을 다시 고르면 pick() 의
+ *    `r === currentRadius` 에 걸려 아무 일도 안 일어나서, 입력이 죽은 것처럼 보인다.
+ *    실제로 그렇게 신고가 들어왔다.
+ *
+ *    AlertDialogCancel 은 기본 동작으로 «닫기만» 한다 — 상태를 되돌리는 건 우리 몫이다.
+ *    닫힘(update:open)에 이 정리를 걸면 안 된다: 확인 버튼도 닫으면서 지나가므로
+ *    confirmRecluster 가 값을 읽기 «전에» 비워진다 (이 파일 위쪽 주석의 그 함정).
+ */
+function cancelRecluster() {
+  pending.value = null
   dialogOpen.value = false
 }
 </script>
@@ -189,7 +209,7 @@ function confirmRecluster() {
     <AlertDialogRoot v-model:open="dialogOpen">
       <AlertDialogPortal>
         <AlertDialogOverlay class="ovl" />
-        <AlertDialogContent class="dlg">
+        <AlertDialogContent class="dlg" @escape-key-down="cancelRecluster">
           <AlertDialogTitle class="dlg-title">포인트 범위 변경</AlertDialogTitle>
 
           <div class="dlg-diff mono">
@@ -221,7 +241,7 @@ function confirmRecluster() {
           <p class="mono dlg-note">사진과 촬영 정보는 그대로 남습니다. 포인트 안 사진 순서는 촬영 시각 순으로 돌아갑니다.</p>
 
           <div class="dlg-actions">
-            <AlertDialogCancel class="btn foot ghost mono">취소</AlertDialogCancel>
+            <AlertDialogCancel class="btn foot ghost mono" @click="cancelRecluster">취소</AlertDialogCancel>
             <AlertDialogAction class="btn foot danger mono" @click="confirmRecluster">
               {{ atRisk.length ? '바꾸고 지우기' : '범위 바꾸기' }}
             </AlertDialogAction>
