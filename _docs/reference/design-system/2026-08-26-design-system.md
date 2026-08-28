@@ -1,3 +1,15 @@
+---
+title: pic-blog 디자인 레퍼런스 — 아트보드에서 가져온 값과 규칙
+status: reference
+topic: design-system
+kind: spec
+scope: frontend
+created: 2026-08-26
+updated: 2026-08-29
+owner: jhyoon
+related:
+  - _docs/reference/product-spec/2026-08-25-product-spec.md
+---
 # 디자인 레퍼런스
 
 아트보드 원본(`_workspace/deisgn/`)은 **추적하지 않는다** — 11MB짜리 캔버스 산출물이라
@@ -8,7 +20,7 @@
 - `_workspace/deisgn/pic-blog 화면.dc.html` — 아트보드 1b~1g
 - `_workspace/deisgn/data.js` — 클러스터링 알고리즘 원본
 - `_workspace/deisgn/pic-map.js` — 지도 렌더 원본 (Leaflet)
-- `_docs/active/planning/2026-08-25/2026-08-25-pic-blog-design.md` — 설계 SSOT (추적함)
+- `_docs/reference/product-spec/2026-08-25-product-spec.md` — 설계 SSOT (추적함)
 
 충돌 시 우선순위: **정보 구조·알고리즘·제약 → 설계문서 / 레이아웃·비주얼·인터랙션 → 아트보드**
 

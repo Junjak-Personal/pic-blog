@@ -1,10 +1,16 @@
 ---
 title: pic-blog — 사진 좌표 기반 여행 로그
-status: planning
+status: reference
+topic: product-spec
+kind: spec
+scope: fullstack
 created: 2026-08-25
+updated: 2026-08-29
 owner: jhyoon
+related:
+  - _docs/reference/design-system/2026-08-26-design-system.md
+  - _docs/reference/deploy/2026-08-26-deploy.md
 ---
-
 # pic-blog — 사진 좌표 기반 여행 로그
 
 사진의 EXIF GPS로 지도에 포인트를 찍고, 포인트마다 글과 사진 갤러리를 붙이는 개인용 여행 로그.

@@ -5,8 +5,8 @@
 읽기는 링크만으로 열리고, 쓰기는 비밀번호 하나로 잠긴다. 사용자 계정은 없다.
 
 - 운영: https://pic-blog.jun-devlog.win
-- 설계 SSOT: `_docs/active/planning/2026-08-25/2026-08-25-pic-blog-design.md`
-- 디자인에서 가져온 값·규칙: `_docs/reference/design-reference.md`
+- 설계 SSOT: `_docs/reference/product-spec/2026-08-25-product-spec.md`
+- 디자인에서 가져온 값·규칙: `_docs/reference/design-system/2026-08-26-design-system.md`
 
 ## 어떻게 도는가
 

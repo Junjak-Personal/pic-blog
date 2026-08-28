@@ -1,3 +1,15 @@
+---
+title: 네이티브 껍데기 — 업로드 경로만 가져간다
+status: complete
+topic: native-shell
+kind: findings
+scope: fullstack
+created: 2026-08-28
+updated: 2026-08-29
+owner: jhyoon
+related:
+  - _docs/reference/product-spec/2026-08-25-product-spec.md
+---
 # 네이티브 껍데기 — 업로드 경로만 가져간다
 
 작성 2026-08-28. 웹 커밋 `0e427b4` 기준.

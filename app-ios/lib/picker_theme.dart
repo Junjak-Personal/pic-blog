@@ -19,7 +19,7 @@ const kAcc = Color(0xFF92ACB2); // --acc
 ///    드롭다운인 것 하나가 아쉬웠고, 그건 판을 엎지 않고 델리게이트 한 메서드로 해결했다
 ///    (album_grid.dart). 근거와 실측은 아래 문서에 있다 — 같은 길로 다시 가기 전에 읽을 것:
 ///
-///      _docs/active/planning/2026-08-28/native-shell.md
+///      _docs/complete/native-shell/2026-08-28-native-shell.md
 ///
 ThemeData pickerTheme() {
   final base = AssetPicker.themeData(kAcc, light: false);

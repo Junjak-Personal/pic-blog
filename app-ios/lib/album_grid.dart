@@ -12,7 +12,7 @@ import 'picker_theme.dart';
 /// 이 피커에 아쉬운 점이 없었다.
 ///
 /// 피커를 통째로 갈아엎으려던 두 시도와 그 결과는
-/// `_docs/active/planning/2026-08-28/native-shell.md` 에 있다.
+/// `_docs/complete/native-shell/2026-08-28-native-shell.md` 에 있다.
 class AlbumGridPickerDelegate extends DefaultAssetPickerBuilderDelegate {
   AlbumGridPickerDelegate({
     required super.provider,
