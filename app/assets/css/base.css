@@ -171,6 +171,35 @@ select:focus-visible {
 /* --danger 는 어두운 바탕 «위의 글자»용 밝은 빨강이다 — 채우는 면은 tokens.css 참고 */
 .btn.danger { background: var(--danger-fill); color: var(--ink); }
 
+/*
+ * 입력 한 벌. 기본 정보와 기록 편집이 .input 을 각자 적고 있었고 세로 여백이 10px 대
+ * 9px 이라 같은 역할의 칸(기록 타이틀 59px · 포인트 이름 57px)이 2px 씩 어긋나 있었다.
+ *
+ * 🔴 높이는 min-height 로 «못 박고» 세로 padding 은 0 이다. padding 으로 높이를 만들면
+ *    모바일에서 글자가 16px 로 강제되는 순간(아래 규칙) 상자가 제멋대로 자란다 —
+ *    실제로 그래서 small 이 normal 보다 커져 있었다. input 은 글자를 세로 가운데에 둔다.
+ */
+.input {
+  width: 100%;
+  min-height: var(--field-h);
+  padding: 0 14px;
+  background: var(--field);
+  border: 1px solid rgba(177, 199, 193, 0.16);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--ink);
+}
+.input:focus {
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+/* 글자만 커진다 — 상자는 같은 높이다. 그래야 아래 요약 칸과 줄이 맞는다. */
+.input.title { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+/* 기타 정보의 촘촘한 줄 — 한 줄에 품목·금액·화폐·✕ 넷이 선다 */
+.input.small { min-height: var(--field-h-sm); padding: 0 10px; font-size: 12px; }
+.input::placeholder { color: var(--faint); }
+
 /* 데이터 텍스트 — 좌표 · 시각 · 거리 · 파일명 */
 .mono {
   font-family: var(--font-mono);

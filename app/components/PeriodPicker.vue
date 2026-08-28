@@ -109,8 +109,11 @@ const label = computed(() => {
 .periodtrigger {
   display: flex;
   align-items: center;
+  /* 위아래 입력들과 같은 줄에 선다 — 폭도 breakpoint 와 무관하게 100% 다 */
+  width: 100%;
   gap: 8px;
-  min-height: 40px;
+  /* 위아래 입력들과 같은 높이 — 버튼이지만 «입력 자리»에 서므로 같은 토큰을 읽는다 */
+  min-height: var(--field-h);
   padding: 0 12px;
   background: var(--field);
   border: 1px solid rgba(177, 199, 193, 0.16);
@@ -123,10 +126,7 @@ const label = computed(() => {
 .periodtrigger:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .periodtrigger[data-state='open'] { border-color: var(--focus-border); }
 .periodtrigger svg { flex: none; color: var(--deep); }
+/* 글자는 왼쪽에 붙는다 — 100% 라 가운데로 두면 아이콘이 칸 한복판에 떠 있게 된다 */
 .periodtext { letter-spacing: 0.02em; }
 
-@media (max-width: 900px) {
-  /* 엄지로 누른다. 글자는 13px 그대로여도 된다 — button 이라 확대 대상이 아니다. */
-  .periodtrigger { min-height: 44px; }
-}
 </style>

@@ -234,7 +234,8 @@ function confirmRecluster() {
 
 <style scoped>
 .settings { flex: 1; min-height: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 22px; }
-.block { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+/* 판 폭을 그대로 쓴다 — 예전엔 680px 로 묶여 있어서 넓은 화면에서 오른쪽이 통째로 비었다 */
+.block { display: flex; flex-direction: column; gap: 10px; }
 
 /* 기간 — 고르개 하나 + 「EXIF 값으로」. 좁아지면 되돌리기 버튼이 아래로 내려간다 */
 .period { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -256,21 +257,7 @@ function confirmRecluster() {
 
 .field { display: flex; flex-direction: column; gap: 7px; }
 .flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.input {
-  width: 100%;
-  background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  font-size: 14px;
-  color: var(--ink);
-}
-.input:focus {
-  border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
-}
-.input.title { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
-.input::placeholder { color: var(--faint); }
+/* 입력은 base.css 의 .input 한 벌을 쓴다 */
 
 .switch { position: relative; display: flex; align-items: center; gap: 11px; cursor: pointer; }
 .switch input { position: absolute; width: 42px; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
@@ -328,7 +315,6 @@ function confirmRecluster() {
 
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
-  .input.title { font-size: 18px; }
   /* 「EXIF 값으로」는 자기 줄로 내려간다 */
   .revert { flex: 1 1 100%; }
   .revert { min-height: 44px; }

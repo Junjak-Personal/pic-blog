@@ -26,6 +26,7 @@ import type { Photo, Point, PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
+import { vEnter } from '~/utils/enter'
 import PhotoTile from '~/components/PhotoTile.vue'
 import { centroid } from '#shared/utils/cluster'
 import { sameSpot } from '#shared/utils/geo'
@@ -1186,8 +1187,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                       class="mono tag-input"
                       maxlength="40"
                       placeholder="태그"
+                      v-enter="addTag"
                       data-testid="editor-tag-input"
-                      @keydown.enter.prevent="addTag"
                       @blur="addTag"
                     >
                   </label>
@@ -1223,7 +1224,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                 <div v-for="(l, i) in activeDraft.links" :key="i" class="xrow">
                   <input
                     v-model="l.url"
-                    class="input mini mono"
+                    class="input small mono"
                     :maxlength="MAX_URL"
                     inputmode="url"
                     placeholder="https://"
@@ -1274,7 +1275,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                 <div v-for="(e, i) in activeDraft.expenses" :key="i" class="xrow">
                   <input
                     v-model="e.item"
-                    class="input mini"
+                    class="input small"
                     :maxlength="MAX_ITEM"
                     placeholder="품목명"
                     :aria-label="`${i + 1}번 품목명`"
@@ -1282,7 +1283,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   >
                   <input
                     v-model="e.amount"
-                    class="input mini amt mono"
+                    class="input small amt mono"
                     :class="{ bad: badAmount(e) }"
                     inputmode="decimal"
                     maxlength="16"
@@ -1564,27 +1565,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
 .flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
-.input {
-  width: 100%;
-  background: var(--field);
-  border: 1px solid rgba(177, 199, 193, 0.16);
-  border-radius: var(--radius);
-  padding: 9px 14px;
-  font-size: 14px;
-  color: var(--ink);
-}
-.input:focus {
-  border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-.input.title {
-  font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.input::placeholder { color: var(--faint); }
+/* 입력은 base.css 의 .input / .input.small 한 벌을 쓴다 */
 
 
 /* 2단계 — 보드 한 판이 전부다. 좌우 분할이 없다: 그룹이 세로로 길게 이어지는 화면이라
@@ -1830,9 +1811,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .content:focus { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
 .content::placeholder { color: var(--faint); }
 
-/* 기타 정보 — 링크 · 소비 금액. 352px 칸에 들어가야 해서 줄바꿈을 허용한다 */
+/* 기타 정보 — 링크 · 소비 금액. 352px 칸에 들어가야 해서 줄바꿈을 허용한다.
+   칸 자체는 base.css 의 .input.small 이다 (높이 --field-h-sm). */
 .xrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.input.mini { padding: 7px 10px; font-size: 12px; }
 /*
  * [품목 45 · 금액 30 · 화폐 15] 로 «남는 폭»을 나눈다. flex-basis 를 고정값으로 주면
  * 좁은 칸(352px)에서 품목·금액이 나란히 쪼그라든다 — 실제로 84/68px 까지 줄어 있었다.
@@ -1912,7 +1893,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .steps { padding: 8px 14px; gap: 6px; }
   .stepbtn { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; }
 
-  .input.title { font-size: 18px; }
 
   /* 보드는 좌우 여백만 줄인다 — 세로 스크롤은 보드가 스스로 갖는다 */
   .boardpane { padding: 10px 12px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
@@ -1944,7 +1924,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
   /* 기타 정보 — 입력이 16px 로 커지므로(base.css) 줄이 넘친다. 지우기·추가도 손가락 크기로 */
   .xrow { gap: 8px; }
-  .input.mini { padding: 10px 11px; }
   /* 보이는 크기는 줄이고 닿는 면적은 44px 로 넓힌다 — 그 8px 이 품목명 칸으로 간다 */
   .xkill { position: relative; width: 32px; height: 32px; }
   .xkill::after { content: ''; position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; }

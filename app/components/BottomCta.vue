@@ -58,7 +58,9 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    /* 위를 더 띄운다 — 10px 이면 바로 위 내용과 붙어 판이 «잘린 것»처럼 보였다.
+       이 값을 바꾸면 --cta-h(menu.css)도 같이 바꿔야 한다. 아래 내용이 그만큼 비켜선다. */
+    padding: 16px 14px calc(12px + env(safe-area-inset-bottom));
     background: rgba(4, 4, 8, 0.94);
     backdrop-filter: blur(14px);
     border-top: 1px solid rgba(146, 178, 169, 0.22);

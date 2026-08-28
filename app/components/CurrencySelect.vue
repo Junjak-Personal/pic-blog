@@ -66,7 +66,7 @@ const model = defineModel<CurrencyCode>({ required: true })
 </template>
 
 <style scoped>
-/* .input.mini 와 같은 값 — 같은 줄에 선 입력들과 높이·테두리가 어긋나면 안 된다 */
+/* .input.small 과 같은 높이 — 같은 줄에 선 입력들과 어긋나면 안 된다 (--field-h-sm) */
 .curtrigger {
   /*
    * 폭은 «줄»이 정한다 (editor/[slug].vue 의 .xrow 비율 — 품목 45 · 금액 30 · 화폐 15).
@@ -76,15 +76,14 @@ const model = defineModel<CurrencyCode>({ required: true })
   /* 실측: 트리거 폭 - 글자 칸 = 45px (테두리 2 · 여백 18 · 화살표 12 · 간격 4 · 정렬 여유).
      mono 세 글자가 12px 에서 24px 이므로 70px 이면 잘리지 않는다. */
   min-width: 70px;
-  /* 같은 줄의 입력들과 높이를 맞춘다. 여백·글꼴이 폭마다 달라져 min-height 로 맞추면
-     모바일에서 6px 씩 어긋난다 — 줄 높이를 따라가게 두는 편이 어디서나 맞다. */
-  align-self: stretch;
+  /* 🔴 stretch 를 쓰지 않는다. 줄 높이를 따라가게 두면 옆 입력이 어긋난 날 이것도 같이
+     어긋나 원인이 안 보인다 — 이제 높이가 토큰 하나라 직접 그 값을 갖는 편이 맞다. */
+  min-height: var(--field-h-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 4px;
-  min-height: 31px;
-  padding: 7px 8px 7px 10px;
+  padding: 0 8px 0 10px;
   background: var(--field);
   border: 1px solid rgba(177, 199, 193, 0.16);
   border-radius: var(--radius);
@@ -105,6 +104,6 @@ const model = defineModel<CurrencyCode>({ required: true })
    * 이건 button 이라 해당이 없다 (base.css 의 16px 규칙도 input/textarea/select 만 잡는다).
    * 그만큼 아낀 폭은 품목명 칸으로 간다 — 좁은 화면에서 거기가 제일 아쉽다.
    */
-  .curtrigger { min-width: 74px; min-height: 44px; font-size: 13px; }
+  .curtrigger { min-width: 74px; font-size: 13px; }
 }
 </style>

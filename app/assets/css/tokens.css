@@ -72,6 +72,21 @@
 
   --radius: 8px;
   --radius-lg: 10px;
+
+  /*
+   * 입력 높이는 «두 가지»뿐이다. 이걸 padding + font-size 로 유도하면 안 된다 —
+   * 모바일에서 base.css 가 입력을 16px 로 강제하면서 글자 차이가 사라지고 padding 만
+   * 남아, 「작은」 칸(50px)이 「보통」 칸(48px)보다 커져 있었다.
+   *   normal — 타이틀 · 요약 · 포인트 이름 · 기간 고르개
+   *   small  — 기타 정보(링크 주소 · 품목명 · 금액 · 화폐)
+   */
+  --field-h: 42px;
+  --field-h-sm: 34px;
+}
+
+@media (max-width: 900px) {
+  /* 엄지로 누른다. 글자도 16px 로 커지므로(base.css) 상자도 같이 자란다. */
+  :root { --field-h: 48px; --field-h-sm: 40px; }
 }
 
 /* 3열이 되는 폭 — 사진만 줄인다. 시각 줄은 글자 크기가 그대로라 22px 그대로다. */

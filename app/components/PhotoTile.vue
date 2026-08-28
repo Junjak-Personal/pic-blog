@@ -119,5 +119,15 @@ const props = defineProps<{
   overflow: hidden;
   border-radius: 6px;
   background: rgba(11, 14, 18, 0.9);
+  /*
+   * 🔴 테두리가 «칸의 경계»를 만든다. 바탕이 90% 반투명이라 합성 결과가 뒤에 뭐가 있느냐에
+   *    따라 달라진다 — 2단계는 포인트 카드(rgba(146,178,169,0.03)) 위라 카드보다 Δ4 어두워
+   *    시각 줄이 띠로 보였는데, 3단계는 셸 바탕(#0B0E12) 위라 Δ0 이 되어 아예 안 보였다.
+   *    같은 컴포넌트가 부모에 따라 달라 보인 원인이 이것이다. 경계를 스스로 그으면 어디에
+   *    놓이든 같게 보인다.
+   * 🔴 border 가 아니라 안쪽 그림자다. border 를 켜면 칸이 2px 커져 「사진 추가」 칸(96px)
+   *    과 어긋난다 — 이 레포가 .pick.on · .ovf-item.current 에서 쓰는 것과 같은 처방.
+   */
+  box-shadow: inset 0 0 0 1px var(--hair);
 }
 </style>
