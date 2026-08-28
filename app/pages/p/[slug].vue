@@ -555,6 +555,9 @@ useHead(() => ({
     font-size: 10px;
   }
   .stats.open { display: flex; }
+  /* 「쓴 돈」 줄은 자기 flex-end 를 따로 갖고 있다 — 같이 돌려주지 않으면
+     칩은 왼쪽, 금액만 오른쪽으로 갈라져 한 줄 걸러 좌우가 뒤집힌다 */
+  .spend { justify-content: flex-start; }
   .stat svg { display: none; }
 
   .stage { grid-template-columns: 1fr; grid-template-rows: 46dvh 1fr; }
