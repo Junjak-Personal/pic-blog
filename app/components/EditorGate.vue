@@ -119,15 +119,15 @@ header {
   padding: 0 20px;
   border-bottom: 1px solid var(--hair);
   color: var(--mid);
-  font-size: 14.5px;
+  font-size: var(--fs-lg);
 }
 header svg { display: block; flex: none; }
 
 .body { display: flex; flex-direction: column; gap: 16px; padding: 32px 40px 36px; }
 
 .intro { display: flex; flex-direction: column; gap: 8px; }
-h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.intro p { max-width: 420px; font-size: 13.5px; line-height: 1.65; color: var(--mid); opacity: 0.8; }
+h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.intro p { max-width: 420px; font-size: var(--fs-md); line-height: 1.65; color: var(--mid); opacity: 0.8; }
 
 .field {
   display: flex;
@@ -162,12 +162,12 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
 .field input {
   width: 100%;
   font-family: var(--font-mono);
-  font-size: 17px;
+  font-size: var(--title-size);
   letter-spacing: 0.28em;
   color: var(--ink);
 }
 
-.note { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+.note { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 2px; }
 /* 두 버튼 높이를 맞춘다 — 테두리 유무 때문에 37.6 / 39.6 으로 어긋나 있었다.
@@ -182,7 +182,7 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   color: var(--ink);
   border-radius: var(--radius);
   padding: 9px 15px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   cursor: pointer;
 }
 .primary:hover:not(:disabled) { filter: brightness(1.2); }
@@ -193,7 +193,7 @@ h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
   padding: 9px 15px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--mid);
 }
 </style>

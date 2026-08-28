@@ -52,7 +52,7 @@ defineEmits<{ retry: [] }>()
   background: var(--s1);
 }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.title { font-size: 15px; color: var(--ink); }
+.title { font-size: var(--fs-xl); color: var(--ink); }
 .retry {
   display: flex;
   align-items: center;
@@ -60,11 +60,11 @@ defineEmits<{ retry: [] }>()
   padding: 7px 12px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--mid);
   cursor: pointer;
 }
-.sub { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.sub { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 .list { flex: 1; margin: 0; padding: 0; list-style: none; }
 .list li {
   display: grid;
@@ -80,11 +80,11 @@ defineEmits<{ retry: [] }>()
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--mid);
   border: 1px solid rgb(var(--acc-rgb) / 0.6);
 }
-.name { font-size: 14px; color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coord { font-size: 10.5px; color: var(--faint); }
+.name { font-size: var(--fs-lg); color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coord { font-size: var(--fs-2xs); color: var(--faint); }
 </style>

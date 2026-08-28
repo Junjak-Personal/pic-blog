@@ -44,5 +44,5 @@ defineProps<{ label: string }>()
   border: 1px solid rgb(var(--acc-rgb) / 0.28);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
-.text { font-size: 12px; color: var(--mid); }
+.text { font-size: var(--fs-sm); color: var(--mid); }
 </style>

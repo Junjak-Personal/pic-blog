@@ -227,7 +227,7 @@ onBeforeUnmount(clearMarkers)
   border-radius: var(--radius);
   padding: 6px 10px;
 }
-.chip .mono { font-size: 10px; letter-spacing: 0.1em; color: var(--mid); }
+.chip .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--mid); }
 /* 지도의 동선 레이어와 같은 색이어야 범례 구실을 한다 (--route, route-style.ts 가 SSOT) */
 .dash { width: 26px; height: 0; border-top: 2px dashed var(--route); }
 

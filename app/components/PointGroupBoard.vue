@@ -427,8 +427,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 
 /* 모바일에서는 .hint 가 접히므로 flex:1 로 미는 것만으로는 버튼이 오른쪽에 안 붙는다 */
 .board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; }
-.label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.hint { flex: 1; font-size: 10px; color: var(--deep); }
+.label { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.hint { flex: 1; font-size: var(--fs-2xs); color: var(--deep); }
 .addbtn {
   display: inline-flex;
   align-items: center;
@@ -437,7 +437,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   padding: 0 11px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--mid);
   cursor: pointer;
 }
@@ -493,7 +493,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   height: 24px;
   flex: none;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   background: rgb(var(--marker-rgb) / 0.94);
   color: var(--mid);
@@ -502,15 +502,15 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 .gname {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   color: var(--mid);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; background: rgb(var(--route-soft-rgb) / 0.16); color: var(--route); }
-.gmeta { flex: none; font-size: 10px; color: var(--faint); }
-.gspot { flex: none; font-size: 10px; color: var(--deep); }
+.badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: var(--fs-micro); background: rgb(var(--route-soft-rgb) / 0.16); color: var(--route); }
+.gmeta { flex: none; font-size: var(--fs-2xs); color: var(--faint); }
+.gspot { flex: none; font-size: var(--fs-2xs); color: var(--deep); }
 
 /* 포인트 자리 — 헤더 높이(44px) 안에 들어가는 아이콘 버튼 */
 .spotbtn {
@@ -550,7 +550,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border-radius: 6px;
   background: none;
   color: var(--deep);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   cursor: pointer;
 }
 .addtile:hover:not(:disabled) { border-color: var(--acc); color: var(--ink); background: rgb(var(--acc-rgb) / 0.08); }
@@ -642,7 +642,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   background: rgb(var(--s1-rgb) / 0.92);
   backdrop-filter: blur(6px);
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .newzone.target { border-color: var(--acc); border-style: solid; color: var(--ink); background: rgb(var(--acc-rgb) / 0.14); }
 

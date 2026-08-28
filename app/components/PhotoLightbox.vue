@@ -251,9 +251,9 @@ watch(() => props.photos, async () => {
   padding: 14px 20px;
   border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
-.name { font-size: 11px; color: var(--ink); }
-.count { font-size: 11px; color: var(--faint); }
-.meta { font-size: 11px; color: var(--faint); }
+.name { font-size: var(--fs-xs); color: var(--ink); }
+.count { font-size: var(--fs-xs); color: var(--faint); }
+.meta { font-size: var(--fs-xs); color: var(--faint); }
 .close {
   margin-left: auto;
   width: 36px;
@@ -315,7 +315,7 @@ watch(() => props.photos, async () => {
   justify-content: space-between;
   gap: 12px;
   padding: 0 2px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--faint);
 }
 .cap-when { color: var(--deep); }
@@ -353,7 +353,7 @@ watch(() => props.photos, async () => {
   }
   /* 헤더 밖 조작 요소는 44px — 하단 바의 이전/다음이 34px 이었다 */
   .nav.sm { width: 44px; height: 44px; }
-  .swipe { font-size: 10px; color: var(--faint); text-align: center; }
+  .swipe { font-size: var(--fs-2xs); color: var(--faint); text-align: center; }
   .swipe.edge { color: var(--mid); }
 }
 </style>

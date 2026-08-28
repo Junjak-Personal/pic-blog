@@ -71,7 +71,7 @@ const cards = computed(() => scatter(props.photos.length, 9301 + props.pointId *
   position: absolute;
   left: 5px;
   bottom: 4px;
-  font-size: 8px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.04em;
   color: var(--ink);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -88,7 +88,7 @@ const cards = computed(() => scatter(props.photos.length, 9301 + props.pointId *
   color: var(--faint);
   pointer-events: none;
 }
-.hint .mono { font-size: 10px; }
+.hint .mono { font-size: var(--fs-2xs); }
 
 @media (max-width: 900px) {
   /* 모바일에서는 접는다 — 세로가 부족해 스캐터 밑으로 밀려 안 보였다.

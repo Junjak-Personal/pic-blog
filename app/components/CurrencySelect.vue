@@ -87,7 +87,7 @@ const model = defineModel<CurrencyCode>({ required: true })
   background: var(--field);
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--ink);
   cursor: pointer;
 }
@@ -104,6 +104,6 @@ const model = defineModel<CurrencyCode>({ required: true })
    * 이건 button 이라 해당이 없다 (base.css 의 16px 규칙도 input/textarea/select 만 잡는다).
    * 그만큼 아낀 폭은 품목명 칸으로 간다 — 좁은 화면에서 거기가 제일 아쉽다.
    */
-  .curtrigger { min-width: 74px; font-size: 13px; }
+  .curtrigger { min-width: 74px; font-size: var(--fs-md); }
 }
 </style>

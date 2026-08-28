@@ -69,7 +69,7 @@ const totals = computed(() => (props.expenses.length > 1 ? totalsOf(props.expens
   border: 1px solid rgb(var(--acc-rgb) / 0.28);
   border-radius: var(--radius);
   color: var(--mid);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   text-decoration: none;
 }
 .link:hover { background: rgb(var(--acc-rgb) / 0.12); color: var(--ink); }
@@ -85,11 +85,11 @@ const totals = computed(() => (props.expenses.length > 1 ? totalsOf(props.expens
   border-radius: var(--radius);
   background: rgb(var(--acc-rgb) / 0.04);
 }
-.slabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.slabel { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 .items { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .item { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.iname { min-width: 0; font-size: 12.5px; color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.iamt { flex: none; font-size: 12px; color: var(--deep); }
+.iname { min-width: 0; font-size: var(--fs-sm); color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iamt { flex: none; font-size: var(--fs-sm); color: var(--deep); }
 
 .total {
   display: flex;
@@ -99,14 +99,14 @@ const totals = computed(() => (props.expenses.length > 1 ? totalsOf(props.expens
   padding-top: 7px;
   border-top: 1px solid var(--hair);
 }
-.tlabel { font-size: 10px; color: var(--faint); }
+.tlabel { font-size: var(--fs-2xs); color: var(--faint); }
 /* 화폐가 여럿이면 세로로 쌓는다 — 한 줄에 이어 붙이면 두 금액이 한 값으로 읽힌다 */
 .tvals { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.tamt { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.tamt { font-size: var(--fs-sm); color: var(--ink); font-weight: 600; }
 
 @media (max-width: 900px) {
   /* 엄지로 누른다 */
-  .link { min-height: 44px; font-size: 13.5px; }
-  .iname, .iamt { font-size: 13px; }
+  .link { min-height: 44px; font-size: var(--fs-md); }
+  .iname, .iamt { font-size: var(--fs-md); }
 }
 </style>

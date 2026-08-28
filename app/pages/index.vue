@@ -199,23 +199,23 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .markbtn.armed .mark { color: var(--route); transform: scale(1.06); }
 .wordmark {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
 .wordmark .dot { color: var(--deep); }
-.kicker { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--deep); }
+.kicker { font-size: var(--fs-2xs); letter-spacing: 0.16em; text-transform: uppercase; color: var(--deep); }
 
 .right { display: flex; align-items: center; gap: 22px; }
-.totals { font-size: 11px; color: var(--deep); }
+.totals { font-size: var(--fs-xs); color: var(--deep); }
 .editor-link {
   /* 헤더 버튼은 높이가 36px 로 고정된다(base.css). 글자가 11px 이면 상자 안이
      텅 비어 「빈 테두리」처럼 보인다 — 글자를 상자에 맞춘다. */
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--mid);
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
@@ -267,7 +267,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
   color: var(--faint);
 }
@@ -281,7 +281,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   background: rgb(var(--s0-rgb) / 0.82);
   border: 1px solid rgb(var(--mid-rgb) / 0.18);
   padding: 3px 7px;
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.08em;
   color: var(--mid);
 }
@@ -299,7 +299,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 .line.lg { height: 20px; width: 64%; }
 .line.sm { height: 9px; width: 32%; }
 .title {
-  font-size: 24px;
+  font-size: var(--fs-display);
   letter-spacing: -0.02em;
   line-height: 1.18;
   color: var(--ink);
@@ -309,7 +309,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.summary { font-size: 14px; line-height: 1.6; color: var(--mid); opacity: 0.82; text-wrap: pretty; }
+.summary { font-size: var(--fs-lg); line-height: 1.6; color: var(--mid); opacity: 0.82; text-wrap: pretty; }
 
 .foot {
   margin-top: auto;
@@ -321,7 +321,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .range { display: flex; align-items: center; gap: 6px; color: var(--faint); }
-.range .mono, .stat { font-size: 10.5px; color: var(--deep); }
+.range .mono, .stat { font-size: var(--fs-2xs); color: var(--deep); }
 .stat.extra { margin-left: 4px; }
 
 
@@ -349,8 +349,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   border: 1px solid var(--hair);
   color: var(--deep);
 }
-.empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
+.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
 .cta {
   display: flex;
   align-items: center;
@@ -361,7 +361,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   color: var(--ink);
   border-radius: var(--radius);
   padding: 11px 18px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 .cta:hover { filter: brightness(1.2); }
 
@@ -410,12 +410,12 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .card:hover { transform: none; }
   .cover { grid-row: 1 / 3; width: 64px; height: 48px; border-radius: 6px; overflow: hidden; }
   /* 64px 칸에 상자를 두르면 커버가 안 보인다 — 글자만 남긴다 */
-  .private { right: 2px; top: 2px; gap: 0; padding: 1px 3px; font-size: 8px; letter-spacing: 0; }
+  .private { right: 2px; top: 2px; gap: 0; padding: 1px 3px; font-size: var(--fs-micro); letter-spacing: 0; }
   .private svg { display: none; }
-  .cover-empty { font-size: 8px; }
+  .cover-empty { font-size: var(--fs-micro); }
 
   .body { grid-column: 2; padding: 0; gap: 0; min-width: 0; }
-  .title { font-size: 15px; line-height: 1.3; }
+  .title { font-size: var(--fs-xl); line-height: 1.3; }
   .summary { display: none; }
 
   .foot {
@@ -427,7 +427,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
     gap: 5px;
     min-width: 0;
   }
-  .range .mono, .stat { font-size: 10px; }
+  .range .mono, .stat { font-size: var(--fs-2xs); }
   .range svg { display: none; }
   .stat.extra { display: none; }
 

@@ -31,7 +31,7 @@ body {
      (Mapbox 가 자기 요소에 touch-action 을 따로 건다)에는 영향이 없다. */
   touch-action: manipulation;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: var(--fs-xl);
   line-height: 1.78;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -188,7 +188,7 @@ select:focus-visible {
   gap: 7px;
   padding: 8px 14px;
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -200,11 +200,11 @@ select:focus-visible {
 .btn.ghost { border: 1px solid rgb(var(--mid-rgb) / 0.2); color: var(--mid); }
 .btn.ghost:hover:not(:disabled) { border-color: rgb(var(--acc-rgb) / 0.45); color: var(--ink); }
 /* 크게 — 빈 화면 한가운데의 「사진 선택」처럼 그 화면의 유일한 행동일 때 */
-.btn.big { padding: 12px 20px; font-size: 12px; }
+.btn.big { padding: 12px 20px; font-size: var(--fs-sm); }
 /* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.
    🔴 이름이 .dlg 면 안 된다 — 그건 다이얼로그 «상자»가 이미 쓰는 클래스라 버튼이 상자
       스타일(padding 22px · 바탕 --s1)을 그대로 먹는다. 실제로 한 번 그렇게 깨졌다. */
-.btn.foot { min-height: 40px; padding: 0 15px; font-size: 12px; }
+.btn.foot { min-height: 40px; padding: 0 15px; font-size: var(--fs-sm); }
 /* 「확인」과 「삭제」는 되돌리기 어려운 쪽이라 취소보다 무겁게 */
 .btn.foot.primary, .btn.danger { font-weight: 600; }
 /* --danger 는 어두운 바탕 «위의 글자»용 밝은 빨강이다 — 채우는 면은 tokens.css 참고 */
@@ -225,7 +225,7 @@ select:focus-visible {
   background: var(--field);
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--ink);
 }
 .input:focus {
@@ -234,9 +234,9 @@ select:focus-visible {
   outline: none;
 }
 /* 글자만 커진다 — 상자는 같은 높이다. 그래야 아래 요약 칸과 줄이 맞는다. */
-.input.title { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+.input.title { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 600; letter-spacing: -0.02em; }
 /* 기타 정보의 촘촘한 줄 — 한 줄에 품목·금액·화폐·✕ 넷이 선다 */
-.input.small { min-height: var(--field-h-sm); padding: 0 10px; font-size: 12px; }
+.input.small { min-height: var(--field-h-sm); padding: 0 10px; font-size: var(--fs-sm); }
 .input::placeholder { color: var(--faint); }
 
 /* 데이터 텍스트 — 좌표 · 시각 · 거리 · 파일명 */
@@ -314,7 +314,7 @@ img.sk { border-radius: 0; }
   padding: 9px 24px;
   background: rgb(var(--route-soft-rgb) / 0.1);
   border-bottom: 1px solid rgb(var(--route-soft-rgb) / 0.28);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.5;
   color: var(--route);
 }
@@ -326,7 +326,7 @@ img.sk { border-radius: 0; }
   background: none;
   border: 1px solid rgb(var(--route-soft-rgb) / 0.34);
   border-radius: var(--radius);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   line-height: 1.6;
 }
 
@@ -371,7 +371,7 @@ img.sk { border-radius: 0; }
   background: var(--s1);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   /* 손끝·마우스가 툴팁 자신에게 걸리면 곧바로 mouseleave 가 돌아 깜빡인다 */
   pointer-events: none;

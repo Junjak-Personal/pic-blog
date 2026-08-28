@@ -118,7 +118,7 @@ const label = computed(() => {
   background: var(--field);
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--ink);
   cursor: pointer;
 }

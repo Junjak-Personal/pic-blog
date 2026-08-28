@@ -413,13 +413,13 @@ async function skip() {
   background: rgb(var(--acc-rgb) / 0.12);
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--faint);
 }
 .bullet.done { background: var(--acc); border-color: var(--acc); color: var(--s0); }
 .bullet.on { background: var(--ink); border-color: var(--ink); color: var(--s0); }
-.step-label { font-size: 13px; color: var(--faint); white-space: nowrap; }
+.step-label { font-size: var(--fs-md); color: var(--faint); white-space: nowrap; }
 .step-label.on { color: var(--ink); }
 .step-rule { width: 22px; height: 1px; background: rgb(var(--mid-rgb) / 0.18); margin: 0 12px; }
 
@@ -436,13 +436,13 @@ async function skip() {
   padding: 13px 24px;
   border-bottom: 1px solid var(--hair);
   background: rgb(var(--acc-rgb) / 0.04);
-  font-size: 13.5px;
+  font-size: var(--fs-md);
 }
 .scanbar .ok { display: flex; align-items: center; gap: 8px; color: var(--ink); }
 .scanbar .ok svg { color: var(--acc); }
 .scanbar .skip { display: flex; align-items: center; gap: 8px; color: var(--mid); }
 .rule { width: 1px; height: 18px; background: var(--hair); }
-.scanbar-note { margin-left: auto; font-size: 10px; color: var(--faint); }
+.scanbar-note { margin-left: auto; font-size: var(--fs-2xs); color: var(--faint); }
 
 /* 미리보기 3분할 */
 .preview { flex: 1; display: grid; grid-template-columns: 1fr 348px 340px; min-height: 0; }
@@ -472,22 +472,22 @@ async function skip() {
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .metric { display: flex; flex-direction: column; gap: 4px; }
-.metric-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.metric-mono { font-size: 13px; color: var(--mid); }
+.metric-label { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.metric-mono { font-size: var(--fs-md); color: var(--mid); }
 .metric-value { display: flex; align-items: baseline; gap: 5px; }
 .metric-value b {
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
 }
-.unit { font-size: 10.5px; color: var(--deep); }
-.gapc { font-size: 13px; color: var(--acc); }
+.unit { font-size: var(--fs-2xs); color: var(--deep); }
+.gapc { font-size: var(--fs-md); color: var(--acc); }
 .arrow { color: var(--faint); flex: none; }
 .metric-rule { width: 1px; height: 34px; background: rgb(var(--mid-rgb) / 0.12); }
-.footnote { margin-left: auto; font-size: 9.5px; line-height: 1.6; color: var(--faint); text-align: right; }
+.footnote { margin-left: auto; font-size: var(--fs-micro); line-height: 1.6; color: var(--faint); text-align: right; }
 
 /* 잠정 포인트 목록 */
 .side {
@@ -505,8 +505,8 @@ async function skip() {
   padding: 15px 18px 13px;
   border-bottom: 1px solid var(--hair);
 }
-.side-title { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
-.side-sub { font-size: 10px; color: var(--faint); }
+.side-title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.side-sub { font-size: var(--fs-2xs); color: var(--faint); }
 
 /* .point-list 와 같은 이유 — overflow 가 없으면 포인트가 많을 때 패널 밖으로 흘러넘친다 */
 .cluster-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
@@ -528,7 +528,7 @@ async function skip() {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   background: rgb(var(--field-rgb) / 0.94);
   color: var(--mid);
@@ -549,11 +549,11 @@ async function skip() {
   color: var(--acc);
 }
 .row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.row-name { font-size: 14px; line-height: 1.2; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-name { font-size: var(--fs-lg); line-height: 1.2; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row.on .row-name { color: var(--ink); }
-.row-sub { font-size: 9.5px; color: var(--faint); white-space: nowrap; }
+.row-sub { font-size: var(--fs-micro); color: var(--faint); white-space: nowrap; }
 .row-sub.gap { color: var(--acc); }
-.row-count { font-size: 10px; color: var(--faint); white-space: nowrap; }
+.row-count { font-size: var(--fs-2xs); color: var(--faint); white-space: nowrap; }
 
 .side-foot {
   flex: none;
@@ -562,7 +562,7 @@ async function skip() {
   gap: 9px;
   padding: 12px 18px;
   border-top: 1px solid var(--hair);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   line-height: 1.6;
   color: var(--faint);
 }
@@ -579,8 +579,8 @@ async function skip() {
   scrollbar-width: none;
 }
 .table-head { display: flex; flex-direction: column; gap: 6px; }
-.t-title { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--deep); }
-.t-sub { font-size: 9.5px; color: var(--faint); }
+.t-title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--deep); }
+.t-sub { font-size: var(--fs-micro); color: var(--faint); }
 
 .table-rows { display: flex; flex-direction: column; gap: 7px; }
 .t-row {
@@ -595,14 +595,14 @@ async function skip() {
 }
 .t-row:hover { background: rgb(var(--ink-rgb) / 0.04); }
 .t-row.on { background: rgb(var(--acc-rgb) / 0.1); border-color: rgb(var(--acc-rgb) / 0.4); }
-.t-label { width: 42px; font-size: 12px; color: var(--faint); }
+.t-label { width: 42px; font-size: var(--fs-sm); color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
-.pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+.pick-hint { max-width: 420px; font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 
 .t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.1); overflow: hidden; }
 .t-fill { display: block; height: 100%; border-radius: 6px; background: var(--acc); }
-.t-count { width: 44px; text-align: right; font-size: 11px; color: var(--faint); }
+.t-count { width: 44px; text-align: right; font-size: var(--fs-xs); color: var(--faint); }
 
 .rules {
   display: flex;
@@ -613,13 +613,13 @@ async function skip() {
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   list-style: none;
 }
-.rules li { font-size: 13px; line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
+.rules li { font-size: var(--fs-md); line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
 .rules li::before { content: '·'; position: absolute; left: 4px; color: var(--acc); }
 .rules-foot {
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   line-height: 1.7;
   color: var(--faint);
 }
@@ -648,10 +648,10 @@ async function skip() {
   border: 1px solid var(--hair);
   color: var(--deep);
 }
-.empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
-.hint { font-size: 10.5px; color: var(--faint); }
-.scan-count { font-size: 15px; color: var(--deep); }
+.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
+.hint { font-size: var(--fs-2xs); color: var(--faint); }
+.scan-count { font-size: var(--fs-xl); color: var(--deep); }
 
 /* 1단계에 머무는 화면 — 「됐다」는 신호와 두 갈래(더 고르기 / 다음) */
 .tick {
@@ -664,11 +664,11 @@ async function skip() {
   border: 1px solid rgb(var(--acc-rgb) / 0.4);
   color: var(--acc);
 }
-.picked-range { font-size: 12px; color: var(--faint); }
+.picked-range { font-size: var(--fs-sm); color: var(--faint); }
 
 .bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
-.progress-line { font-size: 11px; color: var(--deep); }
+.progress-line { font-size: var(--fs-xs); color: var(--deep); }
 
 .failed {
   display: flex;
@@ -689,9 +689,9 @@ async function skip() {
   border: 1px solid var(--hair);
   border-radius: var(--radius);
 }
-.f-name { font-size: 10.5px; color: var(--mid); }
-.f-why { font-size: 10px; color: var(--faint); }
-.error { font-size: 11px; color: var(--danger); }
+.f-name { font-size: var(--fs-2xs); color: var(--mid); }
+.f-why { font-size: var(--fs-2xs); color: var(--faint); }
+.error { font-size: var(--fs-xs); color: var(--danger); }
 .actions { display: flex; align-items: center; gap: 9px; }
 
 @media (max-width: 1240px) {
@@ -712,7 +712,7 @@ async function skip() {
   .side { padding-bottom: calc(var(--cta-h) + env(safe-area-inset-bottom)); }
   .picked { padding-bottom: calc(40px + var(--cta-h) + env(safe-area-inset-bottom)); }
 
-  .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: 12.5px; }
+  .scanbar { flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; font-size: var(--fs-sm); }
   .scanbar-note { display: none; }
 
   /* 격자를 풀고 이 칸 하나가 굴러가게 둔다. 지도는 명시적 높이가 필요하다 — 1fr 은 0 으로 눌린다 */

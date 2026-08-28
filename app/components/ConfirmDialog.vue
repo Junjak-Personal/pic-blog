@@ -74,8 +74,8 @@ const { pending, open } = useConfirmState()
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
-.dlg-title { font-size: 17px; letter-spacing: -0.01em; color: var(--ink); }
-.dlg-desc { font-size: 13px; line-height: 1.7; color: var(--mid); }
+.dlg-title { font-size: var(--title-size); letter-spacing: -0.01em; color: var(--ink); }
+.dlg-desc { font-size: var(--fs-md); line-height: 1.7; color: var(--mid); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 /* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
 

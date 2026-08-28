@@ -228,7 +228,7 @@ onBeforeUnmount(clearMarkers)
   padding: 6px 10px;
 }
 .chip.accent { border-color: rgb(var(--acc-rgb) / 0.4); }
-.chip .mono { font-size: 10px; color: var(--mid); }
+.chip .mono { font-size: var(--fs-2xs); color: var(--mid); }
 .dot-sample { width: 5px; height: 5px; border-radius: 50%; background: rgb(var(--mid-rgb) / 0.5); }
 /* 지도의 동선 레이어와 같은 색 (--route) — .gap-sample 은 시간 공백선이라 세이지 유지 */
 .line-sample { width: 26px; height: 0; border-top: 2px dashed var(--route); }

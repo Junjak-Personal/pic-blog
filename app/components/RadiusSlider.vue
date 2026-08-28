@@ -103,20 +103,20 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
 
 .head { display: flex; align-items: baseline; justify-content: space-between; }
 .title { display: flex; align-items: center; gap: 8px; color: var(--mid); }
-.title .mono { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.title .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; text-transform: uppercase; }
 .title svg { display: block; flex: none; }
 
 .value { display: flex; align-items: baseline; gap: 6px; }
 .num {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: var(--fs-display);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
 }
-.compact .num { font-size: 22px; }
-.unit { font-size: 11px; color: var(--deep); }
+.compact .num { font-size: var(--fs-2xl); }
+.unit { font-size: var(--fs-xs); color: var(--deep); }
 
 .track-wrap {
   position: relative;
@@ -190,7 +190,7 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--faint);
   transition: color 0.12s;
 }
@@ -198,5 +198,5 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
 .labels.sub span { color: var(--faint); }
 .labels.sub span.on { color: var(--acc); }
 .compact .labels { height: 12px; }
-.compact .labels span { font-size: 9.5px; }
+.compact .labels span { font-size: var(--fs-micro); }
 </style>

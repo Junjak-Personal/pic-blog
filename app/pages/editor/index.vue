@@ -128,13 +128,13 @@ useHead({ title: '기록 관리 — pic·blog' })
 .mark { flex: none; }
 .wordmark {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
 .wordmark .dot { color: var(--deep); }
-.kicker { font-size: 10.5px; letter-spacing: 0.16em; color: var(--deep); }
+.kicker { font-size: var(--fs-2xs); letter-spacing: 0.16em; color: var(--deep); }
 
 .top-actions { display: flex; align-items: center; gap: 9px; flex: none; }
 
@@ -198,7 +198,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 9px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.06em;
   color: var(--faint);
   white-space: nowrap;
@@ -206,7 +206,7 @@ useHead({ title: '기록 관리 — pic·blog' })
 
 .main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .title {
-  font-size: 19px;
+  font-size: var(--fs-2xl);
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--ink);
@@ -215,7 +215,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   white-space: nowrap;
 }
 .summary {
-  font-size: 13px;
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--mid);
   opacity: 0.82;
@@ -223,7 +223,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.meta { font-size: 10.5px; color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { font-size: var(--fs-2xs); color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 공개 토글은 편집 1단계로 갔다. 목록에는 상태만 남긴다 — 컨트롤이 아니라 표시다. */
 .private {
   display: inline-block;
@@ -277,8 +277,8 @@ useHead({ title: '기록 관리 — pic·blog' })
   border: 1px solid var(--hair);
   color: var(--deep);
 }
-.empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
+.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
 
 @media (max-width: 900px) {
   .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; }
@@ -289,7 +289,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   .home, .wordmark, .mark { display: none; }
   .kicker {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--title-size);
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--ink);
@@ -306,9 +306,9 @@ useHead({ title: '기록 관리 — pic·blog' })
    * 목록이 들쭉날쭉해졌다. 이제 잘린 전체를 v-tip 이 보여주므로(꾹 누르기)
    * 그 이유가 사라졌다. 행 높이가 고른 쪽이 목록으로서 더 낫다.
    */
-  .title { font-size: 15px; }
+  .title { font-size: var(--fs-xl); }
   .summary { display: none; }
-  .meta { font-size: 10px; line-height: 1.5; }
+  .meta { font-size: var(--fs-2xs); line-height: 1.5; }
   .edit { align-self: center; width: 44px; height: 44px; }
   /*
    * 커버 높이 = 연필 버튼 높이(44px). 행 높이는 어차피 그 터치 타깃이 정하므로

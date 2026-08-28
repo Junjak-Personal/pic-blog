@@ -26,6 +26,8 @@ const stageEl = useTemplateRef<HTMLElement>('stageEl')
 const mapEl = useTemplateRef<InstanceType<typeof TripMap>>('mapEl')
 /** 잘린 제목 전체를 보여주는 판. 네이티브 <dialog> — 포커스 가둠·ESC·배경은 브라우저가 한다 */
 const titleDlg = useTemplateRef<HTMLDialogElement>('titleDlg')
+/** 소비 금액 — 화폐가 늘면 헤더가 자라므로 값은 판에서 본다 */
+const spendDlg = useTemplateRef<HTMLDialogElement>('spendDlg')
 const stageHeight = ref(0)
 
 /**
@@ -52,10 +54,19 @@ const dayGroups = computed(() => groupByDay(points.value))
 const badges = computed(() => badgesOf(dayGroups.value))
 
 /**
- * 이 기록에서 쓴 돈 — 포인트마다 적어둔 것을 화폐별로 합친다.
+ * 이 기록의 소비 금액 — 포인트마다 적어둔 것을 화폐별로 합친다.
  * 적은 것이 하나도 없으면 빈 배열이라 그 줄 자체가 뜨지 않는다.
  */
 const spendTotals = computed(() => totalsOf(points.value.flatMap((p) => p.expenses)))
+/** 그 합계가 «어디서» 왔는지 — 포인트마다 적어둔 항목 그대로. 배지 색·번호는 레일과 같은 값이다. */
+const spendByPoint = computed(() =>
+  points.value
+    .filter((p) => p.expenses.length)
+    .map((p) => {
+      const b = badges.value.get(p.id)
+      return { id: p.id, label: b?.label ?? '', name: b?.name ?? '', color: b?.color, items: p.expenses }
+    }),
+)
 /** null = 전체 */
 const activeDay = ref<string | null>(null)
 const visiblePoints = computed(() =>
@@ -269,60 +280,70 @@ useHead(() => ({
         </h1>
       </div>
 
-      <!-- 모바일 전용: 통계는 접고 아이콘으로 연다 -->
-      <button
-        type="button"
-        class="stats-toggle"
-        :aria-expanded="showStats"
-        aria-controls="post-stats"
-        aria-label="기록 정보"
-        :class="{ hidden: detailOpen }"
-        @click="showStats = !showStats"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
-      </button>
+      <!--
+        오른쪽 묶음. 예전엔 [왼쪽][ⓘ][통계][편집] 넷이 space-between 으로 흩어져서
+        통계가 헤더 한가운데 떠 있었다 — 헤더는 두 덩어리다: 왼쪽은 「어디에 있나」,
+        오른쪽은 「이 기록은 무엇인가 + 무엇을 할 수 있나」.
+      -->
+      <div class="right">
+        <!-- 모바일 전용: 통계는 접고 아이콘으로 연다 -->
+        <button
+          type="button"
+          class="stats-toggle"
+          :aria-expanded="showStats"
+          aria-controls="post-stats"
+          aria-label="기록 정보"
+          :class="{ hidden: detailOpen }"
+          @click="showStats = !showStats"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
+        </button>
 
-      <div id="post-stats" class="stats mono" :class="{ open: showStats }">
-        <span v-if="post.started_at" class="stat">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
-          {{ formatRange(post.started_at, post.ended_at) }}
-        </span>
-        <span class="stat">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-          {{ post.point_count }} 포인트
-        </span>
-        <span class="stat">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M19 7a2 2 0 1 0 0 -4a2 2 0 0 0 0 4" /><path d="M11 19h5.5a3.5 3.5 0 0 0 0 -7h-8a3.5 3.5 0 0 1 0 -7h4.5" /></svg>
-          {{ formatKm(post.distance_km) }} km
-        </span>
-        <span class="stat">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
-          {{ post.photo_count }}장
-        </span>
+        <div id="post-stats" class="stats mono" :class="{ open: showStats }">
+          <span v-if="post.started_at" class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
+            {{ formatRange(post.started_at, post.ended_at) }}
+          </span>
+          <span class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
+            {{ post.point_count }} 포인트
+          </span>
+          <span class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M19 7a2 2 0 1 0 0 -4a2 2 0 0 0 0 4" /><path d="M11 19h5.5a3.5 3.5 0 0 0 0 -7h-8a3.5 3.5 0 0 1 0 -7h4.5" /></svg>
+            {{ formatKm(post.distance_km) }} km
+          </span>
+          <span class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
+            {{ post.photo_count }}장
+          </span>
 
-        <!--
-          합계는 «아래 줄» 통째로 쓴다. 다른 값들 옆에 붙이면 자리가 모자라고, 화폐가
-          둘 이상이면 「12,500원 · 1,200엔」이 옆 항목과 같은 구분점으로 이어져
-          무엇이 한 값인지 읽히지 않는다.
-        -->
-        <span v-if="spendTotals.length" class="stat spend">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M18 11v-2a2 2 0 0 0 -2 -2h-10a2 2 0 0 0 0 4h1" /><path d="M17 14v.01" /></svg>
-          <span class="spend-label">쓴 돈</span>
-          <b v-for="t in spendTotals" :key="t.currency" class="spend-amt">{{ formatMoney(t.amount, t.currency) }}</b>
-        </span>
+          <!--
+            헤더에는 「소비 금액」 한 칸만 둔다. 화폐별 금액을 여기 늘어놓으면 화폐가 늘 때마다
+            줄이 하나씩 붙어 헤더가 자란다 (실제로 두 줄이 됐다) — 값은 눌러서 판으로 본다.
+          -->
+          <button
+            v-if="spendTotals.length"
+            type="button"
+            class="stat spend"
+            @click="spendDlg?.showModal()"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M18 11v-2a2 2 0 0 0 -2 -2h-10a2 2 0 0 0 0 4h1" /><path d="M17 14v.01" /></svg>
+            소비 금액
+          </button>
 
-        <!-- 좁은 화면 — 이 판이 「기록 정보」다. 편집으로 가는 문도 여기 둔다 -->
-        <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link narrow-only">
+          <!-- 좁은 화면 — 이 판이 「기록 정보」다. 편집으로 가는 문도 여기 둔다 -->
+          <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link narrow-only">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+            기록 편집
+          </NuxtLink>
+        </div>
+
+        <!-- 넓은 화면 — 헤더 가장 오른쪽 -->
+        <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link wide-only">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
           기록 편집
         </NuxtLink>
       </div>
-
-      <!-- 넓은 화면 — 헤더 가장 오른쪽 -->
-      <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link wide-only">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
-        기록 편집
-      </NuxtLink>
     </header>
 
     <div ref="stageEl" class="stage">
@@ -365,6 +386,34 @@ useHead(() => ({
         />
       </Transition>
     </div>
+
+    <!-- 소비 금액 — 화폐별 합계. 헤더는 이름만 말하고 값은 여기서 본다 -->
+    <dialog ref="spendDlg" class="titledlg" aria-label="소비 금액">
+      <h2 class="mono dlg-head">소비 금액</h2>
+      <!--
+        합계만 보여주면 「4,455원」이 어디서 나온 값인지 알 길이 없다 —
+        포인트마다 적어둔 항목을 그대로 펼쳐 두고 그 아래 합계를 놓는다.
+      -->
+      <ul class="scroll-y spendlist">
+        <li v-for="row in spendByPoint" :key="row.id" class="spendrow">
+          <span class="mono spend-badge" :style="{ '--day': row.color }">{{ row.label }}</span>
+          <span class="spend-name">{{ row.name }}</span>
+          <span class="spend-items">
+            <span v-for="(x, i) in row.items" :key="i" class="spend-item">
+              <span class="spend-item-name">{{ x.item || '항목 없음' }}</span>
+              <b class="mono">{{ formatMoney(x.amount, x.currency) }}</b>
+            </span>
+          </span>
+        </li>
+      </ul>
+      <div class="spendsum">
+        <span class="mono spendsum-label">합계</span>
+        <b v-for="t in spendTotals" :key="t.currency" class="mono spendsum-amt">{{ formatMoney(t.amount, t.currency) }}</b>
+      </div>
+      <form method="dialog">
+        <button type="submit" class="mono titledlg-close">닫기</button>
+      </form>
+    </dialog>
 
     <!-- 제목 전체. form method="dialog" 라 닫기에 스크립트가 필요 없다 -->
     <dialog ref="titleDlg" class="titledlg" aria-label="기록 제목">
@@ -428,14 +477,18 @@ useHead(() => ({
   height: calc(var(--topbar-h) + var(--top-inset));
   background: var(--s0);
 }
-.left { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.left { display: flex; align-items: center; gap: var(--topbar-gap); min-width: 0; }
+/* 통계와 편집 버튼은 한 덩어리다 — 사이가 벌어지면 통계가 「떠 있는 글자」로 보인다 */
+.right { display: flex; align-items: center; gap: 16px; flex: none; }
 /* h1 은 의미를 지키고, 자르기·누르기는 안쪽 버튼이 맡는다 —
    inline-block 인 버튼을 h1 이 직접 자르면 말줄임표 없이 잘리기만 한다 */
 .title-h { display: flex; min-width: 0; }
 .title {
   display: flex;
   min-width: 0;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: var(--title-size);
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
   text-align: left;
@@ -456,7 +509,7 @@ useHead(() => ({
   padding: 20px;
 }
 .titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
-.titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
+.titledlg-text { font-size: var(--fs-2xl); line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
 .titledlg-close {
   display: block;
   margin: 16px 0 0 auto;
@@ -464,7 +517,7 @@ useHead(() => ({
   padding: 0 15px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--mid);
   cursor: pointer;
 }
@@ -478,23 +531,69 @@ useHead(() => ({
   padding: 0 13px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--mid);
 }
 .edit-link:hover { border-color: var(--focus-border); color: var(--ink); }
 .edit-link.narrow-only { display: none; }
 
-.stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 11px; color: var(--deep); flex: none; }
+.stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: var(--fs-xs); color: var(--deep); flex: none; }
 /* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다
    (base.css 가 display 를 :where() 에 두고 있어 이 한 줄이 그대로 이긴다) */
 .stats-toggle { display: none; }
 .stat { display: flex; align-items: center; gap: 6px; }
-/* 아래 줄 전체 — 앞 줄과 선으로 끊어 「이건 다른 종류의 값」임을 보인다 */
-.spend { flex: 1 1 100%; justify-content: flex-end; gap: 8px; padding-top: 4px; border-top: 1px solid var(--hair-soft); }
-.spend-label { color: var(--faint); }
-.spend-amt { color: var(--ink); font-weight: 600; }
-/* 화폐가 여럿이면 사이를 벌려 둔다 — 붙어 있으면 한 값으로 읽힌다 */
-.spend-amt + .spend-amt { margin-left: 4px; }
+/* 눌러서 여는 칸이라 나머지 통계보다 한 톤 밝다 — 그것들은 글자고 이것만 조작이다 */
+.spend { color: var(--mid); cursor: pointer; }
+.spend:hover { color: var(--ink); }
+.spend svg { color: var(--acc); }
+
+.dlg-head { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--deep); }
+.spendlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(52vh, 420px);
+}
+.spendrow {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--hair-soft);
+}
+/* 레일·마커와 같은 번호·색이다 — 어느 포인트에서 쓴 돈인지 눈으로 잇는다 */
+.spend-badge {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--day, var(--mid));
+  border: 1px solid var(--day, rgb(var(--acc-rgb) / 0.55));
+}
+.spend-name { font-size: var(--fs-md); color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spend-items { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.spend-item { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); color: var(--faint); }
+.spend-item-name { color: var(--deep); }
+.spend-item b { font-size: var(--fs-md); color: var(--ink); font-weight: 600; }
+
+.spendsum {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+}
+.spendsum-label { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.spendsum-amt { font-size: var(--fs-2xl); color: var(--ink); }
 .stat svg { color: var(--faint); flex: none; }
 
 .stage { flex: 1; position: relative; min-height: 0; display: grid; grid-template-columns: 1fr 348px; }
@@ -542,15 +641,15 @@ useHead(() => ({
   border: 1px solid var(--hair);
   color: var(--deep);
 }
-.state h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.state p { max-width: 440px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
-.state-stat { font-size: 11px; color: var(--deep); }
+.state h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.state p { max-width: 440px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
+.state-stat { font-size: var(--fs-xs); color: var(--deep); }
 .back-link {
   margin-top: 6px;
   padding: 9px 15px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--mid);
 }
 
@@ -562,7 +661,7 @@ useHead(() => ({
         헤더가 자라고 그만큼 지도·레일이 아래로 밀렸다 — 여닫을 때마다 화면이 출렁였다.
         상세 시트의 ⓘ 판과 같은 처리를 쓴다: 흐름에서 빼서(absolute) 덮는다. */
   .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); min-height: 0; padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; flex-wrap: nowrap; }
-  .title { font-size: 15px; }
+  .title { font-size: var(--title-size-sm); }
   .left { flex: 1; min-width: 0; gap: 12px; }
 
   .stats-toggle {
@@ -597,15 +696,12 @@ useHead(() => ({
     padding: 10px 14px;
     background: var(--s0);
     border-bottom: 1px solid var(--hair);
-    font-size: 10px;
+    font-size: var(--fs-2xs);
   }
   .stats.open { display: flex; }
   /* 넓은 화면 몫은 감추고, 판 안의 것만 남긴다 */
   .edit-link.wide-only { display: none; }
   .edit-link.narrow-only { display: flex; flex-basis: 100%; justify-content: center; min-height: 40px; margin-top: 2px; }
-  /* 「쓴 돈」 줄은 자기 flex-end 를 따로 갖고 있다 — 같이 돌려주지 않으면
-     칩은 왼쪽, 금액만 오른쪽으로 갈라져 한 줄 걸러 좌우가 뒤집힌다 */
-  .spend { justify-content: flex-start; }
   .stat svg { display: none; }
 
   .stage { grid-template-columns: 1fr; grid-template-rows: 46dvh 1fr; }

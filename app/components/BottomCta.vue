@@ -65,7 +65,7 @@ onMounted(() => {
     backdrop-filter: blur(14px);
     border-top: 1px solid rgb(var(--acc-rgb) / 0.22);
   }
-  .note { font-size: 10.5px; color: var(--faint); text-align: center; }
+  .note { font-size: var(--fs-2xs); color: var(--faint); text-align: center; }
   .row { display: flex; align-items: center; gap: 8px; }
   /* 슬롯에 들어오는 버튼·링크는 폭을 나눠 갖고 44px 터치 타깃을 갖는다 */
   .row :deep(> *) {
@@ -83,7 +83,7 @@ onMounted(() => {
      *    (편집 화면이 그래서 혼자 15px 로 올려 쓰고 있었다). 하단 CTA 는 그 화면에서
      *    가장 큰 버튼이므로 셋 다 같은 크기로 간다.
      */
-    font-size: 15px;
+    font-size: var(--fs-xl);
   }
 }
 </style>

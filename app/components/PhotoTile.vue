@@ -72,7 +72,7 @@ const props = defineProps<{
   left: 4px;
   padding: 1px 4px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: var(--fs-micro);
   background: rgb(var(--s0-rgb) / 0.72);
   color: var(--mid);
 }
@@ -86,7 +86,7 @@ const props = defineProps<{
   bottom: calc(var(--tile-bar-h) + 4px);
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: var(--fs-micro);
 }
 /* 이 포인트의 대표 — 왼쪽.
    🔴 예전엔 밝은 연두 바탕에 검정 글자였는데 사진 위에서 글자가 안 읽혔다.
@@ -106,7 +106,7 @@ const props = defineProps<{
   height: var(--tile-bar-h);
   padding: 0 3px 0 6px;
 }
-.shot { font-size: 9px; color: var(--faint); }
+.shot { font-size: var(--fs-micro); color: var(--faint); }
 </style>
 
 <!--

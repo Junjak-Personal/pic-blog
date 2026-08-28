@@ -72,7 +72,7 @@
   padding: 7px 13px;
   border-radius: 999px;
   background: rgb(var(--sheet-rgb) / 0.72);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.06em;
   color: var(--faint);
 }

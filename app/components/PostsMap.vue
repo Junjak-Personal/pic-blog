@@ -121,7 +121,7 @@ const latRange = computed(() => {
   pointer-events: none;
   color: var(--mid);
 }
-.badge .mono { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+.badge .mono { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; }
 
 @media (max-width: 900px) {
   .badge { display: none; }

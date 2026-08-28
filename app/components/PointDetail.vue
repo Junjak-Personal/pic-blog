@@ -260,11 +260,11 @@ const deviceLine = computed(() => {
   border-radius: 50%;
   background: var(--day, var(--ink));
   color: var(--s0);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 .name {
-  font-size: 29px;
+  font-size: var(--fs-display);
   letter-spacing: -0.025em;
   line-height: 1;
   color: var(--ink);
@@ -273,7 +273,7 @@ const deviceLine = computed(() => {
   text-overflow: ellipsis;
 }
 .meta { display: flex; align-items: center; gap: 6px; padding-top: 3px; color: var(--faint); flex: none; }
-.meta .mono { font-size: 11px; color: var(--deep); }
+.meta .mono { font-size: var(--fs-xs); color: var(--deep); }
 .hact { margin-left: auto; display: flex; align-items: center; gap: 2px; flex: none; }
 
 .close {
@@ -342,7 +342,7 @@ const deviceLine = computed(() => {
   grid-template-columns: 48px 1fr;
   gap: 7px 14px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 .ipair dt { color: var(--faint); }
 .ipair dd { margin: 0; color: var(--mid); }
@@ -356,7 +356,7 @@ const deviceLine = computed(() => {
 }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.06em;
   color: var(--mid);
   border: 1px solid rgb(var(--acc-rgb) / 0.4);
@@ -364,7 +364,7 @@ const deviceLine = computed(() => {
   padding: 4px 9px;
   white-space: nowrap;
 }
-.para { font-size: 14.5px; line-height: 1.78; color: var(--mid); text-wrap: pretty; }
+.para { font-size: var(--fs-lg); line-height: 1.78; color: var(--mid); text-wrap: pretty; }
 
 .exif {
   margin-top: auto;
@@ -373,7 +373,7 @@ const deviceLine = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--faint);
 }
 
@@ -404,7 +404,7 @@ const deviceLine = computed(() => {
      아래 border-bottom 1px 까지 포함한 값이다. */
   .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 0 12px 0 18px; touch-action: none; }
   .wide-only { display: none; }
-  .name { font-size: 26px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { font-size: var(--fs-display); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 본문은 스캐터만. 태그·본문·EXIF 는 전부 ⓘ 판에 모였다 — 흩어놓지 않는다. */
   .body { position: relative; grid-template-columns: 1fr; grid-template-rows: 1fr; }
   .side { display: none; }
@@ -413,6 +413,6 @@ const deviceLine = computed(() => {
   .pnav.prev { left: 8px; }
   .pnav.next { right: 8px; }
   .meta { padding-top: 0; }
-  .para { font-size: 15px; line-height: 1.8; }
+  .para { font-size: var(--fs-xl); line-height: 1.8; }
 }
 </style>

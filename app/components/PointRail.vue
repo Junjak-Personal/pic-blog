@@ -156,8 +156,8 @@ function dayLabel(g: DayGroup<Point>) {
   padding: 15px 18px 13px;
   border-bottom: 1px solid var(--hair);
 }
-.title { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
-.sub { font-size: 10px; color: var(--faint); }
+.title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.sub { font-size: var(--fs-2xs); color: var(--faint); }
 
 /* 날짜가 많으면 가로로 밀린다 — 세로로 접으면 그만큼 목록이 짧아진다 */
 .tabs {
@@ -181,7 +181,7 @@ function dayLabel(g: DayGroup<Point>) {
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: 999px;
   background: rgb(var(--field-rgb) / 0.7);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--deep);
   cursor: pointer;
   white-space: nowrap;
@@ -207,9 +207,9 @@ function dayLabel(g: DayGroup<Point>) {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--hair-soft);
 }
-.sep-day { font-size: 10px; letter-spacing: 0.1em; color: var(--day); }
-.sep-date { font-size: 9.5px; color: var(--faint); }
-.sep-count { margin-left: auto; font-size: 9.5px; color: var(--faint); }
+.sep-day { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--day); }
+.sep-date { font-size: var(--fs-micro); color: var(--faint); }
+.sep-count { margin-left: auto; font-size: var(--fs-micro); color: var(--faint); }
 
 .row {
   display: grid;
@@ -229,7 +229,7 @@ function dayLabel(g: DayGroup<Point>) {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   background: rgb(var(--marker-rgb) / 0.94);
   color: var(--day, var(--mid));
@@ -241,7 +241,7 @@ function dayLabel(g: DayGroup<Point>) {
 
 .main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .name {
-  font-size: 14.5px;
+  font-size: var(--fs-lg);
   line-height: 1.2;
   color: var(--mid);
   white-space: nowrap;
@@ -249,7 +249,7 @@ function dayLabel(g: DayGroup<Point>) {
   text-overflow: ellipsis;
 }
 .row.on .name { color: var(--ink); }
-.sub2 { font-size: 10px; color: var(--faint); white-space: nowrap; }
+.sub2 { font-size: var(--fs-2xs); color: var(--faint); white-space: nowrap; }
 
 .open {
   width: 28px;
@@ -269,7 +269,7 @@ function dayLabel(g: DayGroup<Point>) {
   justify-content: space-between;
   padding: 12px 18px;
   border-top: 1px solid var(--hair);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--faint);
 }
 .cam { display: flex; align-items: center; gap: 6px; }
@@ -282,8 +282,8 @@ function dayLabel(g: DayGroup<Point>) {
   .tab { min-height: 32px; padding: 0 12px; }
   .row { grid-template-columns: 24px 1fr 40px; padding: 10px 8px 10px 16px; }
   .sep { padding: 6px 12px 6px 16px; }
-  .num { width: 23px; height: 23px; font-size: 9.5px; }
-  .name { font-size: 13.5px; }
+  .num { width: 23px; height: 23px; font-size: var(--fs-micro); }
+  .name { font-size: var(--fs-md); }
   .open { width: 40px; height: 44px; }
 }
 </style>

@@ -29,7 +29,7 @@ const props = defineProps<{ files: SkippedPhoto[] }>()
   text-align: left;
 }
 .head { padding: 9px 12px; border-bottom: 1px solid var(--hair); }
-.count { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--deep); }
+.count { font-size: var(--fs-2xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--deep); }
 .list { max-height: 168px; margin: 0; padding: 0; list-style: none; }
 .list li {
   display: flex;
@@ -40,6 +40,6 @@ const props = defineProps<{ files: SkippedPhoto[] }>()
   border-bottom: 1px solid var(--hair-soft);
 }
 .list li:last-child { border-bottom: 0; }
-.name { font-size: 10.5px; color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.why { font-size: 9.5px; color: var(--faint); flex: none; }
+.name { font-size: var(--fs-2xs); color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.why { font-size: var(--fs-micro); color: var(--faint); flex: none; }
 </style>

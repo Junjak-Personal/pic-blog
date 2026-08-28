@@ -154,7 +154,7 @@ onBeforeUnmount(clearMarkers)
   border-radius: var(--radius);
   padding: 6px 10px;
 }
-.chip .mono { font-size: 10px; color: var(--mid); }
+.chip .mono { font-size: var(--fs-2xs); color: var(--mid); }
 .dot-sample { width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--acc-rgb) / 0.95); }
 .gain-sample {
   display: grid;
@@ -165,7 +165,7 @@ onBeforeUnmount(clearMarkers)
   background: rgb(var(--acc-rgb) / 0.28);
   border: 1.5px dashed var(--acc);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-micro);
   color: var(--ink);
 }
 .fresh-sample {
@@ -177,7 +177,7 @@ onBeforeUnmount(clearMarkers)
   background: var(--acc);
   border: 1.5px solid var(--ink);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--s0);
 }

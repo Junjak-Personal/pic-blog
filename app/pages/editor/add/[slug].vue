@@ -358,12 +358,12 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   color: var(--s0);
   border-radius: 6px;
   padding: 4px 9px;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
 }
-.ctx { font-size: 10.5px; color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx { font-size: var(--fs-2xs); color: var(--deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .right { display: flex; align-items: center; gap: 14px; flex: none; }
-.skipped { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--faint); }
+.skipped { display: flex; align-items: center; gap: 7px; font-size: var(--fs-2xs); color: var(--faint); }
 
 /* 버튼은 base.css 의 .btn 한 벌을 쓴다 */
 
@@ -378,9 +378,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   border: 1px solid rgb(var(--acc-rgb) / 0.4);
   color: var(--acc);
 }
-.done-detail { font-size: 12px; color: var(--deep); }
+.done-detail { font-size: var(--fs-sm); color: var(--deep); }
 .leftover {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--route);
   border: 1px solid rgb(var(--route-soft-rgb) / 0.34);
   border-radius: var(--radius);
@@ -415,19 +415,19 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
 .metric { display: flex; flex-direction: column; gap: 4px; }
-.metric-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.metric-label { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 .metric-value { display: flex; align-items: baseline; gap: 5px; }
 .metric-value b {
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
 }
-.unit { font-size: 10.5px; color: var(--deep); }
+.unit { font-size: var(--fs-2xs); color: var(--deep); }
 .metric-rule { width: 1px; background: rgb(var(--mid-rgb) / 0.12); }
-.footnote { margin-left: auto; font-size: 9.5px; line-height: 1.6; color: var(--faint); text-align: right; }
+.footnote { margin-left: auto; font-size: var(--fs-micro); line-height: 1.6; color: var(--faint); text-align: right; }
 
 .side {
   display: flex;
@@ -444,8 +444,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   padding: 15px 18px 13px;
   border-bottom: 1px solid var(--hair);
 }
-.side-title { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
-.side-sub { font-size: 10px; color: var(--faint); }
+.side-title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.side-sub { font-size: var(--fs-2xs); color: var(--faint); }
 /* overflow 가 없으면 포인트가 많을 때 목록이 패널 밖으로 흘러넘친다 */
 .side-list { flex: 1; min-height: 0; overflow-y: auto; }
 
@@ -457,7 +457,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   background: rgb(var(--acc-rgb) / 0.06);
   border-top: 1px solid var(--hair-soft);
   border-bottom: 1px solid var(--hair-soft);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--deep);
@@ -476,20 +476,20 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
 }
 .num.gain { background: rgb(var(--acc-rgb) / 0.28); color: var(--ink); border: 1px dashed var(--acc); }
-.num.fresh { background: var(--acc); color: var(--s0); border: 1px solid var(--ink); font-size: 11px; }
+.num.fresh { background: var(--acc); color: var(--s0); border: 1px solid var(--ink); font-size: var(--fs-xs); }
 .row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.row-name { font-size: 14px; line-height: 1.2; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row-sub { font-size: 9.5px; color: var(--faint); white-space: nowrap; }
-.row-count { font-size: 10.5px; color: var(--acc); white-space: nowrap; }
+.row-name { font-size: var(--fs-lg); line-height: 1.2; color: var(--mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-sub { font-size: var(--fs-micro); color: var(--faint); white-space: nowrap; }
+.row-count { font-size: var(--fs-2xs); color: var(--acc); white-space: nowrap; }
 .side-foot {
   flex: none;
   padding: 12px 18px;
   border-top: 1px solid var(--hair);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   line-height: 1.6;
   color: var(--faint);
 }
@@ -504,8 +504,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   scrollbar-width: none;
 }
 .table-head { display: flex; flex-direction: column; gap: 6px; }
-.t-title { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--deep); }
-.t-sub { font-size: 9.5px; color: var(--faint); }
+.t-title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--deep); }
+.t-sub { font-size: var(--fs-micro); color: var(--faint); }
 .table-rows { display: flex; flex-direction: column; gap: 7px; }
 .t-row {
   display: flex;
@@ -519,18 +519,18 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 .t-row:hover { background: rgb(var(--ink-rgb) / 0.04); }
 .t-row.on { background: rgb(var(--acc-rgb) / 0.1); border-color: rgb(var(--acc-rgb) / 0.4); }
-.t-label { width: 42px; font-size: 12px; color: var(--faint); }
+.t-label { width: 42px; font-size: var(--fs-sm); color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
-.pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+.pick-hint { max-width: 420px; font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 
 .t-bar { flex: 1; display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: rgb(var(--mid-rgb) / 0.1); }
 .t-fill { display: block; height: 100%; }
 .t-fill.join { background: rgb(var(--acc-rgb) / 0.35); }
 .t-fill.new { background: var(--acc); }
-.t-count { width: 52px; text-align: right; font-size: 11px; color: var(--faint); }
+.t-count { width: 52px; text-align: right; font-size: var(--fs-xs); color: var(--faint); }
 
-.t-legend { display: flex; gap: 14px; font-size: 9.5px; color: var(--faint); }
+.t-legend { display: flex; gap: 14px; font-size: var(--fs-micro); color: var(--faint); }
 .t-legend span { display: flex; align-items: center; gap: 6px; }
 .sw { width: 9px; height: 9px; border-radius: 3px; display: block; }
 .sw.join { background: rgb(var(--acc-rgb) / 0.35); }
@@ -545,13 +545,13 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
   list-style: none;
 }
-.rules li { font-size: 13px; line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
+.rules li { font-size: var(--fs-md); line-height: 1.6; color: var(--mid); padding-left: 16px; position: relative; }
 .rules li::before { content: '·'; position: absolute; left: 4px; color: var(--acc); }
 .rules-foot {
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   line-height: 1.7;
   color: var(--faint);
 }
@@ -569,8 +569,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
      내용이 넘치면 여기서 굴러야 잘리지 않는다 */
   overflow-y: auto;
 }
-.empty h3 { font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: 14px; line-height: 1.7; color: var(--mid); opacity: 0.85; }
+.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
+.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
 .bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
 .bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .failed { display: flex; flex-direction: column; gap: 6px; width: min(460px, 100%); margin: 0; padding: 0; list-style: none; }
@@ -584,9 +584,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   border: 1px solid var(--hair);
   border-radius: var(--radius);
 }
-.f-name { font-size: 10.5px; color: var(--mid); }
-.f-why { font-size: 10px; color: var(--faint); }
-.error { font-size: 11px; color: var(--danger); }
+.f-name { font-size: var(--fs-2xs); color: var(--mid); }
+.f-why { font-size: var(--fs-2xs); color: var(--faint); }
+.error { font-size: var(--fs-xs); color: var(--danger); }
 .actions { display: flex; align-items: center; gap: 9px; }
 
 @media (max-width: 1240px) {
@@ -607,7 +607,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     flex: 1;
     min-width: 0;
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--title-size-sm);
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--ink);
@@ -616,7 +616,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 
   /* 완료·실패 화면의 버튼은 여기서만 누른다 (하단 CTA 가 없는 단계다) — 엄지 크기로 */
   .actions { width: 100%; max-width: 340px; }
-  .actions .btn { flex: 1; min-height: 44px; font-size: 12.5px; }
+  .actions .btn { flex: 1; min-height: 44px; font-size: var(--fs-sm); }
 
   /* 지도는 명시적 높이가 필요하다 — .page 가 min-height 라 1fr 은 0 으로 눌린다 */
   /* 격자를 풀고 이 칸 하나가 굴러가게 둔다 (문서는 스크롤하지 않는다) */

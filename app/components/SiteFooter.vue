@@ -48,7 +48,7 @@ const year = new Date().getFullYear()
   color: var(--faint);
 }
 .side { display: flex; align-items: center; gap: 2px; }
-.copy { font-size: 11px; }
+.copy { font-size: var(--fs-xs); }
 
 /* 아이콘 전용 버튼 — 상자를 두르지 않는다. 배경은 눌렀을 때만 잠깐 뜬다. */
 .ico {
@@ -64,7 +64,7 @@ const year = new Date().getFullYear()
 
 @media (max-width: 900px) {
   .sitefoot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
-  .copy { font-size: 10px; }
+  .copy { font-size: var(--fs-2xs); }
   /* 헤더 밖 조작 요소는 44px */
   .ico { width: 44px; height: 44px; }
 }

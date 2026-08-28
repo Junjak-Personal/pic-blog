@@ -20,7 +20,7 @@
   height: 26px;
   border-radius: 50%;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   background: rgb(var(--marker-rgb) / 0.94);
@@ -131,5 +131,5 @@
  * 좁은 띠(190px)에 포인트가 다 들어가야 해서 알약만 26 → 24 로 줄이고, 나머지는
  * 전부 위 규칙을 그대로 받는다. .gain / .fresh 와 같은 방식이다.
  */
-.map-marker.sm .body { width: 24px; height: 24px; font-size: 9.5px; border-width: 1px; }
+.map-marker.sm .body { width: 24px; height: 24px; font-size: var(--fs-micro); border-width: 1px; }
 .map-marker.sm:hover .body { background: var(--acc); border-color: var(--acc); color: var(--s0); }

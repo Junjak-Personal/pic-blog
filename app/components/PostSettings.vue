@@ -244,19 +244,19 @@ function confirmRecluster() {
   padding: 0 12px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--mid);
   cursor: pointer;
 }
 .revert:hover { background: rgb(var(--acc-rgb) / 0.1); }
-.warn { font-size: 10.5px; color: var(--danger); }
+.warn { font-size: var(--fs-2xs); color: var(--danger); }
 
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.blabel { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
-.bnow { font-size: 11px; color: var(--deep); }
+.blabel { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.bnow { font-size: var(--fs-xs); color: var(--deep); }
 
 .field { display: flex; flex-direction: column; gap: 7px; }
-.flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.flabel { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 /* 입력은 base.css 의 .input 한 벌을 쓴다 */
 
 .switch { position: relative; display: flex; align-items: center; gap: 11px; cursor: pointer; }
@@ -266,7 +266,7 @@ function confirmRecluster() {
 .switch input:checked ~ .track { background: rgb(var(--acc-rgb) / 0.9); }
 .switch input:checked ~ .track .knob { transform: translateX(18px); background: var(--s0); }
 .switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
-.switch-text { font-size: 13px; color: var(--mid); }
+.switch-text { font-size: var(--fs-md); color: var(--mid); }
 
 
 .rwrap {
@@ -277,8 +277,8 @@ function confirmRecluster() {
 }
 /* 저장 안 된 변경이 있으면 반경을 못 바꾼다 — 눌리지 않는 이유는 아래 문구가 말한다 */
 .rwrap.locked { opacity: 0.45; pointer-events: none; }
-.hint { font-size: 10.5px; line-height: 1.7; color: var(--faint); }
-.warn { font-size: 10.5px; line-height: 1.7; color: var(--danger); }
+.hint { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
+.warn { font-size: var(--fs-2xs); line-height: 1.7; color: var(--danger); }
 
 .ovl { position: fixed; inset: 0; z-index: 100; background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .dlg {
@@ -298,18 +298,18 @@ function confirmRecluster() {
   border-radius: var(--radius-lg);
   padding: 20px;
 }
-.dlg-title { font-size: 17px; color: var(--ink); }
-.dlg-diff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--deep); }
-.dlg-diff b { color: var(--ink); font-size: 13px; }
+.dlg-title { font-size: var(--title-size); color: var(--ink); }
+.dlg-diff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--deep); }
+.dlg-diff b { color: var(--ink); font-size: var(--fs-md); }
 .dlg-sep { color: var(--faint); }
-.dlg-desc { font-size: 13px; line-height: 1.6; color: var(--mid); }
+.dlg-desc { font-size: var(--fs-md); line-height: 1.6; color: var(--mid); }
 
 .lose { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 10px 12px; list-style: none; background: rgb(var(--danger-rgb) / 0.07); border: 1px solid rgb(var(--danger-rgb) / 0.3); border-radius: var(--radius); }
 .lose li { display: flex; align-items: baseline; gap: 10px; }
-.lose-name { font-size: 13px; color: var(--ink); }
-.lose-detail { margin-left: auto; font-size: 10px; color: var(--danger); }
+.lose-name { font-size: var(--fs-md); color: var(--ink); }
+.lose-detail { margin-left: auto; font-size: var(--fs-2xs); color: var(--danger); }
 
-.dlg-note { font-size: 10px; line-height: 1.7; color: var(--faint); }
+.dlg-note { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
 

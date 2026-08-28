@@ -1417,12 +1417,12 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   height: calc(var(--topbar-h) + var(--top-inset));
   background: linear-gradient(rgb(var(--acc-rgb) / 0.06), rgb(var(--acc-rgb) / 0.06)), var(--s0);
 }
-.top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.top-left { display: flex; align-items: center; gap: var(--topbar-gap); min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 14px; flex: none; }
 
 
 .err {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--danger);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1449,7 +1449,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border: 0;
   background: none;
   font-family: var(--font-display);
-  font-size: 16px;
+  /* 뷰어의 제목과 같은 값이다 — 두 화면을 오가며 같은 제목이 커졌다 작아졌다 하면 안 된다 */
+  font-size: var(--title-size);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -1471,7 +1472,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 20px;
 }
 .titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
-.titledlg-text { font-size: 20px; line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
+.titledlg-text { font-size: var(--fs-2xl); line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
 .titledlg-close {
   display: block;
   margin: 16px 0 0 auto;
@@ -1479,7 +1480,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 0 15px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--mid);
   cursor: pointer;
 }
@@ -1503,7 +1504,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-radius: var(--radius);
   background: rgb(var(--s1-rgb) / 0.7);
   color: var(--faint);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   letter-spacing: 0.04em;
   cursor: pointer;
 }
@@ -1517,13 +1518,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-radius: 50%;
   background: rgb(var(--acc-rgb) / 0.14);
   border: 1px solid rgb(var(--mid-rgb) / 0.22);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--mid);
 }
 .stepbtn.on .sdot { background: var(--mid); border-color: var(--mid); color: var(--s0); }
 
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
-.flabel { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.flabel { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
 /* 입력은 base.css 의 .input / .input.small 한 벌을 쓴다 */
 
@@ -1550,8 +1551,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 15px 18px 13px;
   border-bottom: 1px solid var(--hair);
 }
-.ph-title { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
-.ph-lock { font-size: 10px; color: var(--faint); }
+.ph-title { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.ph-lock { font-size: var(--fs-2xs); color: var(--faint); }
 
 /* min-height:0 + overflow 가 없으면 포인트가 많을 때 목록이 패널을 넘어
    아래 편집 블록 위로 흘러넘친다 (모바일에서 겹쳐 보이던 증상의 루트 원인) */
@@ -1573,7 +1574,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   background: rgb(var(--field-rgb) / 0.94);
   color: var(--mid);
@@ -1582,7 +1583,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .prow.on .pnum { background: var(--ink); color: var(--s0); border-color: var(--ink); }
 .pmain { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .pname {
-  font-size: 14.5px;
+  font-size: var(--fs-lg);
   line-height: 1.2;
   color: var(--mid);
   white-space: nowrap;
@@ -1590,8 +1591,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   text-overflow: ellipsis;
 }
 .prow.on .pname { color: var(--ink); }
-.psub { font-size: 10px; color: var(--faint); white-space: nowrap; }
-.pcount { font-size: 10px; color: var(--faint); white-space: nowrap; }
+.psub { font-size: var(--fs-2xs); color: var(--faint); white-space: nowrap; }
+.pcount { font-size: var(--fs-2xs); color: var(--faint); white-space: nowrap; }
 
 /* 대표 썸네일 — 지도 마커·목록에 뜨는 사진이라 어느 포인트인지 눈으로 구분된다 */
 .pthumb {
@@ -1624,7 +1625,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border-radius: 50%;
   background: var(--ink);
   color: var(--s0);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 .ptitle { flex: 1; min-width: 0; }
@@ -1636,7 +1637,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 8px 12px;
   border: 1px dashed rgb(var(--mid-rgb) / 0.18);
   border-radius: var(--radius);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--faint);
   white-space: nowrap;
 }
@@ -1657,7 +1658,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 /* 썸네일 픽커 */
 .pick-head { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.hint { font-size: 10px; color: var(--deep); }
+.hint { font-size: var(--fs-2xs); color: var(--deep); }
 .picks {
   flex: 1;
   min-height: 0;
@@ -1672,7 +1673,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .pick { display: block; padding: 0; border: 0; cursor: pointer; }
 /* 설명 좌 · 버튼 우, 양 끝으로. 좁아지면 버튼이 아래로 내려간다 */
 .pick-foot { flex: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
-.pick-note { min-width: 0; font-size: 10px; color: var(--faint); }
+.pick-note { min-width: 0; font-size: var(--fs-2xs); color: var(--faint); }
 /* 고르는 중 — 다음에 누를 것이 「버튼」이 아니라 「사진」이라는 걸 색으로 말한다 (2단계와 같다) */
 .picks.picking .pick:hover { box-shadow: inset 0 0 0 2px var(--acc); }
 
@@ -1696,7 +1697,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.06em;
   color: var(--mid);
   background: rgb(var(--acc-rgb) / 0.12);
@@ -1748,13 +1749,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   box-shadow: var(--focus-ring);
   color: var(--mid);
 }
-.tag-input { width: 76px; font-size: 10.5px; color: var(--ink); }
+.tag-input { width: 76px; font-size: var(--fs-2xs); color: var(--ink); }
 .tag-input:focus-visible { outline: none; }
 .tag-input::placeholder { color: var(--faint); }
 
 /* 라벨 좌 · 카운터 우. 규칙이 없어서 두 인라인 span 이 「콘텐츠54 / 2000」으로 붙어 있었다. */
 .flabel-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.counter { font-size: 9px; color: var(--faint); }
+.counter { font-size: var(--fs-micro); color: var(--faint); }
 .counter.full { color: var(--danger); }
 .content {
   flex: 1;
@@ -1764,7 +1765,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
   padding: 12px 13px;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   line-height: 1.72;
   color: var(--mid);
 }
@@ -1805,7 +1806,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   padding: 0 9px;
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
   border-radius: var(--radius);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--mid);
   cursor: pointer;
 }
@@ -1813,10 +1814,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 고르는 중 — 2단계 「커버 지정」(.addbtn.armed)과 같은 강조다. 없으면 모드가 켜진 것이 안 보인다. */
 .minibtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
 .minibtn:disabled { opacity: 0.45; cursor: default; }
-.xnote { font-size: 9.5px; color: var(--faint); }
+.xnote { font-size: var(--fs-micro); color: var(--faint); }
 .xtotal { margin-left: auto; display: flex; align-items: baseline; gap: 10px; }
-.xtlabel { font-size: 9.5px; color: var(--faint); }
-.xtotal b { font-size: 12px; color: var(--ink); }
+.xtlabel { font-size: var(--fs-micro); color: var(--faint); }
+.xtotal b { font-size: var(--fs-sm); color: var(--ink); }
 
 /* 빈 상태 */
 .blank {
@@ -1832,8 +1833,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
      내용이 넘치면 여기서 굴러야 잘리지 않는다 */
   overflow-y: auto;
 }
-.blank h3 { font-size: 22px; color: var(--ink); }
-.blank p { font-size: 11px; color: var(--faint); }
+.blank h3 { font-size: var(--fs-2xl); color: var(--ink); }
+.blank p { font-size: var(--fs-xs); color: var(--faint); }
 
 @media (max-width: 1240px) {
   .split { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
@@ -1877,7 +1878,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
   /* 태그 칩도 터치 타깃이다 — 입력이 16px 로 커지므로 칩도 같이 키운다 */
   .tags { gap: 8px; }
-  .chip { min-height: 36px; font-size: 12px; padding: 4px 6px 4px 11px; }
+  .chip { min-height: 36px; font-size: var(--fs-sm); padding: 4px 6px 4px 11px; }
   .chip-x { width: 24px; height: 24px; }
   /* 입력은 보이지 않는 판을 못 넓힌다 — 상자 자체가 손가락이 닿는 곳이라 44px */
   .chip-add { min-height: 44px; padding: 4px 12px; flex: 1; min-width: 140px; }
@@ -1887,9 +1888,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 보이는 크기는 줄이고 닿는 면적은 44px 로 넓힌다 — 그 8px 이 품목명 칸으로 간다 */
   .xkill { position: relative; width: 32px; height: 32px; }
   .xkill::after { content: ''; position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; }
-  .minibtn { min-height: 40px; font-size: 12px; padding: 0 12px; }
-  .xnote { font-size: 11px; }
-  .xtotal b { font-size: 13.5px; }
+  .minibtn { min-height: 40px; font-size: var(--fs-sm); padding: 0 12px; }
+  .xnote { font-size: var(--fs-xs); }
+  .xtotal b { font-size: var(--fs-md); }
   .tag-input { flex: 1; width: auto; min-width: 0; }
   .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); }
   .field.grow { min-height: 0; }

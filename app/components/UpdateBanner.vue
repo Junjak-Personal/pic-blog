@@ -39,7 +39,7 @@ const dismissed = ref(false)
   border-radius: 999px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
-.msg { font-size: 13px; color: var(--ink); white-space: nowrap; }
+.msg { font-size: var(--fs-md); color: var(--ink); white-space: nowrap; }
 .go {
   flex: none;
   min-height: 32px;
@@ -49,7 +49,7 @@ const dismissed = ref(false)
   /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
   background: var(--primary-fill);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
