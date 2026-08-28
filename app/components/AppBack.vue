@@ -6,8 +6,7 @@
  * 브라우저 뒤로가기도 주소창도 없어 없으면 화면에 갇히기까지 한다.
  * 데스크탑에는 「목록」 같은 명시 링크가 따로 있어 숨긴다.
  *
- * 히스토리가 없으면(그 화면으로 바로 들어왔을 때) fallback 으로 간다 —
- * router.back() 만 믿으면 아무 일도 안 일어나는 막다른 골목이 된다.
+ * 가는 곳은 언제나 fallback 이다 — 이유는 아래 back() 주석에 있다.
  */
 const props = withDefaults(defineProps<{
   fallback: string
@@ -30,15 +29,24 @@ const props = withDefaults(defineProps<{
   always: false,
 })
 
-const router = useRouter()
-
+/**
+ * 🔴 언제나 «위»로 간다 — 온 길이 아니라.
+ *
+ * router.back() 을 쓰면 편집↔뷰어 바로가기 때문에 ← 가 제자리를 오간다.
+ * 편집에서 「공개 화면 보기」로 넘어와 ← 를 누르면, 「기록 목록으로」라고 적힌 버튼이
+ * 편집으로 되돌아간다 — 라벨이 말하는 곳과 실제 가는 곳이 달라진다. 두 화면을 몇 번
+ * 오가면 ← 가 그 둘 사이를 왕복할 뿐 위로는 못 올라간다.
+ * history.length 로 「돌아갈 곳이 있나」를 보던 것도 못 쓴다. 그 값은 이 앱 밖의
+ * 기록까지 세기 때문에, 외부 링크로 바로 들어온 사람이 ← 를 누르면 앱을 떠난다.
+ *
+ * 온 길을 되짚는 것은 브라우저·기기의 뒤로가기가 이미 한다. 두 길은 나뉘어 있는 게 맞다.
+ */
 function back() {
   if (props.intercept) {
     props.intercept()
     return
   }
-  if (window.history.length > 1) router.back()
-  else navigateTo(props.fallback)
+  navigateTo(props.fallback)
 }
 </script>
 
