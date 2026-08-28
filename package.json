@@ -10,6 +10,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@internationalized/date": "^3.12.3",
     "better-sqlite3": "^13.0.3",
     "exifr": "^7.1.3",
     "mapbox-gl": "^3.29.0",

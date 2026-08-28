@@ -98,3 +98,68 @@
 /* 코드가 주인공이고(트리거에도 이게 뜬다) 한글은 무엇인지 알려주는 몫이다 */
 .cur-item .cur-code { letter-spacing: 0.06em; color: var(--ink); }
 .cur-item .cur-name { margin-left: auto; font-size: 12px; color: var(--faint); }
+
+/*
+ * PeriodPicker 의 달력 — DateRangePickerContent 가 body 로 옮기므로 전역이어야 한다
+ * (.ovf-content · .cur-content 와 같은 이유, 같은 판 값).
+ */
+.cal-content {
+  z-index: 120;
+  padding: 12px;
+  background: var(--s1);
+  border: 1px solid rgba(146, 178, 169, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cal-title { font-size: 13px; color: var(--ink); }
+.cal-nav {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--mid);
+  cursor: pointer;
+}
+.cal-nav:hover { background: rgba(146, 178, 169, 0.14); color: var(--ink); }
+.cal-nav[data-disabled] { opacity: 0.35; cursor: default; }
+
+.cal-grid { width: 100%; border-collapse: collapse; }
+.cal-hcell { padding-bottom: 6px; font-size: 10px; font-weight: 400; color: var(--faint); }
+.cal-cell { padding: 0; }
+
+.cal-day {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 34px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--mid);
+  cursor: pointer;
+  user-select: none;
+}
+.cal-day:hover { background: rgba(146, 178, 169, 0.16); color: var(--ink); }
+/* 이번 달이 아닌 날은 흐리게 — 지우면 6주 격자에서 경계가 안 보인다 */
+.cal-day[data-outside-view] { color: var(--faint); opacity: 0.5; }
+.cal-day[data-today] { box-shadow: inset 0 0 0 1px rgba(146, 178, 169, 0.5); }
+/* 범위 안 · 양 끝. 끝 두 날만 채우고 사이는 옅은 띠로 이어 「구간」으로 읽히게 한다. */
+.cal-day[data-highlighted], .cal-day[data-selected] { background: rgba(146, 178, 169, 0.18); color: var(--ink); }
+.cal-day[data-selection-start], .cal-day[data-selection-end],
+.cal-day[data-highlighted-start], .cal-day[data-highlighted-end] {
+  background: var(--acc);
+  color: var(--s0);
+  font-weight: 600;
+}
+.cal-day[data-disabled] { opacity: 0.3; cursor: default; }
+.cal-day[data-unavailable] { text-decoration: line-through; opacity: 0.4; cursor: default; }
+
+@media (max-width: 900px) {
+  /* 손가락으로 찍는다 */
+  .cal-day { width: 40px; height: 40px; font-size: 13px; }
+  .cal-nav { width: 40px; height: 40px; }
+}

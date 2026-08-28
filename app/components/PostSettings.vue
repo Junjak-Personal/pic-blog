@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PeriodPicker from '~/components/PeriodPicker.vue'
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
  * 편집 1단계 「기본 정보」 — 타이틀 · 요약 · 공개 · 기간 · 포인트 범위.
@@ -136,15 +137,7 @@ function confirmRecluster() {
       </div>
 
       <div class="period">
-        <label class="field">
-          <span class="mono flabel">시작</span>
-          <input v-model="startedAt" type="date" class="input mono" data-testid="settings-start-input">
-        </label>
-        <span class="mono dash">–</span>
-        <label class="field">
-          <span class="mono flabel">종료</span>
-          <input v-model="endedAt" type="date" class="input mono" data-testid="settings-end-input">
-        </label>
+        <PeriodPicker v-model:started-at="startedAt" v-model:ended-at="endedAt" />
         <button
           v-if="exifChanged"
           type="button"
@@ -243,14 +236,8 @@ function confirmRecluster() {
 .settings { flex: 1; min-height: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 22px; }
 .block { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
 
-/* 날짜는 「2026. 05. 02.」 한 덩어리라 본문 입력만큼 클 이유가 없다 — 글자와 여백을 줄인다 */
-.period .input { padding: 8px 10px; font-size: 13px; }
-/* 기간 — 두 날짜 입력이 한 줄. 좁아지면 「EXIF 값으로」가 아래로 내려간다 */
-.period { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
-/* 두 날짜가 «한 줄»을 반씩 나눠 갖는다 — 190px 고정이면 680px 블록 안에서 왼쪽에 몰려
-   입력만 짧게 남는다. yyyy. mm. dd. 는 절반 폭에 들어간다 (모바일 390px 에서도). */
-.period .field { flex: 1 1 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.dash { padding-bottom: 12px; color: var(--faint); }
+/* 기간 — 고르개 하나 + 「EXIF 값으로」. 좁아지면 되돌리기 버튼이 아래로 내려간다 */
+.period { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .revert {
   min-height: 40px;
   padding: 0 12px;
@@ -344,16 +331,8 @@ function confirmRecluster() {
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
   .input.title { font-size: 18px; }
-  /* 좁아도 한 줄을 유지한다. 대시만 지워 두 입력에 폭을 넘긴다. */
-  .dash { display: none; }
-  /* 「EXIF 값으로」는 자기 줄로 내려간다 — 날짜 둘 사이에 끼면 셋 다 못 읽는다 */
+  /* 「EXIF 값으로」는 자기 줄로 내려간다 */
   .revert { flex: 1 1 100%; }
-  /*
-   * 🔴 글자는 16px 아래로 못 내린다. iOS 는 16px 미만인 입력에 초점이 가면 화면을
-   *    강제로 확대하고, date 입력도 예외가 아니다 (base.css 의 같은 이유).
-   *    그래서 좁히는 것은 «좌우 여백»뿐이다.
-   */
-  .period .input { min-height: 44px; font-size: 16px; padding-left: 8px; padding-right: 8px; }
   .revert { min-height: 44px; }
   .dlg-actions .btn { flex: 1; min-height: 44px; }
 }
