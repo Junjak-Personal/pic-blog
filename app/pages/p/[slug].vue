@@ -165,8 +165,40 @@ function stepPoint(dir: -1 | 1) {
   }
 }
 
+/*
+ * 공유 카드. 기록마다 제목·요약·커버가 다르므로 사이트 기본값(nuxt.config)을 덮는다.
+ *
+ * 🔴 og:image 는 절대 URL 이어야 한다 — 크롤러는 페이지의 출처를 모른다.
+ *    useRequestURL() 은 서버에서 «실제로 요청된» 주소라, 배포 주소를 상수로 박는 것보다
+ *    안전하다 (개발·프리뷰·커스텀 도메인에서 전부 맞는다).
+ */
+// 🔴 setup 안에서 «한 번» 읽는다. computed 안에서 부르면 lazy 라 setup 컨텍스트를
+//    벗어나 NUXT_E1001 로 500 이 난다 (실제로 그랬다).
+const origin = useRequestURL().origin
+const shareImage = computed(() => {
+  const path = post.value?.cover_display ?? post.value?.cover_thumb
+  return path ? `${origin}${path}` : `${origin}/icons/icon-512.png`
+})
+
 useHead(() => ({
   title: post.value ? `${post.value.title} · pic·blog` : 'pic·blog',
+  meta: post.value
+    ? [
+        { property: 'og:type', content: 'article' },
+        { property: 'og:title', content: post.value.title },
+        {
+          property: 'og:description',
+          content:
+            post.value.summary
+            ?? `${post.value.point_count} 포인트 · 사진 ${post.value.photo_count}장`,
+        },
+        { property: 'og:image', content: shareImage.value },
+        { property: 'og:url', content: `${origin}/p/${post.value.slug}` },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: post.value.title },
+        { name: 'twitter:image', content: shareImage.value },
+      ]
+    : [],
 }))
 </script>
 
