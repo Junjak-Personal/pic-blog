@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MapSkeleton from '~/components/MapSkeleton.vue'
+import MapFrame from '~/components/MapFrame.vue'
 /**
  * 1f 사진 추가 미리보기 지도.
  * 점 = 추가한 사진, 파선 테두리 번호 마커 = 합류하는 기존 포인트, `+` 마커 = 새로 생기는 포인트.
@@ -18,7 +18,15 @@ const props = defineProps<{
   assignment: AssignResult<ClusterInput>
 }>()
 
-const container = ref<HTMLElement | null>(null)
+/** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
+const frame = useTemplateRef<InstanceType<typeof MapFrame>>('frame')
+const container = computed(() => frame.value?.canvas ?? null)
+
+/** 지도가 죽었을 때 대신 세울 목록 — 기존 포인트 다음에 새로 생길 것을 잇는다 */
+const fallbackItems = computed(() => [
+  ...props.points.map((p, i) => ({ num: String(i + 1).padStart(2, '0'), name: p.title ?? `포인트 ${i + 1}`, lat: p.lat, lng: p.lng })),
+  ...props.assignment.news.map((c, i) => ({ num: '+', name: `새 포인트 ${i + 1}`, lat: c.lat, lng: c.lng })),
+])
 const DOTS = 'added-dots'
 
 // 기존 포인트 + 추가 사진 전체를 한 번만 담는다. 반경을 바꿔도 다시 맞추지 않는다.
@@ -105,22 +113,8 @@ onBeforeUnmount(clearMarkers)
 </script>
 
 <template>
-  <div class="wrap">
-    <div ref="container" class="map" />
-
-    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
-    <MapSkeleton v-if="status === 'loading'" />
-
-    <MapFallback
-      v-if="status === 'failed'"
-      :items="[
-        ...props.points.map((p, i) => ({ num: String(i + 1).padStart(2, '0'), name: p.title ?? `포인트 ${i + 1}`, lat: p.lat, lng: p.lng })),
-        ...props.assignment.news.map((c, i) => ({ num: '+', name: `새 포인트 ${i + 1}`, lat: c.lat, lng: c.lng })),
-      ]"
-      @retry="retry"
-    />
-
-    <div v-else-if="status === 'ready'" class="legend">
+  <MapFrame ref="frame" class="wrap" :status="status" :items="fallbackItems" @retry="retry">
+    <div class="legend">
       <div class="chip">
         <span class="dot-sample" />
         <span class="mono">추가한 사진 {{ props.added.length }}장</span>
@@ -134,20 +128,12 @@ onBeforeUnmount(clearMarkers)
         <span class="mono">새로 생기는 포인트</span>
       </div>
     </div>
-  </div>
+  </MapFrame>
 </template>
 
 <style scoped>
-.wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  overflow: hidden;
-  background: #06070A;
-  isolation: isolate;
-}
-.map { position: absolute; inset: 0; }
+/* 겉모습(바탕 · overflow · 마커 z-index 가둠)은 MapFrame 이 준다 — 여기는 크기와 자리만 */
+.wrap { position: relative; width: 100%; height: 100%; min-width: 0; }
 
 .legend {
   position: absolute;

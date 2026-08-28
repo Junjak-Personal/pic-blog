@@ -31,8 +31,16 @@
 .ovf-item svg { flex: none; color: var(--deep); }
 .ovf-item[data-highlighted] { background: rgba(146, 178, 169, 0.14); color: var(--ink); outline: none; }
 .ovf-item[data-disabled] { opacity: 0.4; cursor: default; }
-/* 지금 그 상태인 항목 — 「무엇이 켜져 있는지」를 목록에서 바로 읽게 한다 */
-.ovf-item.current { color: var(--ink); }
+/* 지금 그 상태인 항목 — 「무엇이 켜져 있는지」를 목록에서 바로 읽게 한다.
+   🔴 글자색만으로는 안 보인다(실제 지적). 바탕과 테두리로 말하되, 테두리는 border 가
+   아니라 안쪽 그림자다 — border 를 켜면 켜진 항목만 2px 커져 목록이 들썩인다. */
+.ovf-item.current {
+  color: var(--ink);
+  background: rgba(146, 178, 169, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(146, 178, 169, 0.45);
+}
+/* 손이 얹힌 쪽이 늘 더 밝다 — 안 그러면 「켜진 것」과 「가리키는 것」이 구분되지 않는다 */
+.ovf-item.current[data-highlighted] { background: rgba(146, 178, 169, 0.2); }
 .ovf-item.current svg { color: var(--acc); }
 .ovf-item.current .ovf-state { color: var(--acc); }
 .ovf-item.danger { color: var(--danger); }
@@ -43,17 +51,6 @@
 .ovf-item .ovf-state { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
 
 .ovf-sep { height: 1px; margin: 5px 4px; background: var(--hair); }
-
-/* 항목 위의 상태 한 줄 — 「지금 어디인지」를 누르기 전에 알려준다. 누를 수 없는 글이라
-   DropdownMenuItem 이 아니다 (항목이면 방향키가 여기에도 멈춘다). */
-.ovf-head {
-  padding: 6px 12px 8px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--faint);
-  border-bottom: 1px solid var(--hair);
-  margin-bottom: 4px;
-}
 
 /*
  * BottomCta 는 fixed 라 문서 흐름에서 자리를 차지하지 않는다. 그 아래 깔리는 내용을

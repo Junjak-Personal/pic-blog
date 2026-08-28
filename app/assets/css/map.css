@@ -127,35 +127,9 @@
 }
 
 /*
- * 편집 2단계 상단 지도의 마커 (BoardMap).
- * 마커 엘리먼트는 JS 가 document.createElement 로 만들어 Mapbox 에 넘기므로
- * 컴포넌트 scoped 스타일이 닿지 않는다 — 다른 지도 마커와 같은 이유로 전역이다.
+ * 편집 2단계 상단 지도의 마커 (BoardMap) — .map-marker 의 «작은» 변형이다.
+ * 좁은 띠(190px)에 포인트가 다 들어가야 해서 알약만 26 → 24 로 줄이고, 나머지는
+ * 전부 위 규칙을 그대로 받는다. .gain / .fresh 와 같은 방식이다.
  */
-.bm-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border: 0;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-}
-.bm-num {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(19, 28, 24, 0.94);
-  border: 1px solid rgba(146, 178, 169, 0.65);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--mid);
-}
-.bm-marker:hover .bm-num { background: var(--acc); border-color: var(--acc); color: var(--s0); }
-.bm-tail {
-  width: 1px;
-  height: 6px;
-  background: rgba(146, 178, 169, 0.65);
-}
+.map-marker.sm .body { width: 24px; height: 24px; font-size: 9.5px; border-width: 1px; }
+.map-marker.sm:hover .body { background: var(--acc); border-color: var(--acc); color: var(--s0); }

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { vSk } from '~/utils/img'
 /**
  * 편집 2단계 「포인트 편집」 — 이 기록의 사진 전부를 포인트별 그룹으로 늘어놓는다.
  *
@@ -21,12 +20,14 @@ import { vSk } from '~/utils/img'
  * 빠져나간 그룹은 그 자리에서 사라진다 — 지도에 좌표만 남은 유령을 만들지 않기 위해서다.
  */
 import BoardMap, { type BoardMapPoint } from '~/components/BoardMap.vue'
+import PhotoTile from '~/components/PhotoTile.vue'
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import type { Photo } from '#shared/types/db'
-import { formatTime } from '#shared/utils/format'
 import { centroid } from '#shared/utils/cluster'
-import { distanceM } from '#shared/utils/geo'
+import { distanceM, sameSpot } from '#shared/utils/geo'
+import { pointThumb } from '~/utils/img'
 import { useTileDrag, type DragFrom, type DragOver } from '~/composables/useTileDrag'
+import { usePickMode } from '~/composables/usePickMode'
 
 export interface BoardGroup {
   /** 초안 id. 음수면 아직 서버에 없는 새 포인트다. */
@@ -70,7 +71,7 @@ const drag = useTileDrag((from, over) => emit('drop', from, over))
  * 「클릭 = 커버」면 드래그하려다 손이 미끄러진 순간 커버가 바뀌고, 그걸 되돌릴
  * 방법도 눈에 안 보인다. 「지정」을 누른 동안만 칸이 고를 수 있는 것이 된다.
  */
-const picking = ref(false)
+const picking = usePickMode()
 
 function onTileClick(groupId: number, index: number, photoId: number) {
   if (picking.value) {
@@ -85,13 +86,6 @@ function onTileClick(groupId: number, index: number, photoId: number) {
   }
   emit('openPhoto', groupId, index)
 }
-
-/** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 */
-function onEsc(e: KeyboardEvent) {
-  if (e.key === 'Escape') picking.value = false
-}
-onMounted(() => window.addEventListener('keydown', onEsc))
-onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 
 const totalPhotos = computed(() => props.groups.reduce((n, g) => n + g.photos.length, 0))
 
@@ -132,16 +126,24 @@ function isCaret(groupId: number, index: number) {
  */
 type Spot = { lat: number; lng: number }
 
-/** 같은 자리로 볼 거리 — GPS 흔들림보다 작다 */
-const SAME_M = 0.5
+/**
+ * 그룹 → 대표 사진 (지도 마커에 뜨는 한 장).
+ *
+ * 규칙은 pointThumb 하나뿐이다 — 「지정이 없거나 그 사진이 지워졌으면 첫 사진」. 여기서
+ * 손으로 다시 적으면 배지가 가리키는 사진과 마커에 실제로 뜨는 사진이 갈린다.
+ * 한 번에 만들어 두는 이유: 안 그러면 사진 한 장 그릴 때마다 그 그룹을 처음부터 훑어서
+ * 그룹 크기에 대해 O(n²) 이 된다 (사진 200장짜리 포인트 하나면 렌더마다 2만 번 비교).
+ */
+const repPhotos = computed(
+  () => new Map(props.groups.map((g) => [g.id, pointThumb({ cover_photo_id: g.coverPhotoId, photos: g.photos })])),
+)
 
 function centroidOf(g: BoardGroup): Spot | null {
   return g.photos.length ? centroid(g.photos) : null
 }
 
-/** 대표 사진의 좌표. 지정이 없으면 첫 사진 — 지도 마커가 쓰는 규칙과 같다. */
 function coverOf(g: BoardGroup): Spot | null {
-  const p = g.photos.find((ph) => ph.id === g.coverPhotoId) ?? g.photos[0]
+  const p = repPhotos.value.get(g.id)
   return p ? { lat: p.lat, lng: p.lng } : null
 }
 
@@ -150,49 +152,45 @@ function anchorOf(g: BoardGroup): Spot | null {
   return g.anchor ?? centroidOf(g)
 }
 
-function gapM(a: Spot | null, b: Spot | null) {
-  return a && b ? distanceM([a.lat, a.lng], [b.lat, b.lng]) : 0
-}
-
 function isAt(g: BoardGroup, target: Spot | null) {
-  return !!target && gapM(anchorOf(g), target) < SAME_M
+  const now = anchorOf(g)
+  return !!target && !!now && sameSpot(now, target)
 }
 
-/** 누르면 몇 m 움직이는지 — 0 이면 이미 그 자리라 표시하지 않는다 */
+/** 누르면 몇 m 움직이는지 — 이미 그 자리면 null 이라 아무것도 안 적는다 */
 function moveLabel(g: BoardGroup, target: Spot | null) {
-  const d = gapM(anchorOf(g), target)
-  return d < SAME_M ? null : `${d < 1000 ? Math.round(d) + 'm' : (d / 1000).toFixed(1) + 'km'} 이동`
-}
-
-/** 지금 어느 규칙으로 찍혀 있는가 — 어느 쪽도 아니면 「처음 잡힌 자리」다 */
-function anchorNow(g: BoardGroup) {
-  if (isAt(g, centroidOf(g))) return '사진 평균 자리'
-  if (isAt(g, coverOf(g))) return '대표 사진 자리'
-  return '처음 잡힌 자리'
+  const now = anchorOf(g)
+  if (!target || !now || sameSpot(now, target)) return null
+  const d = distanceM([now.lat, now.lng], [target.lat, target.lng])
+  return `${d < 1000 ? Math.round(d) + 'm' : (d / 1000).toFixed(1) + 'km'} 이동`
 }
 
 /**
- * 지금 «이 규칙»으로 찍혀 있는가.
- * 🔴 두 후보가 같은 지점일 수 있다 (사진 한 장짜리 포인트, 또는 평균이 우연히 대표
- *    사진 위에 떨어진 경우). 그때 둘 다 「지금 여기」로 표시하면 헤더가 말하는 하나와
- *    어긋난다 — 헤더와 «같은 우선순위»로 하나만 고른다 (평균이 먼저).
+ * 지금 어느 규칙으로 찍혀 있는가 — 꼬리표 · 메뉴의 「활성」 · aria-label 이 모두 이것 하나를 읽는다.
+ *
+ * 🔴 사다리를 한 번만 적는다. 두 후보가 같은 지점일 수 있어서(사진 한 장짜리 포인트,
+ *    또는 평균이 우연히 대표 사진 위에 떨어진 경우) 우선순위가 필요한데, 세 군데에 각각
+ *    적으면 하나만 고쳐진 날 꼬리표와 「활성」과 aria-label 이 서로 다른 말을 한다.
+ *    평균이 먼저다 — 최초 자리가 평균이므로 그쪽이 「기본」이다.
  */
-function isCurrentMode(g: BoardGroup, mode: 'centroid' | 'cover') {
-  const atCentroid = isAt(g, centroidOf(g))
-  return mode === 'centroid' ? atCentroid : !atCentroid && isAt(g, coverOf(g))
+type AnchorMode = 'centroid' | 'cover' | 'origin'
+const anchorModes = computed(
+  () => new Map<number, AnchorMode>(props.groups.map((g) => [
+    g.id,
+    isAt(g, centroidOf(g)) ? 'centroid' : isAt(g, coverOf(g)) ? 'cover' : 'origin',
+  ])),
+)
+function modeOf(g: BoardGroup): AnchorMode {
+  return anchorModes.value.get(g.id) ?? 'origin'
 }
+/** 헤더 꼬리표 — 아이콘만으로는 무엇으로 잡혀 있는지 알 수 없다 */
+const MODE_TAG: Record<AnchorMode, string> = { centroid: '사진 평균', cover: '대표 사진', origin: '처음 자리' }
+/** 소리로 읽히는 말 — 꼬리표보다 길어도 된다 */
+const MODE_NOW: Record<AnchorMode, string> = { centroid: '사진 평균 자리', cover: '대표 사진 자리', origin: '처음 잡힌 자리' }
 
-/** 헤더에 붙는 짧은 꼬리표 — 아이콘만으로는 무엇으로 잡혀 있는지 알 수 없다 */
-function anchorTag(g: BoardGroup) {
-  if (isAt(g, centroidOf(g))) return '사진 평균'
-  if (isAt(g, coverOf(g))) return '대표 사진'
-  return '처음 자리'
-}
-
-/** 이 포인트의 대표 사진인가 — 3단계와 같은 규칙(지정이 없으면 첫 사진) */
+/** 이 포인트의 대표 사진인가 — 3단계 배지와 같은 규칙(pointThumb) */
 function isPointCover(g: BoardGroup, photoId: number) {
-  const cover = g.photos.find((p) => p.id === g.coverPhotoId) ?? g.photos[0]
-  return !!cover && cover.id === photoId
+  return repPhotos.value.get(g.id)?.id === photoId
 }
 
 /**
@@ -277,7 +275,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <span v-if="g.id < 0" class="mono badge-new">새 포인트</span>
           <span class="mono gmeta">{{ g.photos.length }}장</span>
           <!-- 아이콘 왼쪽에 지금 자리를 적는다 — 아이콘만으로는 무엇으로 잡혔는지 모른다 -->
-          <span class="mono gspot">{{ anchorTag(g) }}</span>
+          <span class="mono gspot">{{ MODE_TAG[modeOf(g)] }}</span>
 
           <!--
             포인트를 어느 자리에 찍을지. 여기 있던 촬영 시각은 뺐다 — 그룹의 시각은
@@ -289,35 +287,33 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <DropdownMenuRoot>
             <DropdownMenuTrigger
               class="spotbtn"
-              :aria-label="`${g.title} 포인트 자리 — 지금 ${anchorNow(g)}`"
+              :aria-label="`${g.title} 포인트 자리 — 지금 ${MODE_NOW[modeOf(g)]}`"
               :data-testid="`board-spot-${gi}`"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>
               <DropdownMenuContent class="ovf-content" align="end" :side-offset="6" :collision-padding="12">
-                <!-- 누르기 «전»에 지금 어디인지 알아야 판단이 된다 -->
-                <div class="ovf-head mono">지금 {{ anchorNow(g) }}</div>
                 <DropdownMenuItem
                   class="ovf-item"
-                  :class="{ current: isCurrentMode(g, 'centroid') }"
+                  :class="{ current: modeOf(g) === 'centroid' }"
                   :data-testid="`board-spot-avg-${gi}`"
                   @select="emit('setAnchor', g.id, 'centroid')"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
                   사진 평균 자리로
-                  <span v-if="isCurrentMode(g, 'centroid')" class="ovf-state">지금 여기</span>
+                  <span v-if="modeOf(g) === 'centroid'" class="ovf-state">활성</span>
                   <span v-else-if="moveLabel(g, centroidOf(g))" class="ovf-state">{{ moveLabel(g, centroidOf(g)) }}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   class="ovf-item"
-                  :class="{ current: isCurrentMode(g, 'cover') }"
+                  :class="{ current: modeOf(g) === 'cover' }"
                   :data-testid="`board-spot-cover-${gi}`"
                   @select="emit('setAnchor', g.id, 'cover')"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
                   대표 사진 자리로
-                  <span v-if="isCurrentMode(g, 'cover')" class="ovf-state">지금 여기</span>
+                  <span v-if="modeOf(g) === 'cover'" class="ovf-state">활성</span>
                   <span v-else-if="moveLabel(g, coverOf(g))" class="ovf-state">{{ moveLabel(g, coverOf(g)) }}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -329,7 +325,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <template v-for="(ph, i) in g.photos" :key="ph.id">
             <span v-if="isCaret(g.id, i)" class="caret" />
             <div
-              class="tile"
+              class="tile phototile"
               :class="{ src: isSource(ph.id) }"
               :data-tile="i"
               @pointerdown="drag.onPointerDown($event, { groupId: g.id, photoId: ph.id })"
@@ -338,42 +334,33 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
               @pointercancel="drag.cancel"
               @click="onTileClick(g.id, i, ph.id)"
             >
-              <img v-sk class="thumb sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy" draggable="false">
-              <span class="mono ord">{{ String(i + 1).padStart(2, '0') }}</span>
-              <!--
-                포스트 커버(목록 카드에 뜨는 한 장)와 포인트 대표(지도 마커)는 다른 값이라
-                한 사진에 둘 다 붙을 수 있다 — 겹치지 않게 한 줄로 늘어놓는다.
-              -->
-              <span class="badges">
-                <span v-if="isPointCover(g, ph.id)" class="mono rep">대표</span>
-                <span v-if="ph.id === coverId" class="mono cover">커버</span>
-              </span>
-
-              <button
-                type="button"
-                class="kill"
-                :aria-label="`${i + 1}번 사진 삭제`"
-                @click.stop="emit('removePhoto', ph.id)"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
-              </button>
-
-              <span class="bar">
-                <span class="mono shot">{{ formatTime(ph.shot_at) || '시각 없음' }}</span>
-                <!--
-                  data-handle — 여기서 시작한 포인터는 롱프레스를 기다리지 않는다.
-                  「끌라고 있는 손잡이」를 잡고도 1초를 기다려야 하면 고장난 것으로 읽힌다.
-                -->
-                <button
-                  type="button"
-                  class="handle"
-                  data-handle
-                  :aria-label="`${i + 1}번 사진 — 끌어서 옮기기, 좌우 방향키로 순서, Alt+위아래로 다른 포인트`"
-                  @keydown="onKey($event, gi, i)"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
-                </button>
-              </span>
+              <PhotoTile :photo="ph" :num="i + 1" :rep="isPointCover(g, ph.id)" :cover="ph.id === coverId">
+                <template #corner>
+                  <button
+                    type="button"
+                    class="kill"
+                    :aria-label="`${i + 1}번 사진 삭제`"
+                    @click.stop="emit('removePhoto', ph.id)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                  </button>
+                </template>
+                <template #bar>
+                  <!--
+                    data-handle — 여기서 시작한 포인터는 롱프레스를 기다리지 않는다.
+                    「끌라고 있는 손잡이」를 잡고도 1초를 기다려야 하면 고장난 것으로 읽힌다.
+                  -->
+                  <button
+                    type="button"
+                    class="handle"
+                    data-handle
+                    :aria-label="`${i + 1}번 사진 — 끌어서 옮기기, 좌우 방향키로 순서, Alt+위아래로 다른 포인트`"
+                    @keydown="onKey($event, gi, i)"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M11 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M18 15a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+                  </button>
+                </template>
+              </PhotoTile>
             </div>
           </template>
           <span v-if="isCaret(g.id, g.photos.length)" class="caret" />
@@ -533,11 +520,12 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 /* grid 가 아니라 flex-wrap 이다 — 끼어들 자리 표식(.caret)이 칸 사이에 실제로 끼어야 한다 */
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; align-items: flex-start; }
 
-/* 사진 칸과 같은 크기·같은 자리 — 다른 규격이면 격자가 흐트러진다 */
+/* 사진 칸과 같은 크기·같은 자리 — 다른 규격이면 격자가 흐트러진다.
+   높이를 손으로 적지 않는다: 사진 높이를 바꾸면 여기가 조용히 어긋나던 자리다. */
 .addtile {
   flex: none;
   width: 104px;
-  height: 96px;
+  height: calc(var(--tile-img-h) + var(--tile-bar-h));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -557,18 +545,15 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   flex: none;
   width: 3px;
   align-self: stretch;
-  min-height: 74px;
+  min-height: var(--tile-img-h);
   border-radius: 3px;
   background: var(--acc);
 }
 
+/* 상자의 겉모습(position·overflow·모서리·바탕)은 .phototile 이 준다 — PhotoTile.vue */
 .tile {
-  position: relative;
   flex: none;
   width: 104px;
-  overflow: hidden;
-  border-radius: 6px;
-  background: rgba(11, 14, 18, 0.9);
   /*
    * 세로 스크롤은 브라우저에 맡긴다 — 사진이 화면 대부분이라 여기서 none 을 걸면
    * 목록을 굴릴 수 없다. 드래그가 실제로 시작된 뒤에만 touchmove 를 막는다.
@@ -590,36 +575,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 .board.picking .tile .kill,
 .board.picking .tile .handle { opacity: 0.25; pointer-events: none; }
 
-.thumb {
-  display: block;
-  width: 100%;
-  height: 74px;
-  object-fit: cover;
-  /* 이미지 자신에게도 걸어야 한다 — 콜아웃은 <img> 를 보고 뜬다 */
-  -webkit-touch-callout: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-.ord {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  font-size: 9px;
-  background: rgba(4, 4, 8, 0.72);
-  color: var(--mid);
-}
-/*
- * 배지 줄 — 사진 «아래쪽»에 붙인다. 위에 두면 번호(.ord)와 삭제(✕) 사이에 끼어
- * 좁은 화면(3열)에서 「커버」가 ✕ 에 잘렸다. 아래는 시각 바 위라 비어 있다.
- */
-.badges { position: absolute; left: 4px; bottom: 26px; display: flex; gap: 3px; }
-.rep, .cover { padding: 1px 5px; border-radius: 4px; font-size: 9px; }
-.rep { background: rgba(146, 178, 169, 0.9); color: var(--s0); }
-.cover { background: var(--ink); color: var(--s0); }
-
+/* 사진·번호·배지·시각 줄은 PhotoTile 이 그린다 — 여기 있는 것은 감싸는 상자와 슬롯뿐이다 */
 .kill {
   position: absolute;
   top: 3px;
@@ -635,15 +591,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 }
 .kill:hover { background: var(--danger); color: #fff; }
 
-.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  height: 22px;
-  padding: 0 3px 0 6px;
-}
-.shot { font-size: 9px; color: var(--faint); }
 .handle {
   display: grid;
   place-items: center;
@@ -686,9 +633,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   .addbtn { min-height: 40px; }
   /* 3열 — 여백을 빼고 나눈다 */
   .tile { width: calc((100% - 16px) / 3); }
-  .addtile { width: calc((100% - 16px) / 3); height: 88px; }
-  .thumb { height: 66px; }
-  .caret { min-height: 66px; }
+  .addtile { width: calc((100% - 16px) / 3); }
   .kill { width: 26px; height: 26px; }
   /* 손가락이 자주 빗나가는 자리라 보이지 않는 여유를 준다 (칸이 좁아 44px 정사각은 못 넣는다) */
   .kill::after { content: ''; position: absolute; top: -4px; right: -4px; width: 38px; height: 38px; }

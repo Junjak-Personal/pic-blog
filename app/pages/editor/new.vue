@@ -559,19 +559,6 @@ async function skip() {
 .t-label { width: 42px; font-size: 12px; color: var(--faint); }
 .t-row.on .t-label, .t-row.on .t-count { color: var(--ink); }
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
-.notice {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 24px;
-  background: rgba(214, 178, 106, 0.1);
-  border-bottom: 1px solid rgba(214, 178, 106, 0.28);
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--route);
-}
-.notice svg { flex: none; }
 .pick-hint { max-width: 420px; font-size: 10.5px; line-height: 1.7; color: var(--faint); }
 
 .t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgba(177, 199, 193, 0.1); overflow: hidden; }

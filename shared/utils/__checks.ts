@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict'
 import { clusterAt, assignTo, GAP_MINUTES, type ClusterInput } from './cluster.ts'
 import { scatter } from './scatter.ts'
-import { distanceM, toLngLat } from './geo.ts'
+import { distanceM, sameSpot, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
 import { badgesOf, DAY_COLORS, groupByDay } from './days.ts'
@@ -18,13 +18,20 @@ import {
 assert.deepEqual(toLngLat({ lat: 37.763847, lng: 128.899886 }), [128.899886, 37.763847])
 assert.ok(Math.abs(distanceM([37.763847, 128.899886], [37.764847, 128.899886]) - 111.2) < 1)
 
+// 「같은 자리」 허용치 — 보드의 꼬리표와 편집 화면의 「변경 N건」이 이 하나를 읽는다
+assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763847, lng: 128.899886 }))
+// 위도 0.000003° ≈ 0.33m — 같은 자리
+assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.76385, lng: 128.899886 }))
+// 위도 0.00001° ≈ 1.1m — 움직인 것
+assert.ok(!sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763857, lng: 128.899886 }))
+
 // ── 90분 갭 규칙: 같은 자리, 다음 날 → 두 포인트 ─────────────────────────
-const sameSpot: ClusterInput[] = [
+const sameSpotShots: ClusterInput[] = [
   { key: 'a', lat: 37.7638, lng: 128.8998, t: Date.parse('2026-08-23T18:35:00Z') },
   { key: 'b', lat: 37.7638, lng: 128.8999, t: Date.parse('2026-08-23T18:40:00Z') },
   { key: 'c', lat: 37.7638, lng: 128.8998, t: Date.parse('2026-08-24T18:35:00Z') },
 ]
-const gapped = clusterAt(sameSpot, 50)
+const gapped = clusterAt(sameSpotShots, 50)
 assert.equal(gapped.length, 2, '90분 갭 규칙이 없으면 다음 날이 한 포인트로 합쳐진다')
 assert.equal(gapped[1]!.gap, true, '거리는 반경 안이었으므로 끊긴 이유는 시간이다')
 assert.ok(gapped[1]!.gapMinutes >= GAP_MINUTES)

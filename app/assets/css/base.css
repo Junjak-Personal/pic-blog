@@ -198,6 +198,36 @@ img.sk { border-radius: 0; }
   to { transform: rotate(360deg); }
 }
 
+/*
+ * 제외된 사진 안내 — 「몇 장은 안 올라갔습니다」. 사진을 고르는 세 화면(새 기록 · 사진
+ * 추가 · 편집 2단계)이 같은 skipNotice() 결과를 그린다. 세 벌로 두었더니 여백이 22 대 24 로
+ * 갈려 상단바와 2px 어긋나 있었다 — 색을 한 번 바꾸려면 세 군데를 고쳐야 했다.
+ * 조치가 따라붙는 줄이라 동선 색(--route)을 쓴다.
+ */
+.notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 24px;
+  background: rgba(214, 178, 106, 0.1);
+  border-bottom: 1px solid rgba(214, 178, 106, 0.28);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--route);
+}
+.notice svg { flex: none; }
+/* 판 «안»에 놓이는 형태 — 화면 폭을 가로지르지 않으므로 아래 선 대신 사방으로 가둔다 */
+.notice.boxed {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: none;
+  border: 1px solid rgba(214, 178, 106, 0.34);
+  border-radius: var(--radius);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
 /* 움직임을 줄이는 설정에서는 색만 남긴다 — 회전·훑기 둘 다 끈다 */
 @media (prefers-reduced-motion: reduce) {
   .sk, .spin { animation: none; }

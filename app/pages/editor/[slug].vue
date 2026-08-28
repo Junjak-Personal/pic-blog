@@ -26,8 +26,9 @@ import type { Photo, Point, PostDetail } from '#shared/types/db'
 // 자동 임포트에 기대지 않는다 — unimport 스캐너가 연속된 `export const` 중 두 번째부터 놓친다
 import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
+import PhotoTile from '~/components/PhotoTile.vue'
 import { centroid } from '#shared/utils/cluster'
-import { distanceM } from '#shared/utils/geo'
+import { sameSpot } from '#shared/utils/geo'
 import {
   cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
   MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
@@ -36,6 +37,7 @@ import {
 import type { DragFrom, DragOver } from '~/composables/useTileDrag'
 import { askConfirm } from '~/composables/useConfirm'
 import { skipNotice, summarizeSkipped } from '~/utils/exif'
+import { usePickMode } from '~/composables/usePickMode'
 
 /**
  * 편집 중의 금액은 «문자열»이다.
@@ -196,14 +198,8 @@ const changes = computed(() => {
 
 hydrate()
 
-onMounted(() => {
-  window.addEventListener('beforeunload', onBeforeUnload)
-  window.addEventListener('keydown', onPickEsc)
-})
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', onBeforeUnload)
-  window.removeEventListener('keydown', onPickEsc)
-})
+onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
 onBeforeRouteLeave(async () => {
   if (deleting.value || changes.value === 0) return true
@@ -416,7 +412,7 @@ function onPickCover(id: number) {
  * 2단계의 「커버 지정」과 같은 모드다. 사진을 그냥 누르는 것은 «크게 보기»여야 하고,
  * 상시로 「클릭 = 대표」면 확인하려고 누른 순간 대표가 바뀐다.
  */
-const thumbPicking = ref(false)
+const thumbPicking = usePickMode()
 
 /**
  * 3단계 사진 클릭 — 고르는 중이면 대표로, 아니면 크게 본다.
@@ -442,19 +438,10 @@ function selectPoint(id: number) {
   activeId.value = id
 }
 
-/** Esc 로 빠져나온다 — 모드에 갇히면 안 된다 (2단계 보드와 같은 처방) */
-function onPickEsc(e: KeyboardEvent) {
-  if (e.key === 'Escape') thumbPicking.value = false
-}
-
-/* ── 3단계 · 이 포인트에 사진 붙이기 ───────────────────────────────────────
- * 2단계의 「사진 추가」는 반경으로 배정한다. 여기는 그 반대다 — 고른 사진이 좌표와
- * 무관하게 «지금 보고 있는 포인트»로 들어간다. 거리로는 안 묶이는 것을 맥락으로
- * 묶으려면 그 길이 필요하다.
- *
- * 🔴 저장 안 된 변경이 있으면 막는다. 올리고 나면 서버 데이터를 새로 받아야 하는데
- *    (사진 id·순서를 서버가 정한다) 그 새로고침이 초안을 덮어쓴다 — 반경 변경이
- *    같은 이유로 같은 조건을 건다.
+/* ── 2단계 · 포인트 칸에서 사진 붙이기 ─────────────────────────────────────
+ * 상단의 「사진 추가」는 반경으로 배정한다. 여기는 그 반대다 — 고른 사진이 좌표와
+ * 무관하게 «누른 칸의 포인트»로 들어간다. 거리로는 안 묶이는 것을 맥락으로 묶으려면
+ * 그 길이 필요하다.
  */
 const addTargetId = ref<number | null>(null)
 const pointAddFlow = useAddPhotosFlow(slug, computed(() => post.value?.points ?? []), {
@@ -475,6 +462,9 @@ const pointAddBusy = computed(() =>
 const pointAddBlocked = computed(() =>
   saving.value ? '저장 중입니다' : null,
 )
+
+/** 제외된 사진 안내 — 템플릿에서 두 번(v-if 와 보간) 부르지 않도록 여기서 한 번 만든다 */
+const pointAddNotice = computed(() => skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT))
 
 /** 어느 그룹에 붙일지 — 파일 선택기를 여는 사이에 들고 있는다 */
 function onAddToPoint(groupId: number) {
@@ -674,7 +664,7 @@ function anchorMoved(d: PointDraft) {
     ? { lat: base.lat, lng: base.lng }
     : (photos.length ? centroid(photos) : null)
   if (!now || !from) return false
-  return distanceM([from.lat, from.lng], [now.lat, now.lng]) >= 0.5
+  return !sameSpot(from, now)
 }
 
 /** 3단계 헤더에 뜨는 좌표 — 2단계에서 자리를 다시 잡았으면 그 값이 먼저다 */
@@ -1049,9 +1039,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <!-- 2단계 — 사진 전체를 포인트별 그룹으로 -->
       <div v-else-if="step === 'points'" class="boardpane">
         <!-- 상한을 넘겼거나 이미 있는 사진을 골랐을 때 — 조치가 따라붙는 줄이라 따로 띄운다 -->
-        <p v-if="skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT)" class="mono board-skip">
-          {{ skipNotice(pointAddFlow.skipped.value, MAX_PER_POINT) }}
-        </p>
+        <p v-if="pointAddNotice" class="mono notice boxed">{{ pointAddNotice }}</p>
         <PointGroupBoard
           :groups="boardGroups"
           :cover-id="coverId"
@@ -1149,19 +1137,24 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   v-for="(ph, i) in activePhotos"
                   :key="ph.id"
                   type="button"
-                  class="pick"
+                  class="pick phototile"
                   :class="{ on: ph.id === activeThumbId }"
                   :aria-label="thumbPicking ? `${i + 1}번 사진을 대표로` : `${i + 1}번 사진 크게 보기`"
                   :data-testid="`editor-pick-${i}`"
                   @click="onPickClick(i, ph.id)"
                 >
-                  <img v-sk class="pickimg sk" :src="ph.thumb_path" :alt="`사진 ${i + 1}`" loading="lazy">
-                  <!-- 「기본」과 「대표」를 나누지 않는다 — 보는 사람에게는 둘 다 그냥 대표 사진이다 -->
-                  <span v-if="ph.id === activeThumbId" class="mono pickbadge">대표</span>
+                  <!--
+                    2단계 보드와 «같은» 칸이다 (PhotoTile). 삭제·손잡이 슬롯은 비워둔다 —
+                    사진을 넣고 빼는 것도, 순서를 바꾸는 것도 2단계 몫이다.
+                    「기본」과 「대표」를 나누지 않는다 — 보는 사람에게는 둘 다 그냥 대표 사진이다.
+                  -->
+                  <PhotoTile :photo="ph" :num="i + 1" :rep="ph.id === activeThumbId" :cover="ph.id === coverId" />
                 </button>
               </div>
               <!-- 대표 지정은 사진 «아래»에 둔다. 2단계의 「커버 지정」과 같은 모드다. -->
               <div class="pick-foot">
+                <!-- 이 버튼이 무엇을 정하는지 — 사진을 넣고 빼는 안내는 뺐다(2단계 몫이라 여기선 할 수 없는 말) -->
+                <span class="mono pick-note">지도 마커와 목록에 뜨는 사진</span>
                 <button
                   type="button"
                   class="minibtn mono"
@@ -1173,9 +1166,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
                   {{ thumbPicking ? '고르는 중…' : '대표 지정' }}
                 </button>
-
-                <!-- 사진을 붙이는 것은 2단계 몫이다 — 여기는 대표만 고른다 -->
-                <span class="mono pick-note">지도 마커와 목록에 뜨는 사진 · 사진을 넣고 빼는 것은 2단계에서</span>
               </div>
             </div>
 
@@ -1748,43 +1738,14 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   gap: 9px;
   align-content: start;
 }
-.pick {
-  position: relative;
-  display: block;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  overflow: hidden;
-  background: rgba(11, 14, 18, 0.9);
-  cursor: pointer;
-}
-.pickimg { display: block; width: 100%; height: 74px; object-fit: cover; }
+/* 상자의 겉모습은 .phototile 이 준다 — PhotoTile.vue (2단계 .tile 과 같은 것) */
+.pick { display: block; padding: 0; border: 0; cursor: pointer; }
+/* 사진·번호·배지·시각 줄은 PhotoTile 이 그린다 — 여기 있는 것은 감싸는 상자뿐이다 */
 /* 테두리가 아니라 안쪽 그림자다 — border 를 켜면 고른 순간 칸 크기가 2px 흔들린다 */
 .pick.on { box-shadow: inset 0 0 0 2px var(--acc); }
-.pickbadge {
-  position: absolute;
-  left: 5px;
-  bottom: 5px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 9px;
-  background: var(--ink);
-  color: var(--s0);
-}
-/* 버튼 좌 · 설명 우. 좁아지면 설명이 아래로 내려간다 */
-.pick-foot { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-.pick-note { flex: 1 1 100%; min-width: 0; font-size: 10px; color: var(--faint); }
-/* 제외된 사진 안내 — 조치가 따라붙는 줄이라 눈에 띄게 (2단계 추가 화면과 같은 색) */
-.board-skip {
-  flex: none;
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  border: 1px solid rgba(214, 178, 106, 0.34);
-  border-radius: var(--radius);
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: var(--route);
-}
+/* 설명 좌 · 버튼 우, 양 끝으로. 좁아지면 버튼이 아래로 내려간다 */
+.pick-foot { flex: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.pick-note { min-width: 0; font-size: 10px; color: var(--faint); }
 /* 고르는 중 — 다음에 누를 것이 「버튼」이 아니라 「사진」이라는 걸 색으로 말한다 (2단계와 같다) */
 .picks.picking .pick:hover { box-shadow: inset 0 0 0 2px var(--acc); }
 
@@ -1922,6 +1883,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
 }
 .minibtn:hover:not(:disabled) { background: rgba(146, 178, 169, 0.1); }
+/* 고르는 중 — 2단계 「커버 지정」(.addbtn.armed)과 같은 강조다. 없으면 모드가 켜진 것이 안 보인다. */
+.minibtn.armed { background: var(--acc); border-color: var(--acc); color: var(--s0); }
 .minibtn:disabled { opacity: 0.45; cursor: default; }
 .xnote { font-size: 9.5px; color: var(--faint); }
 .xtotal { margin-left: auto; display: flex; align-items: baseline; gap: 10px; }
@@ -1978,7 +1941,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .prow { grid-template-columns: 24px 38px 1fr auto; padding: 10px 12px 10px 14px; }
   .pthumb { width: 38px; height: 30px; }
   .picks { grid-template-columns: repeat(3, 1fr); }
-  .pickimg { height: 66px; }
   .points {
     /* 포인트가 60개여도 편집 블록에 닿을 수 있어야 한다 — 목록만 따로 스크롤 */
     max-height: 45dvh;

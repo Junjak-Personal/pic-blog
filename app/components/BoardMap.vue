@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MapSkeleton from '~/components/MapSkeleton.vue'
+import MapFrame from '~/components/MapFrame.vue'
 /**
  * 편집 2단계 상단 지도 — 지금 «초안»의 포인트가 어디에 찍히는지 보여준다.
  *
@@ -27,7 +27,14 @@ export interface BoardMapPoint {
 const props = defineProps<{ points: BoardMapPoint[] }>()
 const emit = defineEmits<{ select: [id: number] }>()
 
-const container = ref<HTMLElement | null>(null)
+/** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
+const frame = useTemplateRef<InstanceType<typeof MapFrame>>('frame')
+const container = computed(() => frame.value?.canvas ?? null)
+
+/** 지도가 죽었을 때 대신 세울 목록 — 살아 있는 prop 이라 computed 로 캐시한다 */
+const fallbackItems = computed(() =>
+  props.points.map((p) => ({ num: String(p.num), name: p.name, lat: p.lat, lng: p.lng })),
+)
 const bounds = computed(() => boundsOf(props.points))
 
 const { map, status, retry, fit } = useMapbox({
@@ -50,15 +57,13 @@ function render() {
   markers = props.points.map((p) => {
     const el = document.createElement('button')
     el.type = 'button'
-    el.className = 'bm-marker'
+    // 다른 지도들과 «같은» 마커다 (map.css .map-marker). sm 은 좁은 띠용 크기 변형.
+    el.className = 'map-marker sm'
     el.setAttribute('aria-label', `${p.name} 포인트로`)
     el.title = p.name
-    const body = document.createElement('span')
-    body.className = 'bm-num'
-    body.textContent = String(p.num).padStart(2, '0')
-    const tail = document.createElement('span')
-    tail.className = 'bm-tail'
-    el.append(body, tail)
+    el.innerHTML = `<span class="body"></span><span class="tail"></span>`
+    // 이름이 아니라 번호다 — 사용자 입력이 아니지만 innerHTML 로 붙이지 않는다
+    el.querySelector('.body')!.textContent = String(p.num).padStart(2, '0')
     el.addEventListener('click', () => emit('select', p.id))
     return new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat(toLngLat(p)).addTo(m)
   })
@@ -69,25 +74,20 @@ function render() {
 watch(status, (s) => {
   if (s === 'ready') render()
 })
-watch(() => props.points, render, { deep: true })
+// points 는 부모의 computed 라 바뀔 때마다 «새 배열»이다 — deep 은 트리거를 하나도
+// 더하지 못하면서 traverse 비용만 낸다
+watch(() => props.points, render)
 onBeforeUnmount(() => {
   for (const mk of markers) mk.remove()
 })
 </script>
 
 <template>
-  <div class="bm-wrap">
-    <div ref="container" class="bm-map" />
-    <MapSkeleton v-if="status === 'loading'" />
-    <MapFallback
-      v-else-if="status === 'failed'"
-      :items="props.points.map((p) => ({ num: String(p.num), name: p.name, lat: p.lat, lng: p.lng }))"
-      @retry="retry"
-    />
-  </div>
+  <MapFrame ref="frame" class="bm-wrap" :status="status" :items="fallbackItems" @retry="retry" />
 </template>
 
 <style scoped>
+/* 겉모습(바탕 · overflow · 마커 z-index 가둠)은 MapFrame 이 준다 — 여기는 크기와 자리만 */
 .bm-wrap {
   position: relative;
   flex: none;
@@ -95,12 +95,7 @@ onBeforeUnmount(() => {
   margin-bottom: 10px;
   border: 1px solid var(--hair);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: #06070A;
-  /* 마커 z-index 가 페이지로 새지 않게 가둔다 */
-  isolation: isolate;
 }
-.bm-map { position: absolute; inset: 0; }
 
 @media (max-width: 900px) {
   /* 아래 보드가 주인공이다 — 지도는 「어디쯤인지」만 보여주면 된다 */

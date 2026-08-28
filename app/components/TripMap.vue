@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MapSkeleton from '~/components/MapSkeleton.vue'
+import MapFrame from '~/components/MapFrame.vue'
 /**
  * 아트보드 1b 지도 — 번호 마커 + 촬영 시각 순 파선 동선.
  *
@@ -29,7 +29,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [id: number] }>()
 
-const container = ref<HTMLElement | null>(null)
+/** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
+const frame = useTemplateRef<InstanceType<typeof MapFrame>>('frame')
+const container = computed(() => frame.value?.canvas ?? null)
+
+/** 지도가 죽었을 때 대신 세울 목록 — 살아 있는 prop 이라 computed 로 캐시한다 */
+const fallbackItems = computed(() =>
+  props.points.map((p) => ({
+    num: props.badges.get(p.id)?.label ?? '',
+    name: props.badges.get(p.id)?.name ?? '포인트',
+    lat: p.lat,
+    lng: p.lng,
+  })),
+)
 const ROUTE = 'trip-route'
 
 const bounds = computed(() => boundsOf(props.points))
@@ -181,38 +193,20 @@ onBeforeUnmount(clearMarkers)
 </script>
 
 <template>
-  <div class="wrap">
-    <div ref="container" class="map" />
-
-    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
-    <MapSkeleton v-if="status === 'loading'" />
-
-    <MapFallback
-      v-if="status === 'failed'"
-      :items="props.points.map((p) => ({
-        num: props.badges.get(p.id)?.label ?? '',
-        name: props.badges.get(p.id)?.name ?? '포인트',
-        lat: p.lat,
-        lng: p.lng,
-      }))"
-      @retry="retry"
-    />
-
-    <div v-if="status === 'ready'" class="legend">
+  <MapFrame ref="frame" class="wrap" :status="status" :items="fallbackItems" @retry="retry">
+    <div class="legend">
       <div class="chip">
         <span class="dash" />
         <span class="mono">촬영 시각 순 동선</span>
       </div>
     </div>
-  </div>
+  </MapFrame>
 </template>
 
 <style scoped>
 /* 그리드 아이템으로 놓이므로 relative — absolute 로 두면 흐름에서 빠져 레일이 1fr 을 먹는다 */
-.wrap { position: relative; width: 100%; height: 100%; min-width: 0; overflow: hidden; background: #06070A;
-  /* 마커의 z-index 가 루트로 새어 나가 라이트박스·시트 위에 그려지는 걸 막는다 */
-  isolation: isolate; }
-.map { position: absolute; inset: 0; }
+/* 겉모습(바탕 · overflow · 마커 z-index 가둠)은 MapFrame 이 준다 — 여기는 크기와 자리만 */
+.wrap { position: relative; width: 100%; height: 100%; min-width: 0; }
 
 .legend {
   position: absolute;

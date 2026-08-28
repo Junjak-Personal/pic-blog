@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MapSkeleton from '~/components/MapSkeleton.vue'
+import MapFrame from '~/components/MapFrame.vue'
 /**
  * 1g 클러스터 미리보기 지도.
  * 점 = 사진 1장, 번호 마커 = 잠정 포인트, 실선 = 거리로 끊긴 경계, 점선 = 시간 공백으로 끊김.
@@ -22,7 +22,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [id: string] }>()
 
-const container = ref<HTMLElement | null>(null)
+/** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
+const frame = useTemplateRef<InstanceType<typeof MapFrame>>('frame')
+const container = computed(() => frame.value?.canvas ?? null)
+
+/** 지도가 죽었을 때 대신 세울 목록 — 살아 있는 prop 이라 computed 로 캐시한다 */
+const fallbackItems = computed(() =>
+  props.clusters.map((c, i) => ({ num: String(i + 1).padStart(2, '0'), name: `포인트 ${i + 1}`, lat: c.lat, lng: c.lng })),
+)
 
 // 뷰포트는 사진 전체 범위로 한 번만 맞춘다. 반경을 바꿔도 다시 fitBounds 하지 않는다.
 const initialBounds = computed(() => boundsOf(props.shots))
@@ -176,20 +183,8 @@ onBeforeUnmount(clearMarkers)
 </script>
 
 <template>
-  <div class="wrap">
-    <div ref="container" class="map" />
-
-    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
-    <MapSkeleton v-if="status === 'loading'" />
-
-    <!-- 지도 로드 실패 → 좌표 목록으로 대체 (아트보드 1c) -->
-    <MapFallback
-      v-if="status === 'failed'"
-      :items="props.clusters.map((c, i) => ({ num: String(i + 1).padStart(2, '0'), name: `포인트 ${i + 1}`, lat: c.lat, lng: c.lng }))"
-      @retry="retry"
-    />
-
-    <div v-if="status === 'ready'" class="legend">
+  <MapFrame ref="frame" class="wrap" :status="status" :items="fallbackItems" @retry="retry">
+    <div class="legend">
       <div class="chip">
         <span class="dot-sample" />
         <span class="mono">사진 1장 = 점 {{ props.shots.length }}개</span>
@@ -206,14 +201,13 @@ onBeforeUnmount(clearMarkers)
         <span class="mono">시간 공백으로 끊김</span>
       </div>
     </div>
-  </div>
+  </MapFrame>
 </template>
 
 <style scoped>
-.wrap { position: absolute; inset: 0; overflow: hidden; background: #06070A;
-  /* 마커의 z-index 가 루트로 새어 나가 라이트박스·시트 위에 그려지는 걸 막는다 */
-  isolation: isolate; }
-.map { position: absolute; inset: 0; }
+/* 겉모습(바탕 · overflow · 마커 z-index 가둠)은 MapFrame 이 준다 — 여기는 크기와 자리만.
+   🔴 여기만 absolute 다 — .map-area 가 높이를 안 갖고 있어 100% 로는 0px 이 된다. */
+.wrap { position: absolute; inset: 0; }
 
 .legend {
   position: absolute;

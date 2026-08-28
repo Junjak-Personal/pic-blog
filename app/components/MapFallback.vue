@@ -1,9 +1,21 @@
+<script lang="ts">
+/**
+ * 폴백 한 줄. 지도를 쓰는 다섯 화면이 각자 이 모양으로 손수 맞춰 넘기고 있어서
+ * 이름을 붙였다 — 모양이 바뀌면 다섯 군데가 «컴파일 에러»로 알려주는 게 낫다.
+ */
+export interface FallbackItem {
+  /** 목록에 뜨는 번호. '01' 처럼 이미 다듬어진 문자열이거나 '+' 같은 표식이다. */
+  num: string
+  name: string
+  lat: number
+  lng: number
+}
+</script>
+
 <script setup lang="ts">
 import { formatCoord } from '#shared/utils/geo'
 /** 아트보드 1c — 「지도를 불러올 수 없습니다 → 좌표 목록으로 대체」. */
-const props = defineProps<{
-  items: { num: string; name: string; lat: number; lng: number }[]
-}>()
+const props = defineProps<{ items: FallbackItem[] }>()
 
 defineEmits<{ retry: [] }>()
 </script>

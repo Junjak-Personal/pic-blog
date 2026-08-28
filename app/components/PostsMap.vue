@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MapSkeleton from '~/components/MapSkeleton.vue'
+import MapFrame from '~/components/MapFrame.vue'
 /**
  * 아트보드 1a 상단 지도 띠 — 기록마다 마커 하나. 동선은 그리지 않는다.
  * 마커를 누르면 그 기록으로 간다. 마커 위에는 그 기록의 커버 썸네일이 붙는다.
@@ -15,11 +15,18 @@ import { boundsOf } from '#shared/utils/geo'
 
 const props = defineProps<{ posts: PostSummary[] }>()
 
-const container = ref<HTMLElement | null>(null)
+/** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
+const frame = useTemplateRef<InstanceType<typeof MapFrame>>('frame')
+const container = computed(() => frame.value?.canvas ?? null)
 
 /** center 는 이미 [lng, lat] 다 (서버에서 변환). boundsOf 는 lat/lng 객체를 받으므로 되돌린다. */
 const located = computed(() => props.posts.filter((p): p is PostSummary & { center: [number, number] } => !!p.center))
 const bounds = computed(() => boundsOf(located.value.map((p) => ({ lng: p.center[0], lat: p.center[1] }))))
+
+/** 지도가 죽었을 때 대신 세울 목록 — 살아 있는 prop 이라 computed 로 캐시한다 */
+const fallbackItems = computed(() =>
+  located.value.map((p, i) => ({ num: String(i + 1), name: p.title, lat: p.center[1], lng: p.center[0] })),
+)
 
 /** 마커가 앵커에서 위로 뻗는 높이 — 썸네일 40 + 간격 4 + 번호 26 + 꼬리 7 */
 const MARKER_UP = 77
@@ -88,36 +95,17 @@ const latRange = computed(() => {
 </script>
 
 <template>
-  <div class="wrap">
-    <div ref="container" class="map" />
-
-    <!-- 하이드레이션·초기화 동안의 빈 칸을 덮는다 — status 초기값이 loading 이라 서버 HTML 에도 실린다 -->
-    <MapSkeleton v-if="status === 'loading'" />
-
-    <MapFallback
-      v-if="status === 'failed'"
-      :items="located.map((p, i) => ({ num: String(i + 1), name: p.title, lat: p.center[1], lng: p.center[0] }))"
-      @retry="retry"
-    />
-
-    <div v-else-if="status === 'ready' && latRange" class="badge">
+  <MapFrame ref="frame" class="wrap" :status="status" :items="fallbackItems" @retry="retry">
+    <div v-if="latRange" class="badge">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
       <span class="mono">{{ props.posts.length }} records · {{ latRange }}</span>
     </div>
-  </div>
+  </MapFrame>
 </template>
 
 <style scoped>
-.wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #06070A;
-  /* 마커 z-index 가 루트로 새지 않게 가둔다 */
-  isolation: isolate;
-}
-.map { position: absolute; inset: 0; }
+/* 겉모습(바탕 · overflow · 마커 z-index 가둠)은 MapFrame 이 준다 — 여기는 크기와 자리만 */
+.wrap { position: relative; width: 100%; height: 100%; }
 
 .badge {
   position: absolute;

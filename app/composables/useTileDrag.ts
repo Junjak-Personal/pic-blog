@@ -120,6 +120,17 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     raf = requestAnimationFrame(edgeScroll)
   }
 
+  /**
+   * 드롭 자리를 «달라졌을 때만» 바꾼다.
+   * 🔴 매번 새 객체를 넣으면 값이 그대로여도 ref 가 트리거된다. 보드 템플릿이 이걸 읽으므로
+   *    손가락이 한 칸 위에 가만히 있는 동안에도 보드 전체가 초당 60~120번 다시 그려진다.
+   */
+  function setOver(v: DragOver | null) {
+    const o = over.value
+    if (o?.groupId === v?.groupId && o?.index === v?.index) return
+    over.value = v
+  }
+
   /** 손끝 좌표 → 드롭 자리. 포인터가 잡혀 있어 e.target 은 늘 출발 칸이라 좌표로 찾는다. */
   function resolveOver(x: number, y: number) {
     const el = document.elementFromPoint(x, y)
@@ -127,13 +138,13 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
 
     const zone = el.closest<HTMLElement>('[data-newzone]')
     if (zone) {
-      over.value = { groupId: null, index: 0 }
+      setOver({ groupId: null, index: 0 })
       return
     }
 
     const group = el.closest<HTMLElement>('[data-group]')
     if (!group) {
-      over.value = null
+      setOver(null)
       return
     }
     const groupId = Number(group.dataset.group)
@@ -141,13 +152,13 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     const tile = el.closest<HTMLElement>('[data-tile]')
     if (!tile) {
       // 그룹의 빈 여백 — 맨 뒤에 붙인다
-      over.value = { groupId, index: Number(group.dataset.count) }
+      setOver({ groupId, index: Number(group.dataset.count) })
       return
     }
     // 칸의 왼쪽 절반이면 그 앞, 오른쪽 절반이면 그 뒤
     const r = tile.getBoundingClientRect()
     const i = Number(tile.dataset.tile)
-    over.value = { groupId, index: x > r.left + r.width / 2 ? i + 1 : i }
+    setOver({ groupId, index: x > r.left + r.width / 2 ? i + 1 : i })
   }
 
   function begin(tile: HTMLElement, x: number, y: number) {
