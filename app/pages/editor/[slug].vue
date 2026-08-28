@@ -925,13 +925,18 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               변경 취소
               <span class="ovf-state">{{ changes ? `${changes}건` : '없음' }}</span>
             </DropdownMenuItem>
+            <DropdownMenuItem as-child class="ovf-item">
+              <NuxtLink :to="`/p/${slug}`">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6s6.6 2 9 6" /></svg>
+                공개 화면 보기
+              </NuxtLink>
+            </DropdownMenuItem>
             <div class="ovf-sep" />
             <DropdownMenuItem class="ovf-item danger" :disabled="deleting" @select="removePost">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3h6v3" /></svg>
               기록 삭제
             </DropdownMenuItem>
           </OverflowMenu>
-          <button type="button" class="btn ghost mono" :disabled="!changes" @click="revert">취소</button>
           <button type="button" class="btn primary mono" :disabled="!changes || saving" @click="save">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
             {{ saving ? '저장 중' : '저장' }}
@@ -966,12 +971,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             <span class="ovf-state">{{ changes ? `${changes}건` : '없음' }}</span>
           </DropdownMenuItem>
           <div class="ovf-sep" />
-          <DropdownMenuItem as-child class="ovf-item">
-            <NuxtLink to="/editor">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>
-              기록 목록
-            </NuxtLink>
-          </DropdownMenuItem>
+          <!-- 「기록 목록」은 없다 — 왼쪽 ← 가 같은 곳으로 간다 -->
           <DropdownMenuItem as-child class="ovf-item">
             <NuxtLink :to="`/p/${slug}`">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6s6.6 2 9 6" /></svg>

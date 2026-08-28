@@ -15,6 +15,8 @@ import { formatMoney, totalsOf } from '#shared/utils/extras'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
+/** 편집 진입은 로그인한 사람에게만 보인다 — 읽는 사람에게는 없는 문이다 */
+const { loggedIn } = useUserSession()
 
 const { data: post, error, status } = useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
 
@@ -107,12 +109,36 @@ function syncViewport() {
   stageHeight.value = stageEl.value?.clientHeight ?? 0
 }
 
+/*
+ * 🔴 무대 높이는 «무대가 생길 때» 재야 한다. onMounted 한 번으로는 못 잰다.
+ *
+ * useFetch 가 lazy 라, 목록에서 눌러 들어오면 첫 렌더는 스켈레톤 갈래다 — 그 순간
+ * ref="stageEl" 이 붙은 진짜 무대는 아직 없어서 높이가 0 으로 남고, 데이터가 도착해
+ * 무대가 생겨도 아무도 다시 재지 않는다. 그러면 시트에 height 가 안 붙어(0) 내용
+ * 높이로 쪼그라든다 — 1440×1000 에서 시트가 1155 여야 할 자리에 240 으로 떴다.
+ * 새로고침으로 들어오면 서버 렌더에 데이터가 실려 있어 처음부터 진짜 무대라 멀쩡했다.
+ *
+ * ResizeObserver 는 붙는 «순간»에도 한 번 부르므로 「생겼을 때」와 「크기가 바뀔 때」를
+ * 한 번에 덮는다.
+ */
+let stageWatch: ResizeObserver | null = null
+watch(stageEl, (el) => {
+  stageWatch?.disconnect()
+  stageWatch = null
+  if (!el) return
+  stageWatch = new ResizeObserver(() => { stageHeight.value = el.clientHeight })
+  stageWatch.observe(el)
+}, { immediate: true })
+
 onMounted(async () => {
   await nextTick()
   syncViewport()
   window.addEventListener('resize', syncViewport)
 })
-onBeforeUnmount(() => window.removeEventListener('resize', syncViewport))
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncViewport)
+  stageWatch?.disconnect()
+})
 
 function select(id: number) {
   activeId.value = id
@@ -284,7 +310,19 @@ useHead(() => ({
           <span class="spend-label">쓴 돈</span>
           <b v-for="t in spendTotals" :key="t.currency" class="spend-amt">{{ formatMoney(t.amount, t.currency) }}</b>
         </span>
+
+        <!-- 좁은 화면 — 이 판이 「기록 정보」다. 편집으로 가는 문도 여기 둔다 -->
+        <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link narrow-only">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+          기록 편집
+        </NuxtLink>
       </div>
+
+      <!-- 넓은 화면 — 헤더 가장 오른쪽 -->
+      <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link wide-only">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+        기록 편집
+      </NuxtLink>
     </header>
 
     <div ref="stageEl" class="stage">
@@ -431,6 +469,21 @@ useHead(() => ({
   cursor: pointer;
 }
 /* wrap — 합계가 아래 줄을 통째로 쓴다. 두 줄이어도 11px×2 + 여백이라 56px 상단바 안이다 */
+/* 편집으로 가는 문 — 목록 헤더의 「기록 관리」와 같은 모양이다 */
+.edit-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 0 13px;
+  border: 1px solid rgb(var(--mid-rgb) / 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--mid);
+}
+.edit-link:hover { border-color: var(--focus-border); color: var(--ink); }
+.edit-link.narrow-only { display: none; }
+
 .stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 11px; color: var(--deep); flex: none; }
 /* 데스크탑에는 통계가 상단바에 그대로 있으므로 토글이 필요 없다
    (base.css 가 display 를 :where() 에 두고 있어 이 한 줄이 그대로 이긴다) */
@@ -547,6 +600,9 @@ useHead(() => ({
     font-size: 10px;
   }
   .stats.open { display: flex; }
+  /* 넓은 화면 몫은 감추고, 판 안의 것만 남긴다 */
+  .edit-link.wide-only { display: none; }
+  .edit-link.narrow-only { display: flex; flex-basis: 100%; justify-content: center; min-height: 40px; margin-top: 2px; }
   /* 「쓴 돈」 줄은 자기 flex-end 를 따로 갖고 있다 — 같이 돌려주지 않으면
      칩은 왼쪽, 금액만 오른쪽으로 갈라져 한 줄 걸러 좌우가 뒤집힌다 */
   .spend { justify-content: flex-start; }

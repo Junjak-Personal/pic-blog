@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { vSk } from '~/utils/img'
 import { vTip } from '~/utils/tip'
-import AppBack from '~/components/AppBack.vue'
 /**
  * 기록 관리 목록 — 편집 진입점.
  * 목록 자체는 아트보드 1a 와 같은 시각 언어다. 행은 상세로 가고, 우측 연필이 편집으로 간다.
@@ -13,25 +12,17 @@ import { formatRange } from '#shared/utils/format'
 definePageMeta({ layout: 'editor' })
 
 const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
-const { fetch: refreshSession } = useUserSession()
-
 useHead({ title: '기록 관리 — pic·blog' })
-
-async function logout() {
-  await $fetch('/api/auth/logout', { method: 'POST' })
-  await refreshSession()
-}
 </script>
 
 <template>
   <div class="page">
     <header class="topbar">
       <div class="brand">
-        <AppBack always fallback="/" label="홈으로" />
         <!-- 마크가 홈 링크를 겸한다. PWA standalone 에는 브라우저 뒤로가기가 없어서
              화면마다 상위로 가는 경로가 하나씩은 있어야 한다. -->
         <NuxtLink to="/" class="home" aria-label="pic·blog 홈">
-          <BrandMark class="mark" />
+          <span class="brandbox"><BrandMark class="mark" /></span>
           <span class="wordmark">pic<span class="dot">·</span>blog</span>
         </NuxtLink>
         <span class="mono kicker">기록 관리</span>
@@ -42,7 +33,10 @@ async function logout() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
           새 기록
         </NuxtLink>
-        <button type="button" class="btn ghost mono" @click="logout">로그아웃</button>
+        <NuxtLink to="/" class="btn ghost mono">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>
+          뷰어 이동
+        </NuxtLink>
       </div>
     </header>
 

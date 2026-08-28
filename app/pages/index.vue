@@ -68,7 +68,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
              살짝 반응해서, 세다가 놓쳤는지 알 수 있게 한다. -->
         <button
           type="button"
-          class="markbtn"
+          class="markbtn brandbox"
           :class="{ armed: taps > 0 }"
           aria-label="pic·blog"
           @click="tapBrand"
@@ -82,7 +82,12 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         <span v-if="posts.length" class="mono totals">
           {{ totals.posts }} 기록 · {{ totals.points }} 포인트 · {{ totals.photos }}장
         </span>
-        <NuxtLink v-if="loggedIn" to="/editor" class="mono editor-link">기록 관리</NuxtLink>
+        <!-- 아이콘을 단다 — 「기록 관리」의 반대편 짝인 편집 화면의 「뷰어 이동」이
+             눈 아이콘을 달고 있다. 오가는 두 문이 같은 모양이라야 짝으로 읽힌다. -->
+        <NuxtLink v-if="loggedIn" to="/editor" class="mono editor-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+          기록 관리
+        </NuxtLink>
       </div>
     </header>
 
@@ -184,16 +189,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .markbtn {
-  display: grid;
-  place-items: center;
-  flex: none;
-  /* 터치 타깃 — 3연타를 하려면 넉넉해야 한다 */
-  width: 36px;
-  height: 36px;
-  /* 36px 타깃 안에서 마크가 가운데 오므로 왼쪽에 6px 이 남는다 — 그만큼 당겨야
-     마크의 «획»이 상단바 여백선(--topbar-x)에서 시작한다. 「기록 관리」 헤더의
-     같은 마크는 버튼이 아니라 링크라 보정 없이 이미 여백선에 붙어 있다. */
-  margin-left: -6px;
+  /* 크기·자리는 base.css 의 .brandbox 가 정한다 (기록 관리 헤더와 같은 값) */
   border: 0;
   background: none;
   cursor: pointer;
@@ -218,6 +214,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
      텅 비어 「빈 테두리」처럼 보인다 — 글자를 상자에 맞춘다. */
   display: flex;
   align-items: center;
+  gap: 7px;
   font-size: 12.5px;
   color: var(--mid);
   border: 1px solid rgb(var(--mid-rgb) / 0.2);
