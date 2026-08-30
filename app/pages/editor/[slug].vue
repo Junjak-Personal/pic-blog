@@ -109,11 +109,12 @@ const saving = ref(false)
 const step = ref<'basic' | 'points' | 'notes'>('basic')
 
 /*
- * 1단계는 폼뿐이라 문서가 굴러가는 편이 낫다 — 아이폰에서 키보드가 셸 고정과 부딪히는
- * 것을 푼다 (useDocScroll 의 실측 참고). 2단계는 지도·드래그 보드라 그대로 두고,
- * 3단계는 1단계가 기기에서 확인되면 같은 방식으로 옮긴다.
+ * 1·3단계는 입력이 주라서 문서가 굴러가는 편이 낫다 — 아이폰에서 키보드가 셸 고정과
+ * 부딪히는 것을 푼다 (useDocScroll 의 실측 참고). 2단계는 지도와 드래그 보드라
+ * 그대로 둔다: 헤더·지도가 밀려 올라가면 안 되고, 드래그의 가장자리 자동 스크롤이
+ * 「굴러가는 칸」을 찾아 움직이는 구조라(useTileDrag) 문서 스크롤과 섞이면 꼬인다.
  */
-useDocScroll(computed(() => step.value === 'basic'))
+useDocScroll(computed(() => step.value === 'basic' || step.value === 'notes'))
 const reclustering = ref(false)
 /** 삭제 중 — 나가기 확인을 건너뛰게 한다 (기록이 사라졌는데 「저장할까요?」를 물으면 안 된다) */
 const deleting = ref(false)
@@ -1947,6 +1948,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
   /* 본문: 격자를 풀고 이 칸 하나가 굴러가게 둔다 (문서는 스크롤하지 않는다) */
   .body { display: block; min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  /* 문서가 굴러가는 화면에서는 이 칸이 스크롤러 노릇을 하지 않는다 (useDocScroll).
+     🔴 포인트 목록(.point-list)은 그대로 둔다 — 45dvh 로 «일부러» 가둔 칸이라
+        같이 풀면 포인트가 많을 때 편집 블록이 저 아래로 밀린다. */
+  html.doc-scroll .body { overflow: visible; flex: none; min-height: auto; }
   /* 좁은 화면에서 46px 썸네일까지 넣으면 이름이 두 글자만 남는다 — 썸네일을 줄인다 */
   .prow { grid-template-columns: 24px 38px 1fr auto; padding: 10px 12px 10px 14px; }
   .pthumb { width: 38px; height: 30px; }

@@ -335,6 +335,9 @@ function cancelRecluster() {
 
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
+  /* 문서가 굴러가는 화면에서는 이 칸이 스크롤러 노릇을 하지 않는다 — 제 높이를 갖고
+     문서를 길게 만든다 (composables/useDocScroll.ts) */
+  html.doc-scroll .settings { overflow: visible; flex: none; min-height: auto; }
   /* 「EXIF 값으로」는 자기 줄로 내려간다 */
   .revert { flex: 1 1 100%; }
   .revert { min-height: 44px; }
