@@ -100,12 +100,20 @@ onMounted(() => {
     const s = scrollerOf(t)
     if (!s || s === padded) return
     /*
-     * 🔴 조건은 «기기»가 아니라 «여지»다. 굴러갈 여지가 이미 넉넉하면 WebKit 이 알아서
-     *    캐럿을 올리므로 건드릴 이유가 없다 — 문제가 나는 건 여지가 0 일 때뿐이다.
-     *    pointer: coarse 로 기기를 가르는 쪽이 그럴듯해 보이지만, 트랙패드를 붙인
-     *    아이패드처럼 «coarse 가 아닌데 가상 키보드가 뜨는» 조합에서 조용히 꺼진다.
+     * 🔴 여지가 이미 있으면 손대지 않는다 — 이 한 줄이 두 가지를 동시에 막는다.
+     *
+     *    (1) 기기 판별이 필요 없다. pointer: coarse 로 가르면 트랙패드 붙인 아이패드처럼
+     *        «coarse 가 아닌데 가상 키보드가 뜨는» 조합에서 조용히 꺼진다.
+     *    (2) 키보드가 «이미» 올라와 있는 상태의 포커스 이동(타이틀 → 요약)에서 다시
+     *        여백을 만드는 것을 막는다. 그때는 셸이 이미 줄어 스크롤러가 진짜 여지를
+     *        갖고 있는데, 거기에 또 빈 여백을 얹으면 WebKit 의 캐럿 맞추기가 그 «빈 곳»
+     *        까지 굴러들어가 폼이 화면 밖으로 사라졌다가 되돌아온다.
+     *        화면 녹화에서 실제로 그 왕복이 찍혔다.
+     *
+     *    기준을 스크롤러 «자신의» 보이는 높이로 잡는 이유는, 그것이 곧 셸 높이이고
+     *    셸은 이미 시각 뷰포트를 따라가기 때문이다 — 뷰포트를 따로 물어볼 필요가 없다.
      */
-    if (s.scrollHeight - s.clientHeight >= window.innerHeight * 0.5) return
+    if (s.scrollHeight - s.clientHeight >= s.clientHeight * 0.5) return
     release()
     padded = s
     s.style.paddingBottom = RESERVE
