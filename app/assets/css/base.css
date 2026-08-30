@@ -406,9 +406,13 @@ img.sk { border-radius: 0; }
  *    싸잡아 열면 3단계의 포인트 목록(45dvh 로 «일부러» 가둔 칸)까지 풀려 편집 블록이
  *    저 아래로 밀린다.
  *
- * 🔴 각 화면이 풀 때는 overflow 만으로는 부족하다. flex: 1 + min-height: 0 이 그 칸을
- *    셸 높이에 «가둬» 내용이 넘쳐도 문서가 길어지지 않는다 — 실제로 문서 여지가 0
- *    그대로였다. 제 높이를 갖게 풀어야 굴러갈 거리가 생긴다.
+ * 🔴 각 화면이 풀 때 되돌려야 하는 것이 셋이다. 하나라도 빠지면 조용히 어긋난다:
+ *      overflow: visible          — 안 열면 그 칸이 계속 스크롤을 먹는다
+ *      flex: none · min-height: auto — flex 가 그 칸을 셸 높이에 «가둬» 내용이 넘쳐도
+ *                                   문서가 길어지지 않는다 (문서 여지가 0 그대로였다)
+ *      overscroll-behavior · touch-action — .scroll-y 가 얹어둔 contain/pan-y 가 남으면
+ *                                   손가락 제스처가 문서로 «이어지지» 못해, 밀리긴 하는데
+ *                                   매번 제자리로 돌아온다
  */
 @media (max-width: 900px) {
   html.doc-scroll,

@@ -336,8 +336,22 @@ function cancelRecluster() {
 @media (max-width: 900px) {
   .settings { padding: 16px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); gap: 20px; }
   /* 문서가 굴러가는 화면에서는 이 칸이 스크롤러 노릇을 하지 않는다 — 제 높이를 갖고
-     문서를 길게 만든다 (composables/useDocScroll.ts) */
-  html.doc-scroll .settings { overflow: visible; flex: none; min-height: auto; }
+     문서를 길게 만든다 (composables/useDocScroll.ts).
+
+     🔴 overflow 만 열면 부족하다. .scroll-y 가 얹어둔 overscroll-behavior-y: contain 과
+        touch-action: pan-y 가 «그대로 남아» 손가락 제스처가 문서로 이어지지 못했다.
+        밀리긴 하는데 매번 제자리로 돌아오는 증상이 이것이었다 — 같은 구조인 실험대는
+        멀쩡했고, 두 페이지의 조상 사슬을 비교해 이 두 줄만 다른 것을 찾았다:
+          실험대   osb=auto   ta=auto
+          편집화면 osb=contain ta=pan-y   ← .scroll-y 의 잔재
+        스크롤 상자가 아니게 되었으니 사슬을 막을 이유도, 축을 제한할 이유도 없다. */
+  html.doc-scroll .settings {
+    overflow: visible;
+    flex: none;
+    min-height: auto;
+    overscroll-behavior: auto;
+    touch-action: auto;
+  }
   /* 「EXIF 값으로」는 자기 줄로 내려간다 */
   .revert { flex: 1 1 100%; }
   .revert { min-height: 44px; }
