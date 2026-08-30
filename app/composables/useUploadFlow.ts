@@ -251,16 +251,22 @@ export function useUploadFlow() {
     }
   }
 
-  /** 「N장 재시도」 — 실패한 것만 다시 올린다. 원본 File 은 그대로 있으므로 다시 리사이즈한다. */
+  /**
+   * 「N장 재시도」 — 실패한 것만 다시 올린다. 원본 File 은 그대로 있으므로 다시 리사이즈한다.
+   * 🔴 도는 동안 stage 를 uploading 으로 되돌린다. 그래야 조치 버튼이 숨어서, 재시도가
+   *    돌고 있는데 「전부 취소」가 눌리는 일이 없다 (진행 중 조치가 이 화면의 원래 결함이었다).
+   */
   async function retryFailed() {
     const byKey = new Map(scanned.value.map((s) => [s.key, s]))
     const targets = [...failed.value]
     failed.value = []
+    stage.value = 'uploading'
     for (const f of targets) {
       const id = photoIds.value[f.key]
       const shot = byKey.get(f.key)
       if (id != null && shot) await uploadOne(shot, id)
     }
+    stage.value = 'done'
   }
 
   /**

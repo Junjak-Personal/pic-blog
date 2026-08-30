@@ -30,6 +30,15 @@ export interface AddPhotosOptions {
   pointId?: Ref<number | null>
   /** 한 번에 처리할 사진 수 상한 */
   limit?: number
+  /**
+   * 붙이기 «전»의 기록 기간.
+   *
+   * 서버는 사진을 붙일 때마다 started_at/ended_at 을 MIN/MAX(shot_at) 으로 다시 계산한다
+   * (posts/[slug]/photos.post.ts — 손으로 고친 기간도 그때 되돌아간다는 것이 명시된 규약이다).
+   * 「전부 취소」가 그 계산까지 되돌리려면 확정 «직전»의 값을 알아야 하는데, 확정 뒤에는
+   * 화면이 기록을 새로 받으므로 그때 읽으면 이미 넓어진 값이다. 그래서 옵션으로 받는다.
+   */
+  period?: Ref<{ started_at: string | null; ended_at: string | null } | null>
 }
 
 export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: AddPhotosOptions = {}) {
@@ -53,6 +62,8 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
    *    계산돼 방금 한 일과 다른 숫자가 뜬다. 그 순간의 값을 여기 찍어둔다.
    */
   const result = ref<{ photos: number; joined: number; created: number; leftover: number } | null>(null)
+  /** 확정 직전에 찍어둔 기간. 되돌릴 때만 쓰므로 화면에 나가지 않는다 — ref 가 아니다. */
+  let periodBefore: { started_at: string | null; ended_at: string | null } | null = null
 
   /** 기존 포인트를 배정 알고리즘이 받는 최소 형태로 좁힌다 */
   const existing = computed<ExistingPoint[]>(() =>
@@ -94,6 +105,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     totalPhotos.value = 0
     errorMessage.value = null
     result.value = null
+    periodBefore = null
     radius.value = DEFAULT_RADIUS
     stage.value = 'idle'
   }
@@ -170,6 +182,8 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     failed.value = []
     uploaded.value = 0
     totalPhotos.value = scanned.value.length
+    // 서버가 곧 다시 계산할 값이다 — 되돌릴 길을 여기서 확보해 둔다 (AddPhotosOptions.period)
+    periodBefore = opts.period?.value ? { ...opts.period.value } : null
 
     const shots = scanned.value
     const byKey = new Map(shots.map((s) => [s.key, s]))
@@ -266,15 +280,23 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     }
   }
 
+  /**
+   * 「N장 재시도」 — 실패한 것만 다시 올린다. 원본은 그대로 있으므로 다시 리사이즈한다.
+   * 🔴 도는 동안 stage 를 uploading 으로 되돌린다. 그래야 진행 화면이 「업로드 중」을 그리고
+   *    조치 버튼이 숨는다 — 재시도 중에 다시 「전부 취소」가 눌리면 올라가는 중인 사진의
+   *    행을 지우게 된다. 화면 없이 오버레이만 쓰는 편집 화면 경로도 이걸로 바빠진다.
+   */
   async function retryFailed() {
     const byKey = new Map(scanned.value.map((s) => [s.key, s]))
     const targets = [...failed.value]
     failed.value = []
+    stage.value = 'uploading'
     for (const f of targets) {
       const id = photoIds.value[f.key]
       const shot = byKey.get(f.key)
       if (id != null && shot) await uploadOne(shot, id)
     }
+    stage.value = 'done'
   }
 
   /**
@@ -284,14 +306,21 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
    * 그러면 이 기록에서 무엇이 빠졌는지 나중에 알 방법이 없다 (useUploadFlow 의 같은
    * 이름 함수 주석 참고). 빈 포인트는 서버가 함께 지운다.
    *
-   * 되돌린 뒤의 기존 포인트 목록은 «이 화면에 들어올 때» 받아둔 그것이 맞다 —
-   * 방금 붙인 것을 전부 뗐으니 다시 그 상태다. 그래서 refresh 가 필요 없다.
+   * 🔴 사진만 지우면 «없던 일»이 아니다. 붙이는 쪽이 기록의 기간을 사진에 맞춰 다시
+   *    계산했으므로(AddPhotosOptions.period) 그 값도 되돌린다 — 안 그러면 사진은 없는데
+   *    기간만 넓은 기록이 남는다. 사진 삭제 엔드포인트에서 일괄 재계산하지 않는 이유는
+   *    그쪽이 손으로 정한 기간까지 덮어쓰기 때문이다 (photos/index.delete.ts 의 🔴).
+   *
+   * 🔴 부른 쪽은 이 뒤에 기록을 다시 받아야 한다. 확정이 끝나면 화면이 이미 한 번
+   *    새로 받았으므로 방금 지운 포인트가 목록에 유령으로 남아 있다.
    *
    * 고른 사진과 원본은 놓지 않는다 — 곧바로 다시 확정할 수 있어야 한다.
    */
   async function cancelUpload() {
     const ids = Object.values(photoIds.value)
     if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
+    if (periodBefore) await $fetch(`/api/posts/${slug.value}`, { method: 'PATCH', body: periodBefore })
+    periodBefore = null
     photoIds.value = {}
     failed.value = []
     uploaded.value = 0

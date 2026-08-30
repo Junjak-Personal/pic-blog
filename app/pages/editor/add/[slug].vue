@@ -19,7 +19,10 @@ const slug = computed(() => String(route.params.slug))
 const { data: post, refresh } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
 const points = computed(() => post.value?.points ?? [])
 
-const flow = useAddPhotosFlow(slug, points)
+const flow = useAddPhotosFlow(slug, points, {
+  // 「전부 취소」가 서버의 기간 재계산까지 되돌리려면 붙이기 전 값이 필요하다
+  period: computed(() => (post.value ? { started_at: post.value.started_at, ended_at: post.value.ended_at } : null)),
+})
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 
 /** 껍데기면 PhotoKit, 아니면 파일 입력 — flow.pick 이 가르고 진행률까지 맡는다 */
@@ -67,6 +70,9 @@ async function cancelUpload() {
   })
   if (!ok) return
   await flow.cancelUpload()
+  // 확정이 끝나며 한 번 새로 받았으므로 방금 지운 포인트가 목록에 유령으로 남아 있다.
+  // 다시 받지 않으면 이어서 확정할 때 없는 포인트에 사진을 붙이려 든다.
+  await refresh()
 }
 
 /**

@@ -454,6 +454,8 @@ const addTargetId = ref<number | null>(null)
 const pointAddFlow = useAddPhotosFlow(slug, computed(() => post.value?.points ?? []), {
   pointId: addTargetId,
   limit: MAX_PER_POINT,
+  // 「전부 취소」가 서버의 기간 재계산까지 되돌리려면 붙이기 전 값이 필요하다
+  period: computed(() => (post.value ? { started_at: post.value.started_at, ended_at: post.value.ended_at } : null)),
 })
 const pointAddInput = useTemplateRef<HTMLInputElement>('pointAddInput')
 const pointAddBusy = computed(() =>
@@ -510,6 +512,8 @@ async function onPointAdd(picking: Promise<void>) {
     errorMessage.value = pointAddFlow.errorMessage.value
     return
   }
+  // 부분 실패를 여기서 매듭짓는다 — 안 그러면 바이트 없는 사진이 조용히 초안에 섞인다
+  if (!(await settlePointAdd())) return
 
   /*
    * 🔴 hydrate() 를 부르지 않는다 — 그건 초안을 통째로 서버 값으로 되돌려 여기까지 한
@@ -538,6 +542,38 @@ async function onPointAdd(picking: Promise<void>) {
   // 더 이른 사진이 들어오면 포인트 순서가 바뀐다 — 서버와 같은 규칙으로 다시 세운다
   resort()
   addTargetId.value = null
+}
+
+/**
+ * 이 경로의 부분 실패 출구.
+ *
+ * 1f(사진 추가)에는 진행 화면이 있어 「재시도 / 전부 취소」를 버튼으로 내지만, 여기는
+ * 오버레이 하나뿐이라 그 몫을 확인 다이얼로그가 맡는다. 출구는 같은 둘이다 — 다시 하거나,
+ * 없던 일로. 「그냥 두기」는 없다: 바이트가 안 온 사진 행을 남기면 초안에 깨진 이미지가
+ * 섞이고, 저장하는 순간 그게 기록에 굳는다 (예전에는 여기서 아무 말도 안 했다).
+ *
+ * 돌려주는 값 = 계속 진행해도 되는가(= 붙은 사진을 초안에 이어 붙일 것인가).
+ */
+async function settlePointAdd() {
+  while (pointAddFlow.failed.value.length) {
+    const again = await askConfirm({
+      title: `사진 ${pointAddFlow.failed.value.length}장이 올라가지 않았습니다`,
+      body: '다시 시도하지 않으면 이번에 붙인 사진을 전부 되돌립니다 (이미 올라간 것 포함).',
+      confirmLabel: '다시 시도',
+      cancelLabel: '전부 취소',
+    })
+    if (!again) {
+      const n = pointAddFlow.totalPhotos.value
+      await pointAddFlow.cancelUpload()
+      pointAddFlow.reset()
+      addTargetId.value = null
+      // 되돌린 «결과»를 적어둔다 — 다이얼로그는 사라지고 화면은 아무 일도 없던 것처럼 보인다
+      errorMessage.value = `사진이 올라가지 않아 ${n}장을 전부 되돌렸습니다`
+      return false
+    }
+    await pointAddFlow.retryFailed()
+  }
+  return true
 }
 
 /** 지정이 없을 때 실제로 쓰이는 사진 — 3단계 픽커가 「기본」 표시를 붙일 자리 */
@@ -1011,6 +1047,14 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       </div>
     </header>
 
+    <!--
+      🔴 모바일 헤더에는 오류가 들어갈 자리가 없다 (한 줄에 [뒤로][제목][메뉴]로 꽉 찼고
+         높이도 고정이다). 그래서 좁은 화면에서는 헤더 «밑»에 한 줄로 깐다 — 데스크탑은
+         제목 옆에 이미 같은 값을 그린다. 이게 없으면 저장 실패·되돌림 같은 소식이
+         폰에서 통째로 안 보인다: 정확히 「조용한 실패」다 (설계문서 §8).
+    -->
+    <p v-if="errorMessage" class="mono err-bar">{{ errorMessage }}</p>
+
     <section v-if="!post" class="blank">
       <h3>기록을 찾을 수 없습니다</h3>
       <p class="mono">/editor/{{ slug }}</p>
@@ -1445,6 +1489,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .top-right { display: flex; align-items: center; gap: 14px; flex: none; }
 
 
+/* 좁은 화면 전용 — 아래 미디어쿼리에서 켜진다 */
+.err-bar { display: none; }
 .err {
   font-size: var(--fs-2xs);
   color: var(--danger);
@@ -1873,6 +1919,16 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 헤더 갈래 전환 — 데스크탑 마크업은 통째로 빠지고 모바일 것이 들어온다 */
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .err-bar {
+    display: block;
+    flex: none;
+    margin: 0;
+    padding: 9px var(--topbar-x-sm);
+    background: rgb(var(--danger-rgb) / 0.12);
+    border-bottom: 1px solid rgb(var(--danger-rgb) / 0.3);
+    font-size: var(--fs-2xs);
+    color: var(--danger);
+  }
   .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); gap: 0; padding: var(--top-inset) var(--topbar-x-sm) 0; }
 
   .steps { padding: 8px 14px; gap: 6px; }
