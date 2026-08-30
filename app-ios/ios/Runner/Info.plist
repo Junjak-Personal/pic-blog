@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>pic-blog</string>
+	<string>$(APP_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,6 +31,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>같은 와이파이의 개발 서버를 열어보기 위해 씁니다. 개발용 빌드에서만 묻습니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>기록에 올릴 사진을 고르기 위해 사진첩을 읽습니다. 고른 사진만 앱이 다룹니다.</string>
 	<key>UIApplicationSceneManifest</key>
