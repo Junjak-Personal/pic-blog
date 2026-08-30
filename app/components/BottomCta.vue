@@ -53,7 +53,12 @@ onMounted(() => {
     position: fixed;
     z-index: 60;
     right: 0;
-    bottom: 0;
+    /*
+     * 🔴 키보드가 올라온 만큼 비켜선다. position: fixed 는 «레이아웃» 뷰포트에 붙는데
+     *    가상 키보드는 그걸 줄이지 않으므로, bottom: 0 이면 타이핑 중에 이 바가 통째로
+     *    키보드 뒤로 들어간다 (셸을 줄여도 따라오지 않는다 — layouts/editor.vue 의 --kb).
+     */
+    bottom: var(--kb, 0px);
     left: 0;
     display: flex;
     flex-direction: column;

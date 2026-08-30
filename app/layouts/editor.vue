@@ -27,31 +27,107 @@ const { loggedIn } = useUserSession()
  *
  * 🔴 CSS 변수로 넣는다. ref + :style 로 하면 키보드 애니메이션 동안 레이아웃이
  *    Vue 리렌더를 타고 흐른다. 값만 바꾸면 스타일 계산 한 번으로 끝난다.
+ *
+ * 함께 내보내는 --kb 는 키보드가 먹은 높이다. position: fixed 는 셸이 아니라 «레이아웃»
+ * 뷰포트에 붙으므로 셸을 줄이는 것만으로는 하단 CTA 가 따라오지 않는다 — 셸이 414 인데
+ * CTA 는 771~844(키보드 뒤)에 그대로 있었다. BottomCta 가 이 값만큼 위로 올라온다.
  */
+
+/**
+ * 넉넉히 잡는 임시 여지 — 정확한 키보드 높이를 모르는 «첫 프레임»에만 쓰인다 (아래 onFocusIn).
+ * --cta-h 를 더하는 것은 이 값이 스타일시트의 하단 여백을 «덮어쓰기» 때문이다.
+ * 그냥 50vh 로 두면 그동안 내용이 하단 CTA 밑으로 숨는다.
+ */
+const RESERVE = 'calc(50vh + var(--cta-h, 0px))'
+
+/**
+ * 가장 가까운 스크롤 컨테이너.
+ * 🔴 useTileDrag 의 같은 이름과 조건이 다르다 — 그쪽은 «실제로 굴러가는» 것만 찾지만
+ *    여기는 여지가 0 인 것을 «찾아서 만들어 주는» 게 목적이라 overflow 만 본다.
+ */
+function scrollerOf(el: HTMLElement): HTMLElement | null {
+  for (let n = el.parentElement; n; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY
+    if (oy === 'auto' || oy === 'scroll') return n
+  }
+  return null
+}
+
+function isTyping(el: HTMLElement) {
+  if (el.isContentEditable || el.tagName === 'TEXTAREA') return true
+  if (el.tagName !== 'INPUT') return false
+  return !/^(checkbox|radio|button|submit|reset|range|color|file)$/.test((el as HTMLInputElement).type)
+}
+
 onMounted(() => {
   const vv = window.visualViewport
   if (!vv) return
   const root = document.documentElement
   let raf = 0
+  let padded: HTMLElement | null = null
+  let settle: ReturnType<typeof setTimeout> | null = null
+
+  const release = () => {
+    if (!padded) return
+    padded.style.paddingBottom = ''
+    padded = null
+  }
 
   const apply = () => {
     raf = 0
+    const kb = Math.max(0, Math.round(window.innerHeight - vv.height))
     root.style.setProperty('--vvh', `${vv.height}px`)
+    root.style.setProperty('--kb', `${kb}px`)
+    // 셸이 줄어 «진짜» 여지가 생겼다 — 임시 여백은 그 몫을 다했다
+    if (kb) release()
     // 이미 끌려 올라간 뒤일 수 있다 — 문서를 제자리로 돌린다
     if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
   }
   // 키보드는 여러 프레임에 걸쳐 올라온다 — 프레임마다 한 번만 쓴다
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply) }
 
+  /*
+   * 포커스가 «들어오는 순간» 스크롤 여지를 미리 만든다.
+   *
+   * visualViewport.resize 는 WebKit 이 캐럿을 올린 «다음»에 온다. 위의 줄이기만으로는
+   *   끌어내림 → (resize) → 되돌림
+   * 순서가 되어 한 번 크게 튕긴다 (실제로 「끝까지 내려갔다 돌아온다」는 보고를 받았다).
+   * 여지가 미리 있으면 WebKit 이 문서를 끌어내릴 이유가 없어 튕김 자체가 생기지 않는다.
+   */
+  const onFocusIn = (e: FocusEvent) => {
+    const t = e.target as HTMLElement | null
+    if (!t || !isTyping(t)) return
+    const s = scrollerOf(t)
+    if (!s || s === padded) return
+    /*
+     * 🔴 조건은 «기기»가 아니라 «여지»다. 굴러갈 여지가 이미 넉넉하면 WebKit 이 알아서
+     *    캐럿을 올리므로 건드릴 이유가 없다 — 문제가 나는 건 여지가 0 일 때뿐이다.
+     *    pointer: coarse 로 기기를 가르는 쪽이 그럴듯해 보이지만, 트랙패드를 붙인
+     *    아이패드처럼 «coarse 가 아닌데 가상 키보드가 뜨는» 조합에서 조용히 꺼진다.
+     */
+    if (s.scrollHeight - s.clientHeight >= window.innerHeight * 0.5) return
+    release()
+    padded = s
+    s.style.paddingBottom = RESERVE
+    // 하드웨어 키보드처럼 끝내 안 올라오는 경우 — 빈 여백이 남지 않게 되돌린다
+    if (settle) clearTimeout(settle)
+    settle = setTimeout(() => { if (!parseFloat(root.style.getPropertyValue('--kb'))) release() }, 600)
+  }
+
   apply()
   vv.addEventListener('resize', schedule)
   vv.addEventListener('scroll', schedule)
+  document.addEventListener('focusin', onFocusIn)
 
   onBeforeUnmount(() => {
     if (raf) cancelAnimationFrame(raf)
+    if (settle) clearTimeout(settle)
+    release()
     vv.removeEventListener('resize', schedule)
     vv.removeEventListener('scroll', schedule)
+    document.removeEventListener('focusin', onFocusIn)
     root.style.removeProperty('--vvh')
+    root.style.removeProperty('--kb')
   })
 })
 </script>
