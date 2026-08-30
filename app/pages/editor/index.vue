@@ -1,4 +1,7 @@
 <script setup lang="ts">
+/** 개발 서버에서만 참 — 운영 번들에는 아래 실험대 링크가 실리지 않는다 */
+const dev = import.meta.dev
+
 import { vSk } from '~/utils/img'
 import { vTip } from '~/utils/tip'
 /**
@@ -98,6 +101,10 @@ useHead({ title: '기록 관리 — pic·blog' })
         </NuxtLink>
       </li>
     </ul>
+
+    <!-- 키보드 실험대로 가는 길. 껍데기에는 주소창이 없어서 링크가 없으면 갈 수가 없다.
+         개발 서버에서만 뜨고, 확인이 끝나면 실험대와 함께 지운다. -->
+    <NuxtLink v-if="dev" to="/editor/kbtest?mode=fixed" class="mono kbtest-link">키보드 실험대 →</NuxtLink>
   </div>
 </template>
 
@@ -319,5 +326,18 @@ useHead({ title: '기록 관리 — pic·blog' })
    *    행이 122px 이 된다 — object-fit: cover 가 잘라주려면 높이가 «정해져» 있어야 한다.
    */
   .cover { width: 64px; height: 44px; }
+}
+</style>
+
+<style scoped>
+.kbtest-link {
+  display: block;
+  margin: 14px 0 0;
+  padding: 10px;
+  border: 1px dashed rgb(var(--acc-rgb) / 0.4);
+  border-radius: var(--radius);
+  color: var(--acc);
+  font-size: var(--fs-2xs);
+  text-align: center;
 }
 </style>
