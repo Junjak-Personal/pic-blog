@@ -28,6 +28,22 @@ interface Row {
 const route = useRoute()
 const rows = ref<Row[]>([])
 
+/**
+ * 실험 스위치 — 하단 CTA 를 잠깐 걷어낸다.
+ *
+ * 폼만 있는 두 화면(실험대 · 편집 1단계)이 다르게 굴러서 차이를 하나씩 지우는 중이고,
+ * 조상 사슬을 맞춘 뒤 남은 유일한 구조 차이가 BottomCta 다. 그냥 fixed 상자가 아니라
+ * 자기 높이를 ResizeObserver 로 재서 --cta-h 에 쓰고, .settings 의 padding-bottom 이
+ * 그 값을 읽는다 — 「관측 → CSS 변수 → 레이아웃 → 관측」의 고리가 있다.
+ *
+ * display:none 이면 관측도 겹침도 함께 사라진다. 왕복이 멎으면 이 둘 중 하나가 원인이고,
+ * 그대로면 CTA 는 무죄다. (--cta-h 는 BottomCta 의 `if (h)` 가드 덕에 마지막 값이
+ *  남으므로 .settings 의 여백은 그대로다 — 여백이 아니라 «상자»만 지우는 실험이다.)
+ */
+const noCta = ref(false)
+watch(noCta, (on) => document.documentElement.classList.toggle('no-cta', on))
+onBeforeUnmount(() => document.documentElement.classList.remove('no-cta'))
+
 const box = useTemplateRef<HTMLElement>('box')
 
 /** 서버로 보내는 양 — 한 묶음을 통째로 담는다 */
@@ -116,7 +132,8 @@ async function send() {
   )
   if (lines.length < 2) return
   try {
-    await $fetch('/api/_probe', { method: 'POST', body: { label: `${lines.length}건 · ${route.fullPath}`, lines } })
+    const cta = noCta.value ? 'CTA꺼짐' : 'CTA켜짐'
+    await $fetch('/api/_probe', { method: 'POST', body: { label: `${cta} · ${lines.length}건 · ${route.fullPath}`, lines } })
     sent.value++
   } catch {
     // 서버가 잠깐 없어도 화면의 표는 그대로 남는다 — 그때는 스샷이 대안이다
@@ -164,12 +181,22 @@ onMounted(() => {
 
 <template>
   <div ref="box" class="probe mono">
-    <div class="head">보낸묶음 {{ sent }} | t | event | vv h+off | sy | doc여지 | scroller | focus@top</div>
+    <div class="head">
+      <button type="button" class="tog" :class="{ on: noCta }" @click="noCta = !noCta">
+        {{ noCta ? 'CTA 꺼짐 — 다시 밀어보세요' : 'CTA 끄기' }}
+      </button>
+      보낸묶음 {{ sent }} | t | ev | vv h+off | sy | doc | scroller | focus@top
+    </div>
     <div v-for="(r, i) in rows.slice(-SHOWN)" :key="i" class="row">
       {{ String(r.t).padStart(4) }} {{ r.ev.padEnd(9) }} {{ r.vv.padEnd(8) }} {{ String(r.sy).padEnd(4) }} doc{{ String(r.doc).padEnd(4) }} {{ r.sc.padEnd(14) }} {{ r.el }}
     </div>
   </div>
 </template>
+
+<style>
+/* 실험용 — 위 noCta 참고. 확인이 끝나면 진단과 함께 지운다. */
+html.no-cta .cta { display: none !important; }
+</style>
 
 <style scoped>
 .probe {
@@ -189,5 +216,17 @@ onMounted(() => {
   overflow: hidden;
 }
 .head { color: #6b8fa0; }
+/* 판 전체는 터치를 통과시키지만 이 버튼만은 받는다 */
+.tog {
+  pointer-events: auto;
+  margin-right: 6px;
+  padding: 3px 8px;
+  border: 1px solid #6b8fa0;
+  border-radius: 4px;
+  background: none;
+  color: #6b8fa0;
+  font: inherit;
+}
+.tog.on { border-color: #ffd479; color: #ffd479; }
 .row:last-child { color: #ffd479; }
 </style>
