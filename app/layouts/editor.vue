@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import UpdateBanner from '~/components/UpdateBanner.vue'
 import ConfirmDialog from '~/components/ConfirmDialog.vue'
-import KeyboardProbe from '~/components/KeyboardProbe.vue'
 /**
  * 쓰기 전체가 이 레이아웃 아래에 있다. 진입 조건이 비밀번호다 (설계문서 §7).
  * 라우트 단위가 아니라 레이아웃 단위 게이트 — 세션이 없으면 어떤 페이지든 비밀번호 화면으로 떨어진다.
  */
 const { loggedIn } = useUserSession()
-/** 개발 서버로 띄웠는가 — 운영 번들에서는 상수 false 라 진단이 통째로 빠진다 */
-const dev = import.meta.dev
-
 
 /**
  * 키보드가 올라온 만큼 셸을 줄인다 (--vvh).
@@ -90,11 +86,6 @@ onMounted(() => {
     <UpdateBanner />
     <!-- 확인창 한 벌. 라우트가 바뀌어도 살아 있어야 한다 (나가기 확인이 여기서 뜬다) -->
     <ConfirmDialog />
-    <!--
-      키보드 진단. import.meta.dev 는 «개발 서버로 띄운 문서»에서만 참이므로,
-      로컬을 보는 dev 껍데기에서만 뜨고 운영 번들에는 아예 실려 나가지 않는다.
-    -->
-    <KeyboardProbe v-if="dev" />
   </div>
 </template>
 

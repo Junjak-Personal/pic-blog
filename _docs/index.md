@@ -4,7 +4,7 @@ status: reference
 topic: doc-storage
 kind: brief
 created: 2026-08-29
-updated: 2026-08-29
+updated: 2026-08-31
 owner: jhyoon
 ---
 # pic-blog 문서 색인
@@ -18,10 +18,9 @@ owner: jhyoon
 
 ## ① 문서
 
-진행 중인 것은 없다. 아래는 전부 끝났거나 계속 참조하는 것이다.
-
 | 상태 | 토픽 | 문서 | 무엇 |
 |---|---|---|---|
+| processing | `ios-keyboard` | [2026-08-31-ios-keyboard-findings.md](active/processing/2026-08-31/2026-08-31-ios-keyboard-findings.md) | 아이폰 키보드와 고정 셸. **지운 다섯 가지 접근**과 아직 못 찾은 차이. 이 문제를 다시 만지기 전에 읽을 것 |
 | reference | `product-spec` | [2026-08-25-product-spec.md](reference/product-spec/2026-08-25-product-spec.md) | 설계 SSOT — 스키마 · 클러스터링 · 업로드 파이프라인. 코드 주석이 「설계문서 §N」으로 가리키는 그 문서 |
 | reference | `design-system` | [2026-08-26-design-system.md](reference/design-system/2026-08-26-design-system.md) | 아트보드에서 가져온 값·규칙. 원본 캔버스는 추적하지 않는다 |
 | reference | `deploy` | [2026-08-26-deploy.md](reference/deploy/2026-08-26-deploy.md) | junserver 배포 런북 |
@@ -45,6 +44,7 @@ owner: jhyoon
 | `e2e-testing` | 브라우저로 화면을 확인하는 절차와 점검 항목 |
 | `native-shell` | iOS 껍데기(`app-ios/`)와 웹↔네이티브 브리지 |
 | `doc-storage` | 이 색인처럼 문서 보관 자체를 다루는 것 |
+| `ios-keyboard` | 아이폰 가상 키보드와 뷰포트 — 고정 셸과 부딪히는 자리 |
 
 ## 이웃 버킷
 

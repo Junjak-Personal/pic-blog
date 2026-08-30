@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/** 개발 서버에서만 참 — 운영 번들에는 실험대 버튼이 실리지 않는다 */
-const dev = import.meta.dev
-
 import { vSk } from '~/utils/img'
 import { vTip } from '~/utils/tip'
 import BrandMark from '~/components/BrandMark.vue'
@@ -94,10 +91,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
       </div>
     </header>
 
-    <!-- 키보드 실험대. 껍데기에는 주소창이 없어 링크가 없으면 갈 수가 없고,
-         목록 «아래»에 두었더니 화면 끝에 붙어 두 번이나 못 보고 지나쳤다.
-         헤더 바로 밑이어야 한다. 개발 서버에서만 뜬다. -->
-    <NuxtLink v-if="dev" to="/test-scroll?mode=fixed" class="mono testlink">키보드 실험대 →</NuxtLink>
 
     <!--
       불러오는 중 — 오는 것의 «모양»을 그대로 잡아둔다.
@@ -442,18 +435,5 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   /* 자리표시는 실제 행과 같은 상자를 쓴다 — 도착했을 때 레이아웃이 튀지 않게 */
   .sk-cover { width: 64px; height: 48px; border-radius: 6px; }
   .line.lg { height: 15px; }
-}
-</style>
-
-<style scoped>
-.testlink {
-  flex: none;
-  margin: 10px 16px 2px;
-  padding: 12px;
-  border: 1px dashed rgb(var(--acc-rgb) / 0.45);
-  border-radius: var(--radius);
-  color: var(--acc);
-  font-size: var(--fs-2xs);
-  text-align: center;
 }
 </style>
