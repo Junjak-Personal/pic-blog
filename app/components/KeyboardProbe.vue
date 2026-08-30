@@ -23,6 +23,7 @@ interface Row {
 
 const route = useRoute()
 const rows = ref<Row[]>([])
+
 const box = useTemplateRef<HTMLElement>('box')
 
 const MAX = 16
@@ -137,7 +138,7 @@ onMounted(() => {
 
 <template>
   <div ref="box" class="probe mono">
-    <div class="head">t | event | vv h+off | win | winScrollY | shell | scroller top/scrollH/clientH | focus@top · 보낸묶음 {{ sent }}</div>
+    <div class="head">보낸묶음 {{ sent }} | t | event | vv h+off | win | sy | shell | scroller top/scrollH/clientH | focus@top</div>
     <div v-for="(r, i) in rows" :key="i" class="row">
       {{ String(r.t).padStart(4) }} {{ r.ev.padEnd(9) }} {{ r.vv.padEnd(8) }} {{ String(r.win).padEnd(4) }} {{ String(r.sy).padEnd(3) }} {{ String(r.shell).padEnd(4) }} {{ r.sc.padEnd(14) }} {{ r.el }}
     </div>

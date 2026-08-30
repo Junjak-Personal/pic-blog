@@ -1,7 +1,4 @@
 <script setup lang="ts">
-/** 개발 서버에서만 참 — 운영 번들에는 아래 실험대 링크가 실리지 않는다 */
-const dev = import.meta.dev
-
 import { vSk } from '~/utils/img'
 import { vTip } from '~/utils/tip'
 /**
@@ -43,10 +40,6 @@ useHead({ title: '기록 관리 — pic·blog' })
       </div>
     </header>
 
-    <!-- 키보드 실험대로 가는 길. 껍데기에는 주소창이 없어서 링크가 없으면 갈 수가 없다.
-         🔴 목록 «위»여야 한다 — 아래에 두었더니 화면 맨 끝(803~844px)에 붙어
-            홈 인디케이터에 가려 못 보고 지나쳤다. 개발 서버에서만 뜬다. -->
-    <NuxtLink v-if="dev" to="/editor/kbtest?mode=fixed" class="mono kbtest-link">키보드 실험대 →</NuxtLink>
 
     <!-- 불러오는 중 — 행의 «모양»을 잡아둔다. pending 에도 posts 는 [] 라 이 갈래가 먼저다. -->
     <ul v-if="status === 'pending'" class="list safe-bottom" role="status" aria-label="기록을 불러오는 중">
@@ -328,19 +321,5 @@ useHead({ title: '기록 관리 — pic·blog' })
    *    행이 122px 이 된다 — object-fit: cover 가 잘라주려면 높이가 «정해져» 있어야 한다.
    */
   .cover { width: 64px; height: 44px; }
-}
-</style>
-
-<style scoped>
-.kbtest-link {
-  display: block;
-  flex: none;
-  margin: 10px 14px 2px;
-  padding: 10px;
-  border: 1px dashed rgb(var(--acc-rgb) / 0.4);
-  border-radius: var(--radius);
-  color: var(--acc);
-  font-size: var(--fs-2xs);
-  text-align: center;
 }
 </style>
