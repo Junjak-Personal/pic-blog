@@ -17,6 +17,8 @@ interface Row {
   win: number
   sy: number
   shell: number
+  /** 문서가 굴러갈 수 있는 거리 — 「손으로 안 내려간다」를 가릴 핵심 값 */
+  doc: number
   sc: string
   el: string
 }
@@ -81,6 +83,7 @@ function snap(ev: string) {
       win: window.innerHeight,
       sy: Math.round(window.scrollY),
       shell: shell?.offsetHeight ?? 0,
+      doc: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       sc: sc ? `${Math.round(sc.scrollTop)}/${sc.scrollHeight}/${sc.clientHeight}` : '-',
       el: `${nameOf(active)}@${r}`,
     },
@@ -100,7 +103,7 @@ async function send() {
   flush = null
   const lines = rows.value.map(
     (r) => `${String(r.t).padStart(5)} ${r.ev.padEnd(9)} vv=${r.vv.padEnd(9)} win=${String(r.win).padEnd(4)}`
-      + ` sy=${String(r.sy).padEnd(4)} shell=${String(r.shell).padEnd(4)} sc=${r.sc.padEnd(16)} ${r.el}`,
+      + ` sy=${String(r.sy).padEnd(4)} doc=${String(r.doc).padEnd(4)} shell=${String(r.shell).padEnd(4)} sc=${r.sc.padEnd(16)} ${r.el}`,
   )
   if (lines.length < 2) return
   try {
@@ -134,6 +137,13 @@ onMounted(() => {
     on(vv, 'scroll', 'vvSCROLL'),
     // 🔴 스크롤은 버블링하지 않는다 — 안쪽 스크롤러가 굴러가는 것을 보려면 캡처여야 한다
     on(document, 'scroll', 'SCROLL', { capture: true, passive: true }),
+    /*
+     * 손가락이 «닿았는데» 굴러가지 않는지 가른다. touchmove 는 초당 수십 번 와서 표를
+     * 밀어내므로 시작과 끝만 남긴다 — 그 사이에 SCROLL 이 하나도 없으면 제스처가
+     * 삼켜진 것이고, touchstart 조차 없으면 손가락이 페이지에 닿지도 않은 것이다.
+     */
+    on(document, 'touchstart', 'touchSTART', { capture: true, passive: true }),
+    on(document, 'touchend', 'touchEND', { capture: true, passive: true }),
   ]
   snap('start')
   onBeforeUnmount(() => {
@@ -145,9 +155,9 @@ onMounted(() => {
 
 <template>
   <div ref="box" class="probe mono">
-    <div class="head">보낸묶음 {{ sent }} | t | event | vv h+off | win | sy | shell | scroller top/scrollH/clientH | focus@top</div>
+    <div class="head">보낸묶음 {{ sent }} | t | event | vv h+off | sy | doc여지 | scroller | focus@top</div>
     <div v-for="(r, i) in rows.slice(-SHOWN)" :key="i" class="row">
-      {{ String(r.t).padStart(4) }} {{ r.ev.padEnd(9) }} {{ r.vv.padEnd(8) }} {{ String(r.win).padEnd(4) }} {{ String(r.sy).padEnd(3) }} {{ String(r.shell).padEnd(4) }} {{ r.sc.padEnd(14) }} {{ r.el }}
+      {{ String(r.t).padStart(4) }} {{ r.ev.padEnd(9) }} {{ r.vv.padEnd(8) }} {{ String(r.sy).padEnd(4) }} doc{{ String(r.doc).padEnd(4) }} {{ r.sc.padEnd(14) }} {{ r.el }}
     </div>
   </div>
 </template>
