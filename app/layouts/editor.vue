@@ -89,6 +89,22 @@ onMounted(() => {
   // 키보드는 여러 프레임에 걸쳐 올라온다 — 프레임마다 한 번만 쓴다
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply) }
 
+  /**
+   * 시각 뷰포트가 «밀렸을» 때는 프레임을 기다리지 않는다.
+   *
+   * 기기 진단에서 나온 것: 키보드가 이미 올라온 상태에서 포커스를 옮기면 WebKit 이
+   * 문서를 통째로 아래로 민다 — window.scrollY 가 -396(= 키보드 높이)이 되고
+   * 초점 칸이 268 → 664 로 내려갔다가 24ms 뒤 제자리로 돌아왔다. 안쪽 스크롤러는
+   * 그동안 꿈쩍도 하지 않았다(scrollTop 0 고정). 즉 이건 «스크롤»이 아니라 문서 밀림이다.
+   *
+   * 되돌리는 일 자체는 높이 계산과 무관하므로 rAF 를 거칠 이유가 없다. 한 프레임이라도
+   * 늦으면 그 어긋남이 그대로 눈에 보인다.
+   */
+  const onVvScroll = () => {
+    if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
+    schedule()
+  }
+
   /*
    * 포커스가 «들어오는 순간» 스크롤 여지를 미리 만든다.
    *
@@ -127,7 +143,7 @@ onMounted(() => {
 
   apply()
   vv.addEventListener('resize', schedule)
-  vv.addEventListener('scroll', schedule)
+  vv.addEventListener('scroll', onVvScroll)
   document.addEventListener('focusin', onFocusIn)
 
   onBeforeUnmount(() => {
@@ -135,7 +151,7 @@ onMounted(() => {
     if (settle) clearTimeout(settle)
     release()
     vv.removeEventListener('resize', schedule)
-    vv.removeEventListener('scroll', schedule)
+    vv.removeEventListener('scroll', onVvScroll)
     document.removeEventListener('focusin', onFocusIn)
     root.style.removeProperty('--vvh')
   })
