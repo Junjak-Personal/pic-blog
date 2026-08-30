@@ -20,7 +20,7 @@ owner: jhyoon
 
 | 상태 | 토픽 | 문서 | 무엇 |
 |---|---|---|---|
-| processing | `ios-keyboard` | [2026-08-31-ios-keyboard-findings.md](active/processing/2026-08-31/2026-08-31-ios-keyboard-findings.md) | 아이폰 키보드와 고정 셸. **지운 다섯 가지 접근**과 아직 못 찾은 차이. 이 문제를 다시 만지기 전에 읽을 것 |
+| processing | `ios-keyboard` | [2026-08-31-ios-keyboard-findings.md](active/processing/2026-08-31/2026-08-31-ios-keyboard-findings.md) | 아이폰 키보드와 고정 셸. **지운 다섯 가지 접근**과 아직 못 찾은 차이. 열린 항목 둘(360장 실사용 · 포커스 튐). 이 문제를 다시 만지기 전에 읽을 것 |
 | reference | `product-spec` | [2026-08-25-product-spec.md](reference/product-spec/2026-08-25-product-spec.md) | 설계 SSOT — 스키마 · 클러스터링 · 업로드 파이프라인. 코드 주석이 「설계문서 §N」으로 가리키는 그 문서 |
 | reference | `design-system` | [2026-08-26-design-system.md](reference/design-system/2026-08-26-design-system.md) | 아트보드에서 가져온 값·규칙. 원본 캔버스는 추적하지 않는다 |
 | reference | `deploy` | [2026-08-26-deploy.md](reference/deploy/2026-08-26-deploy.md) | junserver 배포 런북 |
