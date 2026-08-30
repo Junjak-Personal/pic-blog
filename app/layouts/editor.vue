@@ -10,6 +10,9 @@ const { loggedIn } = useUserSession()
 /** 개발 서버로 띄웠는가 — 운영 번들에서는 상수 false 라 진단이 통째로 빠진다 */
 const dev = import.meta.dev
 
+/** 셸 자체를 잡는다 — 시각 뷰포트가 밀릴 때 반대로 되밀어야 한다 (아래 onVvScroll) */
+const shellEl = useTemplateRef<HTMLElement>('shellEl')
+
 /**
  * 키보드가 올라온 만큼 셸을 줄인다 (--vvh).
  *
@@ -90,18 +93,28 @@ onMounted(() => {
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply) }
 
   /**
-   * 시각 뷰포트가 «밀렸을» 때는 프레임을 기다리지 않는다.
+   * WebKit 이 «시각 뷰포트»를 밀면 셸을 같은 만큼 되밀어 눈에는 안 움직이게 한다.
    *
-   * 기기 진단에서 나온 것: 키보드가 이미 올라온 상태에서 포커스를 옮기면 WebKit 이
-   * 문서를 통째로 아래로 민다 — window.scrollY 가 -396(= 키보드 높이)이 되고
-   * 초점 칸이 268 → 664 로 내려갔다가 24ms 뒤 제자리로 돌아왔다. 안쪽 스크롤러는
-   * 그동안 꿈쩍도 하지 않았다(scrollTop 0 고정). 즉 이건 «스크롤»이 아니라 문서 밀림이다.
+   * 기기 진단이 확정해 준 것: 키보드가 이미 올라온 상태에서 포커스를 옮기면
+   * visualViewport.offsetTop 이 -396(= 키보드 높이)이 되었다가 ~15ms 뒤 0 으로 돌아온다.
+   * 그동안 초점 칸이 268 → 664 로 내려갔다 온다. 그게 눈에 보이는 「이상한 이동」이다.
    *
-   * 되돌리는 일 자체는 높이 계산과 무관하므로 rAF 를 거칠 이유가 없다. 한 프레임이라도
-   * 늦으면 그 어긋남이 그대로 눈에 보인다.
+   * 🔴 스크롤이 «아니다». 안쪽 스크롤러는 내내 scrollTop 0 이었고, 문서에서 굴러갈
+   *    여지를 없앤 뒤에도 그대로였다. 즉 window.scrollTo 로는 되돌릴 수 없다 —
+   *    실제로 넣어봤고 15~24ms 가 18ms 로 줄었을 뿐 사라지지 않았다.
+   *    움직이는 것은 뷰포트 자체이므로, 그 반대로 «내용»을 옮겨 상쇄한다.
+   *    (같은 화면의 진단 패널이 이 방법으로 혼자 제자리에 남아 있었다 — 그게 근거다.)
+   *
+   * 평소에는 transform 을 아예 걸지 않는다. transform 이 있는 요소는 그 안의
+   * position: fixed 에 대해 컨테이닝 블록이 되므로, 필요 없을 때 남겨두지 않는다.
    */
   const onVvScroll = () => {
-    if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
+    const shell = shellEl.value
+    const off = Math.round(vv.offsetTop)
+    if (shell) {
+      if (off) shell.style.transform = `translateY(${off}px)`
+      else shell.style.removeProperty('transform')
+    }
     schedule()
   }
 
@@ -149,6 +162,7 @@ onMounted(() => {
   onBeforeUnmount(() => {
     if (raf) cancelAnimationFrame(raf)
     if (settle) clearTimeout(settle)
+    shellEl.value?.style.removeProperty('transform')
     release()
     vv.removeEventListener('resize', schedule)
     vv.removeEventListener('scroll', onVvScroll)
@@ -159,7 +173,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="shell">
+  <div ref="shellEl" class="shell">
     <EditorGate v-if="!loggedIn" />
     <slot v-else />
     <UpdateBanner />
