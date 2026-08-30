@@ -50,15 +50,18 @@ onMounted(() => {
 
 @media (max-width: 900px) {
   .cta {
-    position: fixed;
+    /*
+     * 🔴 fixed 가 아니라 absolute 다. fixed 는 «레이아웃» 뷰포트에 붙는데 가상 키보드는
+     *    그걸 줄이지 않아서, 타이핑 중에 이 바가 통째로 키보드 뒤로 들어갔다.
+     *    키보드 높이를 따로 계산해 bottom 을 밀어봤지만(--kb) 그 값과 셸 높이가 서로
+     *    다른 시점에 들어와 첫 포커스에서 엉뚱한 자리에 섰다.
+     *    쓰는 쪽 .page 는 셸(높이 = 시각 뷰포트, layouts/editor.vue)의 마지막 칸이므로
+     *    그 바닥에 붙이면 «항상» 키보드 바로 위다 — 값이 하나뿐이라 어긋날 수가 없다.
+     */
+    position: absolute;
     z-index: 60;
     right: 0;
-    /*
-     * 🔴 키보드가 올라온 만큼 비켜선다. position: fixed 는 «레이아웃» 뷰포트에 붙는데
-     *    가상 키보드는 그걸 줄이지 않으므로, bottom: 0 이면 타이핑 중에 이 바가 통째로
-     *    키보드 뒤로 들어간다 (셸을 줄여도 따라오지 않는다 — layouts/editor.vue 의 --kb).
-     */
-    bottom: var(--kb, 0px);
+    bottom: 0;
     left: 0;
     display: flex;
     flex-direction: column;

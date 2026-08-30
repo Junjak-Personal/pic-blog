@@ -28,9 +28,9 @@ const { loggedIn } = useUserSession()
  * 🔴 CSS 변수로 넣는다. ref + :style 로 하면 키보드 애니메이션 동안 레이아웃이
  *    Vue 리렌더를 타고 흐른다. 값만 바꾸면 스타일 계산 한 번으로 끝난다.
  *
- * 함께 내보내는 --kb 는 키보드가 먹은 높이다. position: fixed 는 셸이 아니라 «레이아웃»
- * 뷰포트에 붙으므로 셸을 줄이는 것만으로는 하단 CTA 가 따라오지 않는다 — 셸이 414 인데
- * CTA 는 771~844(키보드 뒤)에 그대로 있었다. BottomCta 가 이 값만큼 위로 올라온다.
+ * 🔴 이 값 하나가 SSOT 다. 한때 「키보드가 먹은 높이(--kb)」를 따로 내보내 하단 CTA 를
+ *    밀었는데, 둘이 서로 다른 시점에 들어와 첫 포커스에서 CTA 가 엉뚱한 자리에 섰다.
+ *    지금 CTA 는 셸의 마지막 칸에 absolute 로 붙어 이 값을 그냥 «따라간다» (BottomCta).
  */
 
 /**
@@ -75,11 +75,11 @@ onMounted(() => {
 
   const apply = () => {
     raf = 0
-    const kb = Math.max(0, Math.round(window.innerHeight - vv.height))
+    // 키보드가 올라와 있는가 — 임시 여백을 언제 걷을지 판단하는 데만 쓴다
+    const shrunk = vv.height < window.innerHeight - 1
     root.style.setProperty('--vvh', `${vv.height}px`)
-    root.style.setProperty('--kb', `${kb}px`)
     // 셸이 줄어 «진짜» 여지가 생겼다 — 임시 여백은 그 몫을 다했다
-    if (kb) release()
+    if (shrunk) release()
     // 이미 끌려 올라간 뒤일 수 있다 — 문서를 제자리로 돌린다
     if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
   }
@@ -111,7 +111,7 @@ onMounted(() => {
     s.style.paddingBottom = RESERVE
     // 하드웨어 키보드처럼 끝내 안 올라오는 경우 — 빈 여백이 남지 않게 되돌린다
     if (settle) clearTimeout(settle)
-    settle = setTimeout(() => { if (!parseFloat(root.style.getPropertyValue('--kb'))) release() }, 600)
+    settle = setTimeout(() => { if (vv.height >= window.innerHeight - 1) release() }, 600)
   }
 
   apply()
@@ -127,7 +127,6 @@ onMounted(() => {
     vv.removeEventListener('scroll', schedule)
     document.removeEventListener('focusin', onFocusIn)
     root.style.removeProperty('--vvh')
-    root.style.removeProperty('--kb')
   })
 })
 </script>

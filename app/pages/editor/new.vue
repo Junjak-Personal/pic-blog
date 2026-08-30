@@ -449,7 +449,8 @@ async function onBack() {
 
 
 <style scoped>
-.page { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+/* position: relative — 하단 CTA 가 이 칸의 바닥에 붙는다 (BottomCta 의 🔴) */
+.page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 /* 상단 단계바 */
 .topbar {

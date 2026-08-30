@@ -369,7 +369,8 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 
 <style scoped>
 /* 셸이 이미 뷰포트에 고정돼 있다 — 여기서는 남는 높이를 받아 채우기만 한다 */
-.page { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* position: relative — 하단 CTA 가 이 칸의 바닥에 붙는다 (BottomCta 의 🔴) */
+.page { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 .topbar {
   height: var(--topbar-h);
