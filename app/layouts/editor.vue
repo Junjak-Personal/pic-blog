@@ -26,10 +26,21 @@ const dev = import.meta.dev
  *      SCROLL    vv=397+-396  sy=-396  sc=0/744/280  summary@664   ← ~100ms 뒤 밀림
  *      SCROLL    vv=397+0     sy=0     sc=0/744/280  summary@268   ← ~17ms 뒤 복귀
  *
- *    안쪽 스크롤러는 내내 scrollTop 0 이다. 움직이는 것은 문서가 아니라 시각 뷰포트
- *    자체라서 JS 가 손댈 수 없고, 상쇄를 걸어도 합성 프레임이 어긋나 반대 방향 흔들림만
- *    생겼다(로그의 @-128). 그래서 손대는 것을 그만두고 최소로 되돌린다 —
- *    WebKit 이 캐럿을 맞추는 동안 우리가 레이아웃을 건드리면 그 흔들림을 키울 뿐이다.
+ *    안쪽 스크롤러는 내내 scrollTop 0 이다.
+ *
+ * 🔴 그런데 «되돌리기»는 반드시 있어야 한다. 한때 이것을 「24ms 가 18ms 로 줄었을 뿐」
+ *    이라고 잘못 읽고 걷어냈는데, 그러자 로그가 이렇게 끝났다:
+ *
+ *      focusIN   vv=397+0     sy=0     summary@268
+ *      SCROLL    vv=397+-396  sy=-396  summary@664   ← 그리고 «돌아오지 않는다»
+ *
+ *    앞선 로그들에서 ~17ms 뒤에 제자리로 돌아온 것은 WebKit 이 스스로 푼 것이 아니라
+ *    바로 이 scrollTo 가 한 일이었다. 없으면 밀린 채로 남아 화면이 통째로 비고 하단
+ *    CTA 가 사라진다 — 처음 신고된 그 증상이다.
+ *
+ *    되돌리는 일은 높이 계산과 무관하므로 rAF 를 거치지 않는다. 남는 흔들림은 한두
+ *    프레임이고, 그 이상은 JS 로 못 줄인다 (상쇄를 걸어봤더니 합성 프레임이 어긋나
+ *    반대 방향 흔들림만 하나 더 생겼다 — 로그의 @-128).
  */
 onMounted(() => {
   const vv = window.visualViewport
@@ -44,12 +55,19 @@ onMounted(() => {
   // 키보드는 여러 프레임에 걸쳐 올라온다 — 프레임마다 한 번만 쓴다
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply) }
 
+  /** WebKit 이 밀어둔 것을 곧바로 되돌린다 — 위 🔴 참고. 이게 없으면 밀린 채로 남는다. */
+  const undoPush = () => {
+    if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
+  }
+
   apply()
   vv.addEventListener('resize', schedule)
+  vv.addEventListener('scroll', undoPush)
 
   onBeforeUnmount(() => {
     if (raf) cancelAnimationFrame(raf)
     vv.removeEventListener('resize', schedule)
+    vv.removeEventListener('scroll', undoPush)
     root.style.removeProperty('--vvh')
   })
 })
