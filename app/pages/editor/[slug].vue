@@ -107,6 +107,13 @@ const activeId = ref<number | null>(null)
 const tagInput = ref('')
 const saving = ref(false)
 const step = ref<'basic' | 'points' | 'notes'>('basic')
+
+/*
+ * 1단계는 폼뿐이라 문서가 굴러가는 편이 낫다 — 아이폰에서 키보드가 셸 고정과 부딪히는
+ * 것을 푼다 (useDocScroll 의 실측 참고). 2단계는 지도·드래그 보드라 그대로 두고,
+ * 3단계는 1단계가 기기에서 확인되면 같은 방식으로 옮긴다.
+ */
+useDocScroll(computed(() => step.value === 'basic'))
 const reclustering = ref(false)
 /** 삭제 중 — 나가기 확인을 건너뛰게 한다 (기록이 사라졌는데 「저장할까요?」를 물으면 안 된다) */
 const deleting = ref(false)

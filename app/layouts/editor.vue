@@ -48,15 +48,24 @@ onMounted(() => {
   const root = document.documentElement
   let raf = 0
 
+  /**
+   * 문서가 굴러가는 화면에서는 이 둘을 «하지 않는다» (useDocScroll).
+   * 그쪽에서는 WebKit 이 문서를 정상으로 굴려 캐럿을 올리므로 셸을 줄일 이유가 없고,
+   * 되돌리기는 그 «정상 스크롤»을 도로 0 으로 밀어 캐럿 맞추기를 망가뜨린다.
+   */
+  const docScroll = () => root.classList.contains('doc-scroll')
+
   const apply = () => {
     raf = 0
-    root.style.setProperty('--vvh', `${vv.height}px`)
+    if (docScroll()) root.style.removeProperty('--vvh')
+    else root.style.setProperty('--vvh', `${vv.height}px`)
   }
   // 키보드는 여러 프레임에 걸쳐 올라온다 — 프레임마다 한 번만 쓴다
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply) }
 
   /** WebKit 이 밀어둔 것을 곧바로 되돌린다 — 위 🔴 참고. 이게 없으면 밀린 채로 남는다. */
   const undoPush = () => {
+    if (docScroll()) return
     if (window.scrollY || window.scrollX) window.scrollTo(0, 0)
   }
 
