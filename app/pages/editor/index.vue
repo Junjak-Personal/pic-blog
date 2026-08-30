@@ -43,6 +43,11 @@ useHead({ title: '기록 관리 — pic·blog' })
       </div>
     </header>
 
+    <!-- 키보드 실험대로 가는 길. 껍데기에는 주소창이 없어서 링크가 없으면 갈 수가 없다.
+         🔴 목록 «위»여야 한다 — 아래에 두었더니 화면 맨 끝(803~844px)에 붙어
+            홈 인디케이터에 가려 못 보고 지나쳤다. 개발 서버에서만 뜬다. -->
+    <NuxtLink v-if="dev" to="/editor/kbtest?mode=fixed" class="mono kbtest-link">키보드 실험대 →</NuxtLink>
+
     <!-- 불러오는 중 — 행의 «모양»을 잡아둔다. pending 에도 posts 는 [] 라 이 갈래가 먼저다. -->
     <ul v-if="status === 'pending'" class="list safe-bottom" role="status" aria-label="기록을 불러오는 중">
       <li v-for="i in 3" :key="i" class="row sk-row" aria-hidden="true">
@@ -102,9 +107,6 @@ useHead({ title: '기록 관리 — pic·blog' })
       </li>
     </ul>
 
-    <!-- 키보드 실험대로 가는 길. 껍데기에는 주소창이 없어서 링크가 없으면 갈 수가 없다.
-         개발 서버에서만 뜨고, 확인이 끝나면 실험대와 함께 지운다. -->
-    <NuxtLink v-if="dev" to="/editor/kbtest?mode=fixed" class="mono kbtest-link">키보드 실험대 →</NuxtLink>
   </div>
 </template>
 
@@ -332,7 +334,8 @@ useHead({ title: '기록 관리 — pic·blog' })
 <style scoped>
 .kbtest-link {
   display: block;
-  margin: 14px 0 0;
+  flex: none;
+  margin: 10px 14px 2px;
   padding: 10px;
   border: 1px dashed rgb(var(--acc-rgb) / 0.4);
   border-radius: var(--radius);
