@@ -33,12 +33,6 @@ const currentStep = computed(() => {
   return 1 // idle · loading · scanning · picked — 전부 「고르는 중」이다
 })
 
-/** 시도가 아니라 실제 안착한 장수 기준. 2장 실패면 100%가 아니라 98.x% 로 보인다. */
-const uploadPercent = computed(() => {
-  const total = flow.totalPhotos.value
-  return total ? +((flow.uploaded.value / total) * 100).toFixed(1) : 0
-})
-
 function formatBytes(bytes: number) {
   return bytes >= 1024 * 1024
     ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
@@ -69,9 +63,21 @@ async function retry() {
   }
 }
 
-async function skip() {
-  await flow.skipFailed()
-  if (flow.createdSlug.value) await router.replace(`/editor/${flow.createdSlug.value}`)
+/**
+ * 부분 실패의 출구는 「다시 하기」와 「없던 일로」 둘뿐이다.
+ * 예전의 「건너뛰고 저장」은 실패한 사진만 빼고 저장했는데, 그러면 무엇이 빠졌는지
+ * 알 수 없는 기록이 남는다. 취소하면 고른 사진은 그대로라 곧바로 다시 확정할 수 있다.
+ */
+async function cancelUpload() {
+  const ok = await askConfirm({
+    title: '올린 것을 전부 취소할까요?',
+    body: `방금 만든 기록이 통째로 지워집니다. 고른 사진 ${flow.scanned.value.length}장은 그대로 남아 다시 확정할 수 있습니다.`,
+    confirmLabel: '전부 취소',
+    cancelLabel: '그대로 두기',
+    danger: true,
+  })
+  if (!ok) return
+  await flow.cancelUpload()
 }
 
 /**
@@ -398,35 +404,45 @@ async function onBack() {
       </div>
     </template>
 
-    <!-- 3단계 — 업로드 진행률 · 부분 실패 (아트보드 1c) -->
+    <!--
+      3단계 — 업로드 진행률 · 부분 실패 (아트보드 1c)
+
+      🔴 실패 목록도 조치 버튼도 «끝난 뒤»(done)에만 낸다. 예전에는 첫 실패가 나는 순간
+         올리는 중에도 버튼이 떴는데, 그걸 누르면 아직 안 올라간 사진의 원본을 놓아버려
+         («건너뛰고 저장»이 그랬다) 남은 사진이 전부 변환 실패로 떨어졌다 — 포인트는
+         있는데 이미지가 전부 깨진 기록이 그렇게 만들어졌다. 진행 중에는 숫자로만 알린다.
+    -->
     <section v-else class="empty">
-      <h3 v-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
-      <h3 v-else-if="flow.stage.value === 'done'">저장했습니다</h3>
-      <h3 v-else>업로드 중</h3>
+      <h3 v-if="flow.stage.value === 'uploading'">업로드 중</h3>
+      <h3 v-else-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
+      <h3 v-else>저장했습니다</h3>
 
       <div class="bar">
-        <span class="bar-fill" :style="{ width: `${uploadPercent}%` }" />
+        <span class="bar-fill" :style="{ width: `${flow.uploadPercent.value}%` }" />
       </div>
+      <!-- 퍼센트만으로는 「얼마나 남았는지」가 안 잡힌다 — 장수를 앞에 둔다 -->
       <p class="mono progress-line">
-        업로드 {{ uploadPercent }}%
-        <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장 · 재시도 가능</template>
+        업로드 {{ flow.uploaded.value }} / {{ flow.totalPhotos.value }}장 ({{ flow.uploadPercent.value }}%)
+        <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장</template>
       </p>
-
-      <ul v-if="flow.failed.value.length" class="failed">
-        <li v-for="f in flow.failed.value" :key="f.key">
-          <span class="mono f-name">{{ f.name }}</span>
-          <span class="mono f-why">{{ f.reason }} · {{ formatBytes(f.bytes) }}</span>
-        </li>
-      </ul>
 
       <p v-if="flow.errorMessage.value" class="mono error">{{ flow.errorMessage.value }}</p>
 
-      <div v-if="flow.failed.value.length" class="actions">
-        <button type="button" class="btn primary mono" @click="retry">
-          {{ flow.failed.value.length }}장 재시도
-        </button>
-        <button type="button" class="btn ghost mono" @click="skip">건너뛰고 저장</button>
-      </div>
+      <template v-if="flow.stage.value === 'done' && flow.failed.value.length">
+        <ul class="failed">
+          <li v-for="f in flow.failed.value" :key="f.key">
+            <span class="mono f-name">{{ f.name }}</span>
+            <span class="mono f-why">{{ f.reason }} · {{ formatBytes(f.bytes) }}</span>
+          </li>
+        </ul>
+
+        <div class="actions">
+          <button type="button" class="btn primary mono" @click="retry">
+            {{ flow.failed.value.length }}장 재시도
+          </button>
+          <button type="button" class="btn ghost mono" @click="cancelUpload">전부 취소</button>
+        </div>
+      </template>
     </section>
   </div>
 </template>

@@ -46,7 +46,7 @@ export function useUploadFlow() {
   const totalPhotos = ref(0)
   const failed = ref<FailedPhoto[]>([])
   const createdSlug = ref<string | null>(null)
-  /** 업로드 세션 키 → photo.id. 재시도·건너뛰기가 이걸 쓴다. */
+  /** 업로드 세션 키 → photo.id. 재시도가 이걸 쓴다. */
   const photoIds = ref<Record<string, number>>({})
   const errorMessage = ref<string | null>(null)
 
@@ -59,6 +59,11 @@ export function useUploadFlow() {
       const cs = clusterAt(scanned.value, r)
       return { radius: r, count: cs.length, gaps: cs.filter((c) => c.gap || c.dayBreak).length }
     }),
+  )
+
+  /** 시도가 아니라 실제 안착한 장수 기준. 2장 실패면 100%가 아니라 98.x% 로 보인다. */
+  const uploadPercent = computed(() =>
+    totalPhotos.value ? +((uploaded.value / totalPhotos.value) * 100).toFixed(1) : 0,
   )
 
   /** 시간 공백(90분)으로 끊긴 자리 */
@@ -258,12 +263,26 @@ export function useUploadFlow() {
     }
   }
 
-  /** 「건너뛰고 저장」 — 끝내 못 올린 사진 행을 지운다. 행만 남으면 깨진 이미지가 된다. */
-  async function skipFailed() {
-    const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
-    if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
+  /**
+   * 「전부 취소」 — 방금 만든 기록을 통째로 지우고 2단계로 되돌린다.
+   *
+   * 예전에는 여기가 「건너뛰고 저장」이었다. 실패한 행만 지우고 나머지는 그대로 두는
+   * 것이었는데, 그러면 «반쯤 올라간 기록»이 남는다 — 사진 몇 장이 빠진 포인트를 나중에
+   * 보고 무엇이 빠졌는지 알 방법이 없다. 부분 실패의 출구는 「다시 하기」거나
+   * 「없던 일로」 둘 뿐이어야 한다.
+   *
+   * 고른 사진(scanned)과 원본(src)은 놓지 않는다 — 곧바로 다시 확정할 수 있어야 하고,
+   * 여기서 놓으면 껍데기 쪽 원본이 사라져 재확정이 전량 「변환 실패」가 된다.
+   */
+  async function cancelUpload() {
+    const slug = createdSlug.value
+    if (slug) await $fetch(`/api/posts/${slug}`, { method: 'DELETE' })
+    createdSlug.value = null
+    photoIds.value = {}
     failed.value = []
-    void releaseSources(scanned.value.map((s) => s.src))
+    uploaded.value = 0
+    totalPhotos.value = 0
+    stage.value = 'preview'
   }
 
   return {
@@ -279,6 +298,7 @@ export function useUploadFlow() {
     loadProgress,
     uploaded,
     totalPhotos,
+    uploadPercent,
     failed,
     createdSlug,
     photoIds,
@@ -290,7 +310,7 @@ export function useUploadFlow() {
     backToPick,
     confirm,
     retryFailed,
-    skipFailed,
+    cancelUpload,
     reset,
   }
 }

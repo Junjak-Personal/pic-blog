@@ -416,7 +416,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
         :class="{ target: drag.over.value?.groupId === null }"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-        <span class="mono">여기 떨구면 새 포인트로 분리됩니다</span>
+        <!-- 좁은 화면에서는 영역 자체가 작아진다 (아래 스타일) — 문구도 같이 줄인다 -->
+        <span class="mono zone-long">여기 떨구면 새 포인트로 분리됩니다</span>
+        <span class="mono zone-short">새 포인트</span>
       </div>
     </div>
   </div>
@@ -645,6 +647,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   font-size: var(--fs-xs);
 }
 .newzone.target { border-color: var(--acc); border-style: solid; color: var(--ink); background: rgb(var(--acc-rgb) / 0.14); }
+.zone-short { display: none; }
 
 @media (max-width: 900px) {
   .hint { display: none; }
@@ -656,7 +659,25 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   .kill { width: 26px; height: 26px; }
   /* 손가락이 자주 빗나가는 자리라 보이지 않는 여유를 준다 (칸이 좁아 44px 정사각은 못 넣는다) */
   .kill::after { content: ''; position: absolute; top: -4px; right: -4px; width: 38px; height: 38px; }
-  /* 하단 CTA(저장) 위에 앉힌다 — 겹치면 떨구려다 저장을 누른다 */
-  .newzone { height: 74px; bottom: calc(var(--cta-h) + 8px + env(safe-area-inset-bottom)); width: calc(100% - 24px); }
+  /*
+   * 하단 CTA(저장) 위에 앉힌다 — 겹치면 떨구려다 저장을 누른다.
+   *
+   * 🔴 폭을 화면 전체로 두면 안 된다. 이 영역은 fixed 라 «위에» 떠 있고, 화면을 가로로
+   *    가로막으면 그 아래 줄의 포인트로 옮기려는 손이 여기 먼저 걸린다 — 실제로 다른
+   *    포인트로 옮기는 게 불편하다는 지적을 받은 자리다. 오른손 엄지가 닿는 오른쪽 아래
+   *    정사각형으로 줄여 목록 대부분을 비워 둔다.
+   */
+  .newzone {
+    left: auto;
+    right: 12px;
+    transform: none;
+    flex-direction: column;
+    gap: 5px;
+    width: 96px;
+    height: 96px;
+    bottom: calc(var(--cta-h) + 8px + env(safe-area-inset-bottom));
+  }
+  .zone-long { display: none; }
+  .zone-short { display: inline; font-size: var(--fs-2xs); }
 }
 </style>

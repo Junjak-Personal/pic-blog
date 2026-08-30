@@ -53,12 +53,20 @@ async function retry() {
 }
 
 /**
- * 못 올린 사진을 포기한다 — 여기서는 완료 화면으로 가지 않는다.
- * result 는 「올리려 한 장수」라 버린 몫만큼 사실과 어긋난다. 편집으로 돌려보낸다.
+ * 부분 실패의 출구는 「다시 하기」와 「없던 일로」 둘뿐이다 (useAddPhotosFlow 주석 참고).
+ * 취소하면 이번에 붙인 사진이 전부 떨어져 나가고 고른 사진은 남는다 — 곧바로 다시 확정할 수 있다.
  */
-async function skip() {
-  await flow.skipFailed()
-  await back()
+async function cancelUpload() {
+  const ok = await askConfirm({
+    title: '올린 것을 전부 취소할까요?',
+    // 떨어지는 것은 «이번에 만든 행 전부»다 — 올라간 것도 포함이라 uploaded 로 세면 거짓말이 된다
+    body: `이번에 붙인 사진 ${flow.totalPhotos.value}장이 이 기록에서 떨어집니다 (이미 올라간 것 포함). 고른 사진 ${flow.scanned.value.length}장은 그대로 남아 다시 확정할 수 있습니다.`,
+    confirmLabel: '전부 취소',
+    cancelLabel: '그대로 두기',
+    danger: true,
+  })
+  if (!ok) return
+  await flow.cancelUpload()
 }
 
 /**
@@ -326,26 +334,29 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       </div>
     </section>
 
-    <!-- 업로드 진행 · 부분 실패 -->
+    <!-- 업로드 진행 · 부분 실패. 조치는 «끝난 뒤»에만 낸다 — new.vue 의 같은 자리 주석 참고 -->
     <section v-else class="empty">
-      <h3 v-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
-      <h3 v-else>업로드 중</h3>
+      <h3 v-if="flow.stage.value === 'uploading'">업로드 중</h3>
+      <h3 v-else-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
+      <h3 v-else>저장했습니다</h3>
       <div class="bar"><span class="bar-fill" :style="{ width: `${flow.uploadPercent.value}%` }" /></div>
       <p class="mono">
-        업로드 {{ flow.uploadPercent.value }}%
-        <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장 · 재시도 가능</template>
+        업로드 {{ flow.uploaded.value }} / {{ flow.totalPhotos.value }}장 ({{ flow.uploadPercent.value }}%)
+        <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장</template>
       </p>
-      <ul v-if="flow.failed.value.length" class="failed">
-        <li v-for="f in flow.failed.value" :key="f.key">
-          <span class="mono f-name">{{ f.name }}</span>
-          <span class="mono f-why">{{ f.reason }}</span>
-        </li>
-      </ul>
       <p v-if="flow.errorMessage.value" class="mono error">{{ flow.errorMessage.value }}</p>
-      <div v-if="flow.failed.value.length" class="actions">
-        <button type="button" class="btn primary mono" @click="retry">{{ flow.failed.value.length }}장 재시도</button>
-        <button type="button" class="btn ghost mono" @click="skip">건너뛰고 저장</button>
-      </div>
+      <template v-if="flow.stage.value === 'done' && flow.failed.value.length">
+        <ul class="failed">
+          <li v-for="f in flow.failed.value" :key="f.key">
+            <span class="mono f-name">{{ f.name }}</span>
+            <span class="mono f-why">{{ f.reason }}</span>
+          </li>
+        </ul>
+        <div class="actions">
+          <button type="button" class="btn primary mono" @click="retry">{{ flow.failed.value.length }}장 재시도</button>
+          <button type="button" class="btn ghost mono" @click="cancelUpload">전부 취소</button>
+        </div>
+      </template>
     </section>
   </div>
 </template>

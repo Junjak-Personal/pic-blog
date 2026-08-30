@@ -277,18 +277,33 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
     }
   }
 
-  /** 끝내 못 올린 사진 행을 지운다 — 행만 남으면 깨진 이미지가 된다 */
-  async function skipFailed() {
-    const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
+  /**
+   * 「전부 취소」 — 이번에 붙인 사진을 «성공분까지» 전부 지우고 2단계로 되돌린다.
+   *
+   * 예전에는 여기가 「건너뛰고 저장」이었다. 실패한 행만 지우면 반쯤 붙은 상태가 남는데,
+   * 그러면 이 기록에서 무엇이 빠졌는지 나중에 알 방법이 없다 (useUploadFlow 의 같은
+   * 이름 함수 주석 참고). 빈 포인트는 서버가 함께 지운다.
+   *
+   * 되돌린 뒤의 기존 포인트 목록은 «이 화면에 들어올 때» 받아둔 그것이 맞다 —
+   * 방금 붙인 것을 전부 뗐으니 다시 그 상태다. 그래서 refresh 가 필요 없다.
+   *
+   * 고른 사진과 원본은 놓지 않는다 — 곧바로 다시 확정할 수 있어야 한다.
+   */
+  async function cancelUpload() {
+    const ids = Object.values(photoIds.value)
     if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
+    photoIds.value = {}
     failed.value = []
-    void releaseSources(scanned.value.map((s) => s.src))
+    uploaded.value = 0
+    totalPhotos.value = 0
+    result.value = null
+    stage.value = 'preview'
   }
 
   return {
     stage, scanned, skipped, radius, assignment, radiusTable, totalAfter,
     scanProgress, loadProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage, result,
-    pick, selectFiles, confirm, retryFailed, skipFailed, reset,
+    pick, selectFiles, confirm, retryFailed, cancelUpload, reset,
   }
 }
 

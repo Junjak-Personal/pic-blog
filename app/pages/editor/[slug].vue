@@ -199,8 +199,14 @@ const changes = computed(() => {
 
 hydrate()
 
-onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
-onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('keydown', onSaveKey)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  window.removeEventListener('keydown', onSaveKey)
+})
 
 onBeforeRouteLeave(async () => {
   if (deleting.value || changes.value === 0) return true
@@ -875,6 +881,20 @@ async function save() {
   }
 }
 
+/**
+ * ⌘S · Ctrl+S 로 저장. 데스크탑에서는 본문·태그를 길게 고치다가 저장 버튼까지
+ * 손을 올리는 왕복이 잦다.
+ *
+ * 브라우저의 「페이지 저장」을 반드시 막아야 한다 — 안 막으면 다운로드 창이 뜬다.
+ * 저장할 게 없을 때(변경 0건·저장 중)도 막는다: 눌렀는데 다운로드 창이 뜨는 쪽이
+ * 아무 일도 안 일어나는 것보다 나쁘다. save() 가 그 조건을 이미 스스로 본다.
+ */
+function onSaveKey(e: KeyboardEvent) {
+  if (e.key !== 's' || !(e.metaKey || e.ctrlKey) || e.altKey) return
+  e.preventDefault()
+  void save()
+}
+
 function onBeforeUnload(e: BeforeUnloadEvent) {
   if (!changes.value) return
   // 최신 브라우저는 preventDefault 만 본다 (returnValue 는 폐기된 경로다)
@@ -1387,7 +1407,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       v-if="pointAddBusy"
       :label="pointAddFlow.stage.value === 'scanning'
         ? `사진을 검사하는 중 ${pointAddFlow.scanProgress.value.done} / ${pointAddFlow.scanProgress.value.total}`
-        : `이 포인트에 올리는 중 ${pointAddFlow.uploadPercent.value}%`"
+        : `이 포인트에 올리는 중 ${pointAddFlow.uploaded.value} / ${pointAddFlow.totalPhotos.value}장 (${pointAddFlow.uploadPercent.value}%)`"
     />
     <BusyOverlay v-else-if="saving" label="저장 중" />
     <BusyOverlay v-else-if="reclustering" label="포인트를 다시 묶는 중" />

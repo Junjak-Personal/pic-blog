@@ -7,7 +7,7 @@ import { vSk } from '~/utils/img'
  * 배경에 스캐터가 흐리게 비친다.
  * Reka DialogRoot 가 포커스 트랩·ESC·스크롤 잠금을 맡는다.
  */
-import { Keyboard, Zoom } from 'swiper/modules'
+import { Zoom } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import type { Swiper as SwiperClass } from 'swiper/types'
 import 'swiper/css'
@@ -115,6 +115,11 @@ function onWheel(e: WheelEvent) {
   else sw.zoom.out()
 }
 
+/*
+ * 키보드 ←/→ 는 «우리»가 처리한다. Swiper 의 Keyboard 모듈은 쓰지 않는다 —
+ * 둘 다 켜두면 한 번 눌러도 두 칸씩 넘어갔다 (1/5 에서 → 를 누르면 3/5).
+ * 게다가 Swiper 쪽은 슬라이드 안에서만 움직여 끝에서 앞뒤 «포인트»로 넘어가지 못한다.
+ */
 function onKey(e: KeyboardEvent) {
   if (props.index === null) return
   if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1) }
@@ -167,10 +172,9 @@ watch(() => props.photos, async () => {
 
           <Swiper
             class="carousel"
-            :modules="[Zoom, Keyboard]"
+            :modules="[Zoom]"
             :initial-slide="props.index ?? 0"
             :zoom="{ maxRatio: 4, toggle: true }"
-            :keyboard="{ enabled: true }"
             :space-between="24"
             @swiper="onSwiper"
             @slide-change="onSlideChange"
