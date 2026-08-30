@@ -125,6 +125,9 @@ html.ts-flow, html.ts-flow body, html.ts-flow #__nuxt { height: auto; overflow: 
 /* ① 지금 구조 — 편집 셸과 같은 모양 */
 .ts.fixed {
   height: var(--vvh, 100dvh);
+  /* 🔴 진단 판(fixed)이 화면 위를 덮는다 — 그만큼 비켜서 버튼줄이 가려지지 않게 한다 */
+  padding-top: 92px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -133,7 +136,7 @@ html.ts-flow, html.ts-flow body, html.ts-flow #__nuxt { height: auto; overflow: 
 .ts.fixed .body { flex: 1; min-height: 0; overflow-y: auto; }
 
 /* ② A안 — 아무것도 가두지 않는다 */
-.ts.flow { min-height: 100dvh; background: var(--s0); }
+.ts.flow { min-height: 100dvh; padding-top: 92px; background: var(--s0); }
 
 .bar {
   flex: none;
@@ -164,7 +167,7 @@ html.ts-flow, html.ts-flow body, html.ts-flow #__nuxt { height: auto; overflow: 
 }
 .pick.on { background: rgb(var(--acc-rgb) / 0.18); border-color: var(--acc); color: var(--ink); }
 
-.body { display: flex; flex-direction: column; gap: 14px; padding: 150px 14px 60px; }
+.body { display: flex; flex-direction: column; gap: 14px; padding: 18px 14px 60px; }
 .note { font-size: var(--fs-2xs); color: var(--faint); line-height: 1.7; }
 .note b { color: var(--ink); }
 .f { display: flex; flex-direction: column; gap: 6px; }

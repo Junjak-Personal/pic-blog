@@ -26,7 +26,14 @@ const rows = ref<Row[]>([])
 
 const box = useTemplateRef<HTMLElement>('box')
 
+/** 서버로 보내는 양 — 한 묶음을 통째로 담는다 */
 const MAX = 16
+/**
+ * 🔴 화면에 그리는 줄 수는 따로다. 16줄이면 판이 190px 이라 그 밑의 조작 버튼을
+ *    통째로 가린다 — 실험대의 모드 버튼이 실제로 안 보여 실험이 한 번 헛돌았다.
+ *    보내는 것은 그대로 두고 «보이는» 것만 줄인다.
+ */
+const SHOWN = 6
 /** 이만큼 조용하면 새 묶음으로 본다 — 매번 0 부터 세야 한 동작이 몇 ms 였는지 읽힌다 */
 const BURST_GAP_MS = 900
 
@@ -139,7 +146,7 @@ onMounted(() => {
 <template>
   <div ref="box" class="probe mono">
     <div class="head">보낸묶음 {{ sent }} | t | event | vv h+off | win | sy | shell | scroller top/scrollH/clientH | focus@top</div>
-    <div v-for="(r, i) in rows" :key="i" class="row">
+    <div v-for="(r, i) in rows.slice(-SHOWN)" :key="i" class="row">
       {{ String(r.t).padStart(4) }} {{ r.ev.padEnd(9) }} {{ r.vv.padEnd(8) }} {{ String(r.win).padEnd(4) }} {{ String(r.sy).padEnd(3) }} {{ String(r.shell).padEnd(4) }} {{ r.sc.padEnd(14) }} {{ r.el }}
     </div>
   </div>
