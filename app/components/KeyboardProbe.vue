@@ -21,6 +21,8 @@ interface Row {
   doc: number
   sc: string
   el: string
+  /** sc 가 «어느» 상자인지 — 짐작으로 읽다 두 번 헛짚었다 */
+  scName: string
 }
 
 const route = useRoute()
@@ -29,15 +31,19 @@ const rows = ref<Row[]>([])
 const box = useTemplateRef<HTMLElement>('box')
 
 /** 서버로 보내는 양 — 한 묶음을 통째로 담는다 */
-const MAX = 16
+const MAX = 40
 /**
  * 🔴 화면에 그리는 줄 수는 따로다. 16줄이면 판이 190px 이라 그 밑의 조작 버튼을
  *    통째로 가린다 — 실험대의 모드 버튼이 실제로 안 보여 실험이 한 번 헛돌았다.
  *    보내는 것은 그대로 두고 «보이는» 것만 줄인다.
  */
 const SHOWN = 6
-/** 이만큼 조용하면 새 묶음으로 본다 — 매번 0 부터 세야 한 동작이 몇 ms 였는지 읽힌다 */
-const BURST_GAP_MS = 900
+/**
+ * 이만큼 조용하면 새 묶음으로 본다.
+ * 🔴 넉넉해야 한다. 900ms 였을 때 「타이틀 → 요약 → 손으로 밀기」가 세 묶음으로 쪼개져
+ *    정작 봐야 할 «이어진» 순간이 로그에 없었다. 사람이 손을 옮기는 시간을 덮는다.
+ */
+const BURST_GAP_MS = 2500
 
 let t0 = 0
 let last = 0
@@ -72,6 +78,7 @@ function snap(ev: string) {
   const shell = document.querySelector<HTMLElement>('.shell')
   const active = document.activeElement
   const sc = scrollerOf(active) ?? document.querySelector<HTMLElement>('.scroll-y')
+  const scName = sc ? (sc.className.trim().split(/\s+/).slice(0, 2).join('.') || sc.tagName.toLowerCase()) : '-'
   const r = active instanceof HTMLElement ? Math.round(active.getBoundingClientRect().top) : 0
 
   rows.value = [
@@ -86,6 +93,7 @@ function snap(ev: string) {
       doc: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       sc: sc ? `${Math.round(sc.scrollTop)}/${sc.scrollHeight}/${sc.clientHeight}` : '-',
       el: `${nameOf(active)}@${r}`,
+      scName,
     },
   ]
 
@@ -103,7 +111,8 @@ async function send() {
   flush = null
   const lines = rows.value.map(
     (r) => `${String(r.t).padStart(5)} ${r.ev.padEnd(9)} vv=${r.vv.padEnd(9)} win=${String(r.win).padEnd(4)}`
-      + ` sy=${String(r.sy).padEnd(4)} doc=${String(r.doc).padEnd(4)} shell=${String(r.shell).padEnd(4)} sc=${r.sc.padEnd(16)} ${r.el}`,
+      + ` sy=${String(r.sy).padEnd(4)} doc=${String(r.doc).padEnd(4)} shell=${String(r.shell).padEnd(5)}`
+      + ` ${r.scName.padEnd(16)} ${r.sc.padEnd(16)} ${r.el}`,
   )
   if (lines.length < 2) return
   try {
