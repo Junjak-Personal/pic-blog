@@ -497,23 +497,21 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   content-visibility: auto;
   contain-intrinsic-size: auto 240px;
 }
+/*
+ * 지금 고른 포인트. 지도의 밝은 마커와 «한 쌍»이라, 둘 중 어디를 봐도 같은 것을
+ * 가리키고 있다는 게 읽혀야 한다.
+ * 🔴 아래 셋(flash/target/fresh)보다 «먼저» 적는다 — 전부 잠깐 스치는 표시라,
+ *    같은 그룹에서 겹치는 순간에는 그쪽이 이겨야 한다.
+ */
+.group.active { border-color: var(--acc); }
+.group.active .gnum { background: var(--acc); color: var(--s0); border-color: var(--acc); }
+
 /* 지도 마커로 찾아온 그룹 — 잠깐 빛나고 사라진다 */
 .group.flash { border-color: var(--acc); background: rgb(var(--acc-rgb) / 0.1); }
 
 /* 손끝이 올라온 그룹 — 어디에 떨어질지 그룹 단위로 먼저 보여준다 */
 .group.target { border-color: rgb(var(--acc-rgb) / 0.6); background: rgb(var(--acc-rgb) / 0.09); }
 .group.fresh { border-style: dashed; border-color: rgb(var(--route-soft-rgb) / 0.5); }
-/*
- * 지금 고른 포인트. 지도의 밝은 마커와 «한 쌍»이라, 둘 중 어디를 봐도 같은 것을
- * 가리키고 있다는 게 읽혀야 한다.
- * 🔴 테두리 색만으로 구분하지 않는다 — .target(드래그 중)과 색이 겹친다. 왼쪽에
- *    굵은 띠를 둬서 «상태가 다른 것»임을 형태로도 말한다.
- */
-.group.active {
-  border-color: rgb(var(--acc-rgb) / 0.45);
-  box-shadow: inset 3px 0 0 var(--acc);
-}
-.group.active .gnum { background: var(--acc); color: var(--s0); border-color: var(--acc); }
 .gnum:hover { border-color: var(--acc); color: var(--ink); }
 .gnum:focus-visible { box-shadow: var(--focus-ring); }
 
