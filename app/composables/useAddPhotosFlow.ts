@@ -300,6 +300,23 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
   }
 
   /**
+   * 「업로드 분 반영」 — 바이트가 안 온 «행만» 지우고 붙은 것은 그대로 둔다.
+   * 근거는 useUploadFlow 의 같은 이름 함수 주석과 같다.
+   *
+   * 🔴 기간(period)은 되돌리지 않는다. 붙이는 쪽이 이번 사진 전체에 맞춰 다시 계산했으므로,
+   *    하필 기간의 끝을 늘린 사진이 실패했다면 기록의 기간이 남은 사진보다 넓게 남는다.
+   *    「전부 취소」와 달리 되돌릴 기준값이 없다 — 남은 사진에 맞춰 다시 계산하는 일은
+   *    손으로 정한 기간까지 덮어쓰므로 하지 않는다(photos/index.delete.ts 의 🔴).
+   *    화면에서 기간을 고칠 수 있으니 여기서는 넓게 남는 쪽을 택한다.
+   */
+  async function keepUploaded() {
+    const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
+    if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
+    void releaseSources(scanned.value.map((s) => s.src))
+    failed.value = []
+  }
+
+  /**
    * 「전부 취소」 — 이번에 붙인 사진을 «성공분까지» 전부 지우고 2단계로 되돌린다.
    *
    * 예전에는 여기가 「건너뛰고 저장」이었다. 실패한 행만 지우면 반쯤 붙은 상태가 남는데,
@@ -332,7 +349,7 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
   return {
     stage, scanned, skipped, radius, assignment, radiusTable, totalAfter,
     scanProgress, loadProgress, uploaded, totalPhotos, uploadPercent, failed, errorMessage, result,
-    pick, selectFiles, confirm, retryFailed, cancelUpload, reset,
+    pick, selectFiles, confirm, retryFailed, keepUploaded, cancelUpload, reset,
   }
 }
 

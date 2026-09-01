@@ -69,10 +69,18 @@ function countBy(files: readonly SkippedPhoto[], reason: SkippedPhoto['reason'])
 
 /**
  * 사용자가 «다음에 무엇을 해야 하는지»까지 말해주는 한 줄.
- * 사유별 개수(summarizeSkipped)는 그 자체로 사실이지만, 상한과 중복은 조치가 따라붙는다.
+ * 사유별 개수(summarizeSkipped)는 그 자체로 사실이지만, 사유 셋에는 조치가 따라붙는다.
+ *
+ * 🔴 위치 정보를 「촬영 정보」라고 뭉뚱그리지 않는다. 통과 조건은 «좌표 하나»뿐이라,
+ *    시각·기기 EXIF 가 통째로 없어도 좌표만 있으면 올라간다(실측). 넓게 적으면
+ *    날짜를 넣고 다시 시도했다가 똑같이 막히는 사람이 생긴다.
  */
 export function skipNotice(files: readonly SkippedPhoto[], limit = MAX_PER_SELECTION): string | null {
   const notes: string[] = []
+  const noGps = countBy(files, 'no-gps')
+  if (noGps) {
+    notes.push(`위치 정보가 없는 사진 ${noGps}장은 올릴 수 없습니다 — 사진에 위치를 넣고 다시 시도해 주세요`)
+  }
   const over = countBy(files, 'over-limit')
   if (over) {
     notes.push(`한 번에 ${limit}장까지 처리합니다 — 나머지 ${over}장은 「사진 더 선택」으로 이어서 고르면 됩니다`)

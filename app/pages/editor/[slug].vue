@@ -537,8 +537,13 @@ async function onPointAdd(picking: Promise<void>) {
 
   if (!pointAddFlow.scanned.value.length) {
     // 아무것도 안 고르고 닫았으면 조용히 끝낸다 — 고른 게 있었는데 전부 걸러졌을 때만 사유를 말한다
+    //
+    // 조치가 있는 사유면 그 줄을 그대로 쓴다. 개수와 「올릴 수 없다」가 이미 그 안에 있고,
+    // 바로 아래 reset() 이 skipped 를 비우므로 화면의 안내줄(pointAddNotice)은 뜨지 못한다 —
+    // 이 자리가 조치를 말할 «유일한» 자리다.
     if (pointAddFlow.skipped.value.length) {
-      errorMessage.value = `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
+      errorMessage.value = pointAddNotice.value
+        ?? `올릴 사진이 없습니다 — ${summarizeSkipped(pointAddFlow.skipped.value)}`
     }
     pointAddFlow.reset()
     return

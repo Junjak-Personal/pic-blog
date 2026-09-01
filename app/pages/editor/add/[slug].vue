@@ -56,9 +56,19 @@ async function retry() {
   await flow.retryFailed()
 }
 
+/** 부분 실패의 출구 셋 중 뒤의 둘 — new.vue 의 같은 이름 주석 참고 */
+const settling = ref(false)
+
+/** 「업로드 분 반영」 — 안 온 행만 떼고 완료 화면으로. 붙은 사진은 그대로 남는다. */
+async function keepUploaded() {
+  await flow.keepUploaded()
+  // 지운 행이 목록에 유령으로 남지 않게 — cancelUpload 와 같은 이유다
+  await refresh()
+  settling.value = false
+}
+
 /**
- * 부분 실패의 출구는 「다시 하기」와 「없던 일로」 둘뿐이다 (useAddPhotosFlow 주석 참고).
- * 취소하면 이번에 붙인 사진이 전부 떨어져 나가고 고른 사진은 남는다 — 곧바로 다시 확정할 수 있다.
+ * 「전부 취소」 — 이번에 붙인 사진이 전부 떨어져 나가고 고른 사진은 남는다 (useAddPhotosFlow 주석 참고).
  */
 async function cancelUpload() {
   const ok = await askConfirm({
@@ -74,6 +84,7 @@ async function cancelUpload() {
   // 확정이 끝나며 한 번 새로 받았으므로 방금 지운 포인트가 목록에 유령으로 남아 있다.
   // 다시 받지 않으면 이어서 확정할 때 없는 포인트에 사진을 붙이려 든다.
   await refresh()
+  settling.value = false
 }
 
 /**
@@ -359,10 +370,22 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
             <span class="mono f-why">{{ f.reason }}</span>
           </li>
         </ul>
-        <div class="actions">
+        <div v-if="!settling" class="actions">
           <button type="button" class="btn primary mono" @click="retry">{{ flow.failed.value.length }}장 재시도</button>
-          <button type="button" class="btn ghost mono" @click="cancelUpload">전부 취소</button>
+          <button type="button" class="btn ghost mono" @click="settling = true">편집으로</button>
         </div>
+        <template v-else>
+          <p class="mono settle-ask">올라가지 않은 {{ flow.failed.value.length }}장을 어떻게 할까요?</p>
+          <div class="actions">
+            <button type="button" class="btn danger mono" @click="cancelUpload">전부 취소</button>
+            <span class="settle-gap" />
+            <button type="button" class="btn ghost mono" @click="settling = false">돌아가기</button>
+            <!-- 올라간 것이 0장이면 반영할 것이 없다 -->
+            <button v-if="flow.uploaded.value" type="button" class="btn primary mono" @click="keepUploaded">
+              올라간 {{ flow.uploaded.value }}장만 반영
+            </button>
+          </div>
+        </template>
       </template>
     </section>
   </div>
@@ -635,6 +658,9 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 .f-why { font-size: var(--fs-2xs); color: var(--faint); }
 .error { font-size: var(--fs-xs); color: var(--danger); }
 .actions { display: flex; align-items: center; gap: 9px; }
+/* 되돌릴 수 없는 「전부 취소」는 나머지와 붙여두지 않는다 (new.vue 와 같은 처방) */
+.settle-gap { flex: 1; min-width: 24px; }
+.settle-ask { margin: 2px 0 0; color: var(--mid); }
 
 @media (max-width: 1240px) {
   .preview { grid-template-columns: 1fr 320px; }

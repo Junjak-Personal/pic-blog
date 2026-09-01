@@ -270,6 +270,25 @@ export function useUploadFlow() {
   }
 
   /**
+   * 「업로드 분 반영」 — 바이트가 끝내 오지 않은 «행만» 지우고 나머지로 기록을 확정한다.
+   *
+   * 예전의 「건너뛰고 저장」을 걷어낸 이유는 부분 반영 자체가 틀려서가 아니라 그 버튼이
+   * «올리는 중»에도 눌렸기 때문이다 — 아직 안 올라간 사진의 원본까지 놓아버려 남은 전부가
+   * 변환 실패로 떨어졌다. 지금은 done 에서만 닿고 실패 집합이 확정된 뒤라 지울 행이 정확하다.
+   * 서버가 빈 포인트와 커버까지 함께 정리한다(photos/index.delete.ts).
+   *
+   * 🔴 올라간 것이 0장이면 부르면 안 된다 — 사진 한 장 없는 기록만 남는다. 그 판단은
+   *    화면이 한다(버튼을 내지 않는다).
+   */
+  async function keepUploaded() {
+    const ids = failed.value.map((f) => photoIds.value[f.key]).filter((v): v is number => v != null)
+    if (ids.length) await $fetch('/api/photos', { method: 'DELETE', body: { ids } })
+    // 여기서 끝이므로 원본을 놓는다 — 재시도가 더 없다
+    void releaseSources(scanned.value.map((s) => s.src))
+    failed.value = []
+  }
+
+  /**
    * 「전부 취소」 — 방금 만든 기록을 통째로 지우고 2단계로 되돌린다.
    *
    * 예전에는 여기가 「건너뛰고 저장」이었다. 실패한 행만 지우고 나머지는 그대로 두는
@@ -316,6 +335,7 @@ export function useUploadFlow() {
     backToPick,
     confirm,
     retryFailed,
+    keepUploaded,
     cancelUpload,
     reset,
   }

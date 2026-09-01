@@ -65,10 +65,20 @@ async function retry() {
 }
 
 /**
- * 부분 실패의 출구는 「다시 하기」와 「없던 일로」 둘뿐이다.
- * 예전의 「건너뛰고 저장」은 실패한 사진만 빼고 저장했는데, 그러면 무엇이 빠졌는지
- * 알 수 없는 기록이 남는다. 취소하면 고른 사진은 그대로라 곧바로 다시 확정할 수 있다.
+ * 부분 실패의 출구는 셋이다 — 다시 하기 · 올라간 것만 살리기 · 없던 일로.
+ *
+ * 셋을 한 줄에 늘어놓지 않는 이유: 「재시도」는 거의 언제나 옳은 답이고 나머지 둘은
+ * 「재시도가 소용없다」고 판단한 뒤에야 고르는 답이다(HEIC 처럼 이 브라우저에서 영영
+ * 변환되지 않는 사진이 그렇다). 그래서 한 겹 뒤에 둔다.
  */
+const settling = ref(false)
+
+/** 「업로드 분 반영」 — 안 올라간 행만 떼고 편집으로 */
+async function keepUploaded() {
+  await flow.keepUploaded()
+  if (flow.createdSlug.value) await router.replace(`/editor/${flow.createdSlug.value}`)
+}
+
 async function cancelUpload() {
   const ok = await askConfirm({
     title: '올린 것을 전부 취소할까요?',
@@ -79,6 +89,7 @@ async function cancelUpload() {
   })
   if (!ok) return
   await flow.cancelUpload()
+  settling.value = false
 }
 
 /**
@@ -437,12 +448,31 @@ async function onBack() {
           </li>
         </ul>
 
-        <div class="actions">
+        <div v-if="!settling" class="actions">
           <button type="button" class="btn primary mono" @click="retry">
             {{ flow.failed.value.length }}장 재시도
           </button>
-          <button type="button" class="btn ghost mono" @click="cancelUpload">전부 취소</button>
+          <button type="button" class="btn ghost mono" @click="settling = true">편집으로</button>
         </div>
+        <template v-else>
+          <p class="mono settle-ask">
+            올라가지 않은 {{ flow.failed.value.length }}장을 어떻게 할까요?
+          </p>
+          <div class="actions">
+            <button type="button" class="btn danger mono" @click="cancelUpload">전부 취소</button>
+            <span class="settle-gap" />
+            <button type="button" class="btn ghost mono" @click="settling = false">돌아가기</button>
+            <!-- 올라간 것이 0장이면 반영할 것이 없다 — 사진 없는 기록만 남는다 -->
+            <button
+              v-if="flow.uploaded.value"
+              type="button"
+              class="btn primary mono"
+              @click="keepUploaded"
+            >
+              올라간 {{ flow.uploaded.value }}장만 반영
+            </button>
+          </div>
+        </template>
       </template>
     </section>
   </div>
@@ -767,6 +797,9 @@ async function onBack() {
 .f-why { font-size: var(--fs-2xs); color: var(--faint); }
 .error { font-size: var(--fs-xs); color: var(--danger); }
 .actions { display: flex; align-items: center; gap: 9px; }
+/* 되돌릴 수 없는 「전부 취소」는 나머지와 붙여두지 않는다 — 손가락이 미끄러질 자리다 */
+.settle-gap { flex: 1; min-width: 24px; }
+.settle-ask { margin: 2px 0 0; color: var(--mid); }
 
 @media (max-width: 1240px) {
   .preview { grid-template-columns: 1fr 320px; }
