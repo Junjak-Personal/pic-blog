@@ -31,6 +31,26 @@ export function tokenColor(channel: string, alpha = 1) {
 export const ROUTE_COLOR = '#FFB454'
 
 /**
+ * 날짜 색을 «동선용»으로 밝힌다 — 흰색 쪽으로 40%.
+ *
+ * 날짜 팔레트(DAY_COLORS)는 26px 원형 «마커»를 위해 밝기를 서로 비슷하게 맞춰 만든
+ * 색이다. 그 색을 2.75px 파선에 그대로 쓰면 이 지도 배경에서 사라지는 것이 나온다.
+ * 실측 luminance 로는 갈리지 않았다 — 가장 어두운 분홍(0.351)이 제일 잘 보이고
+ * 세이지(0.388)·파랑(0.372)이 안 보인다. 밝기가 아니라 «배경과 같은 색 계열»이라서다
+ * (지도 바탕이 탈색된 남회색이다).
+ *
+ * 그래서 밝기 기준으로 «골라» 올리지 않고 전부 같은 양만큼 올린다. 서로의 관계가
+ * 그대로 남아야 날짜 탭·마커와 같은 색으로 읽힌다. 색상(hue)은 건드리지 않는다.
+ */
+export function routeDash(hex: string | undefined | null) {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return null
+  const n = parseInt(hex.slice(1), 16)
+  const up = (c: number) => Math.round(c + (255 - c) * 0.4)
+  const [r, g, b] = [up(n >> 16), up((n >> 8) & 255), up(n & 255)]
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
  * 글로우 → 본선 순으로 2장 올린다. beforeId 를 주지 않아 라벨 위로 올라간다.
  * dash 는 [2,7] 에서 [2,5] 로 좁혔다 — 2.25px 폭에서 [2,7] 은 4.5px 점 / 15.75px 공백이라
  * 지도 위 다른 선들 사이에서 선으로 읽히지 않고 흩어진 점으로 보였다.
@@ -68,7 +88,7 @@ export function addRouteLayers(m: Map, source: string, lineId: string) {
        * 「선이 거기 있다」는 신호는 색과 무관하다.
        */
       'line-color': ['coalesce', ['get', 'color'], ROUTE_COLOR],
-      'line-width': 2.75,
+      'line-width': 3,
       'line-dasharray': [2, 5],
       'line-emissive-strength': 1,
     },

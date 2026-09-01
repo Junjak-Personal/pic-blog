@@ -15,7 +15,7 @@ import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
-import { addRouteLayers } from '~/utils/route-style'
+import { addRouteLayers, routeDash } from '~/utils/route-style'
 import { pointThumb } from '~/utils/img'
 
 const props = defineProps<{
@@ -79,7 +79,7 @@ function routeData(): FeatureCollection {
       const from = pts[i]!
       return {
         type: 'Feature' as const,
-        properties: { color: props.badges.get(from.id)?.color ?? null },
+        properties: { color: routeDash(props.badges.get(from.id)?.color) },
         geometry: { type: 'LineString' as const, coordinates: [toLngLat(from), toLngLat(to)] },
       }
     }),
@@ -184,7 +184,12 @@ function paintActive() {
  * 60포인트짜리 기록에서 전부 켜면 지도가 썸네일 벽이 된다. 줌 단계를 잘라 「11 이상이면
  * 전부」 같은 규칙을 두는 방법도 있지만, 같은 줌이라도 도심은 빽빽하고 이동 구간은
  * 성기다 — 줌은 밀도의 대리 지표일 뿐이다. 그래서 «실제로 겹치는가»를 화면 좌표로 직접
- * 재고, 겹치면 그 마커는 알약만 남긴다. 밀집한 곳은 대표 몇 장, 한적한 곳은 전부가 된다.
+ * 잰다.
+ *
+ * 🔴 다만 «겹침 자체»는 막지 않는다. 사진이 서로 조금 물리는 모습은 어색하지 않고
+ *    (목록 지도가 늘 그렇게 보인다), 전부 떼어놓으려 들면 도심에서 한두 장만 남아
+ *    정작 볼 것이 사라진다. 그래서 자리를 «썸네일 전체»가 아니라 가운데 작은 심(core)
+ *    으로만 잡는다 — 거의 같은 점에 겹쳐 앉은 것만 걸러지고, 비켜 겹치는 것은 둘 다 뜬다.
  *
  * 누가 남는가는 화면과 무관하게 정해둔다(byPriority: 활성 → 사진 많은 순 → 목록 순).
  * 자리를 먼저 잡은 쪽이 이기는 방식이라, 순서가 화면에 따라 바뀌면 팬할 때마다 켜지고
@@ -193,10 +198,11 @@ function paintActive() {
  * 이미지는 켜지는 순간에 받는다 — 처음 그림에서 60장을 한꺼번에 받지 않기 위한 기존
  * 규칙(markerEl 의 🔴)을 그대로 잇는다.
  */
-const SHOT_W = 56
-/** 썸네일 40 + 간격 4 + 알약 26 + 꼬리 7 — map.css 의 .shown 과 함께 고쳐야 한다 */
+/** 자리다툼에 쓰는 «심» — 실제 썸네일(56×40)보다 훨씬 작다. 겹침을 허용하려고 일부러 작다. */
+const CORE_W = 34
+const CORE_H = 34
+/** 썸네일 40 + 간격 4 + 알약 26 + 꼬리 7 — 화면 밖 판정에 쓴다 */
 const SHOT_H = 77
-const GAP = 8
 
 function paintLod() {
   const m = map.value
@@ -222,18 +228,23 @@ function paintLod() {
     }
     const on = el.classList.contains('on')
     const pt = m.project(mk.getLngLat())
-    // 활성 마커의 썸네일은 더 크다(.on) — 자리도 그만큼 잡아야 옆 마커가 파고들지 않는다
-    const half = (on ? 74 : SHOT_W) / 2
+    // 활성 마커의 썸네일은 더 크다(.on) — 심도 그만큼 키워 바로 옆에 다른 장이 앉지 않게 한다
+    const half = (on ? CORE_W * 1.4 : CORE_W) / 2
     const tall = on ? 96 : SHOT_H
-    const q = { l: pt.x - half - GAP, r: pt.x + half + GAP, t: pt.y - tall - GAP, b: pt.y + GAP }
+    // 심은 썸네일의 «가운데»다 — 알약 위 (tall - 20) 지점 언저리
+    const cy = pt.y - tall + CORE_H / 2
+    const q = { l: pt.x - half, r: pt.x + half, t: cy - CORE_H / 2, b: cy + CORE_H / 2 }
 
-    // 지도 밖으로 잘리는 자리에는 얹지 않는다. 반쯤 잘린 사진은 없느니만 못하다.
-    const clipped = q.l < 0 || q.r > w || q.t < 0 || q.b > h
+    // 위로 잘리면 사진이 알약에서 떨어져 나간 것처럼 보인다. 옆으로 물리는 건 그대로 둔다 —
+    // 지도 가장자리에서 잘리는 건 마커·라벨도 마찬가지라 어색하지 않다.
+    const clipped = pt.y - tall < 0 || pt.x < 0 || pt.x > w || pt.y > h
     const hit = taken.some((t) => q.l < t.r && q.r > t.l && q.t < t.b && q.b > t.t)
 
-    // 활성은 .on 이 이미 띄우므로 자리만 잡고 .shown 은 붙이지 않는다
-    // (map.css 에서 .shown 이 뒤에 있어 붙이면 활성 썸네일이 작아진다)
+    // 활성은 .on 이 이미 띄우므로 자리만 잡는다.
+    // 🔴 .shown 은 «떼어»내야 한다 — 남겨두면 map.css 에서 뒤에 오는 .shown 이 이겨서
+    //    골라놓은 마커의 썸네일이 도리어 작아진다 (74 → 56).
     if (on) {
+      el.classList.remove('shown')
       taken.push(q)
       continue
     }
