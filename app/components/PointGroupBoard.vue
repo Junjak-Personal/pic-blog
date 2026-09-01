@@ -500,8 +500,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 /*
  * 지금 고른 포인트. 지도의 밝은 마커와 «한 쌍»이라, 둘 중 어디를 봐도 같은 것을
  * 가리키고 있다는 게 읽혀야 한다.
- * 🔴 아래 셋(flash/target/fresh)보다 «먼저» 적는다 — 전부 잠깐 스치는 표시라,
- *    같은 그룹에서 겹치는 순간에는 그쪽이 이겨야 한다.
+ * 🔴 왼쪽 굵은 띠(inset box-shadow)로 돌아가지 말 것. .target 과 색이 겹치는 건
+ *    순서로 풀린다 — 아래 셋(flash/target/fresh)보다 «먼저» 적으면 잠깐 스치는
+ *    표시가 겹치는 순간에 이긴다. 둥근 카드에 악센트 레일은 AI 가 그린 티가 난다.
  */
 .group.active { border-color: var(--acc); }
 .group.active .gnum { background: var(--acc); color: var(--s0); border-color: var(--acc); }
