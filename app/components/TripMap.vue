@@ -354,25 +354,25 @@ onBeforeUnmount(clearMarkers)
 .chip .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--mid); }
 
 /*
- * 축척 막대 — 판이 아니라 «자»다.
+ * 축척 막대 — Mapbox 기본값이 흰 바탕에 진회색 글씨라 야간 지도 위에서 홀로 밝다.
+ * 범례 칩과 같은 옷을 입힌다 (지도 위에 얹히는 것은 전부 같은 규칙이어야 한다).
  *
- * Mapbox 기본값은 흰 바탕에 진회색 글씨라 야간 지도 위에서 홀로 밝다. 그렇다고 칩으로
- * 감싸면 「어느 만큼이 그 거리인가」를 말해주는 눈금이 사라진다 — 이건 읽는 글이 아니라
- * 재는 물건이라 양 끝이 어디인지가 전부다. 바탕을 걷고 ㄴ자 괄호만 남긴다.
- * 지도 위 아무 색에나 얹히므로 글자에는 그림자로 바닥을 깔아준다.
+ * 🔴 «자» 모양(바탕 없이 ㄴ자 괄호 + 글자 그림자)으로 바꿔봤다가 되돌렸다. 눈금의
+ *    양 끝은 그쪽이 정확하지만, 지도 위 아무 색에나 얹히는 자리라 실제로는 읽기가
+ *    나빴다. 여기서는 「정확히 어디까지가 그 거리인가」보다 「지금 대충 얼마인가」가
+ *    쓸모라서, 판으로 감싸 또렷한 쪽이 낫다 (실사용 판단).
  */
 :deep(.mapboxgl-ctrl-scale) {
-  margin: 0 12px 12px 0;
-  padding: 0 3px 3px;
-  border: 1.5px solid rgb(var(--ink-rgb) / 0.72);
+  margin: 0 10px 10px 0;
+  padding: 3px 7px;
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-top: 0;
-  border-radius: 0;
-  background: none;
-  color: var(--ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: rgb(var(--s0-rgb) / 0.8);
+  color: var(--mid);
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
-  text-shadow: 0 1px 4px rgb(0 0 0 / 0.9), 0 0 2px rgb(0 0 0 / 0.7);
 }
 /*
  * 파선 «모양»만 범례다. 색은 이제 날짜마다 다르므로(routeData 가 구간에 심는다) 여기서
