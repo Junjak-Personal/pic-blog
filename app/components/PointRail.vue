@@ -19,7 +19,6 @@ const props = defineProps<{
   camera: string | null
   format: string | null
   /** 모바일은 행 클릭 = 강조만, 우측 전용 버튼만 상세로 (아트보드 1b 인터랙션 규칙 2) */
-  mobile?: boolean
 }>()
 
 const emit = defineEmits<{ select: [id: number]; open: [id: number]; pickDay: [date: string | null] }>()
@@ -43,10 +42,16 @@ watch(() => props.activeId, async (id) => {
   })
 })
 
+/*
+ * 행 클릭은 «고르기»까지다 — 상세는 오른쪽 ›(chevron) 가 연다.
+ *
+ * 예전에는 데스크탑에서 행 하나를 누르면 곧바로 상세가 덮였다. 그런데 목록을 훑는
+ * 동작의 대부분은 「이게 지도 어디지?」이지 「본문을 읽자」가 아니다 — 지도에 대표 사진이
+ * 뜨는 지금은 더 그렇다. 매번 시트가 올라오면 그걸 닫아야 다음 행을 볼 수 있었다.
+ * 두 뜻을 두 자리로 나눈다.
+ */
 function onRow(id: number) {
   emit('select', id)
-  // 데스크탑은 행 클릭 한 번으로 선택 + 상세가 열린다. 전용 버튼은 모바일에만.
-  if (!props.mobile) emit('open', id)
 }
 
 /** 탭 라벨은 '08.22' — 연도는 상단바 기간이 이미 말한다 */

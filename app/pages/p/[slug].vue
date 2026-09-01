@@ -396,7 +396,6 @@ useHead(() => ({
         :active-id="activeId"
         :camera="cameraLabel"
         :format="formatLabel"
-        :mobile="isMobile"
         @select="select"
         @open="open"
         @pick-day="pickDay"
@@ -649,8 +648,26 @@ useHead(() => ({
   z-index: 4;
 }
 
-.sheet-enter-active, .sheet-leave-active { transition: transform 0.28s ease, opacity 0.2s ease; }
-.sheet-enter-from, .sheet-leave-to { transform: translateY(16px); opacity: 0; }
+/*
+ * 상세 시트의 여닫힘.
+ *
+ * 곡선이 ease 였을 때는 16px 을 등속에 가깝게 미끄러져 「올라온다」기보다 「나타난다」에
+ * 가까웠다. 처음에 빠르게 붙고 끝에서 길게 눕는 곡선으로 바꾸고 이동 거리를 늘렸다.
+ * 나갈 때는 더 짧게 — 닫기는 이미 마음이 떠난 동작이라 기다리게 하면 답답하다.
+ */
+.sheet-enter-active { transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease-out; }
+.sheet-leave-active { transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease-in; }
+.sheet-enter-from, .sheet-leave-to { transform: translateY(28px); opacity: 0; }
+
+@media (max-width: 900px) {
+  /* 모바일에서는 시트가 화면을 통째로 덮는다 — 28px 만 움직이면 그냥 깜빡인 것으로 보인다 */
+  .sheet-enter-from, .sheet-leave-to { transform: translateY(100%); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-enter-active, .sheet-leave-active { transition: opacity 0.12s linear; }
+  .sheet-enter-from, .sheet-leave-to { transform: none; opacity: 0; }
+}
 
 /* 빈·에러 상태 */
 .state {

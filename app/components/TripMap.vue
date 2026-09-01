@@ -281,12 +281,29 @@ function focusActive() {
   const lift = pointThumb(p) ? 30 : 0
   const offset: [number, number] = [0, (inset > 0 ? (h - inset) / 2 - h / 2 : 0) + lift]
 
-  m.easeTo({
-    center: toLngLat(p),
-    zoom: Math.max(m.getZoom(), 14),
-    offset,
-    duration: 450,
-  })
+  const to = toLngLat(p)
+  const zoom = Math.max(m.getZoom(), 14)
+
+  /*
+   * 가까우면 밀고(easeTo), 멀면 난다(flyTo).
+   *
+   * easeTo 는 화면을 «직선»으로 끌고 가므로, 목적지가 화면 밖이면 중간에 아무 것도
+   * 아닌 땅이 빠르게 흘러 지나가 어디로 가는지 놓친다. flyTo 는 잠깐 물러났다가
+   * 내려앉아서 두 지점의 관계가 보인다 — 날짜가 다른 포인트로 건너뛸 때가 그렇다.
+   *
+   * essential 은 주지 않는다. 그래야 「동작 줄이기」를 켠 사람에게는 Mapbox 가 애니메이션을
+   * 통째로 건너뛴다 (그 판단을 여기서 다시 하지 않는다).
+   */
+  if (m.getBounds()?.contains(to)) {
+    m.easeTo({ center: to, zoom, offset, duration: 620, easing: easeInOut })
+  } else {
+    m.flyTo({ center: to, zoom, offset, curve: 1.42, speed: 0.85 })
+  }
+}
+
+/** 양끝에서 눕고 가운데서 빠른 곡선 — 지도가 «출발하고 도착한다»는 느낌을 준다 */
+function easeInOut(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
 
 watch(status, (s) => {
