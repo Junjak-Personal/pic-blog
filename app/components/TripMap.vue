@@ -16,6 +16,7 @@ import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers, routeDash } from '~/utils/route-style'
+import { SCALE_MAX_PX } from '~/composables/useMapbox'
 import { pointThumb } from '~/utils/img'
 
 const props = defineProps<{
@@ -178,9 +179,10 @@ function paintActive() {
  * 걷어냈다(목록 지도가 늘 그렇게 보인다). 겹침을 막으려 들면 정작 밀집한 곳에서
  * 한두 장만 남아 볼 것이 사라진다.
  *
- * 남은 조건은 둘뿐이다.
+ * 남은 조건은 셋뿐이다.
+ *   · 너무 넓게 보고 있으면 얹지 않는다 — 아래 SHOT_MAX_M 참고.
  *   · 점으로 접히는 구간(zoom < DOT_ZOOM)에서는 얹지 않는다 — 12px 점 위의 썸네일은
- *     무엇을 가리키는지 읽히지 않는다.
+ *     무엇을 가리키는지 읽히지 않는다. (지금은 위 조건이 더 엄해서 닿지 않지만 바닥으로 둔다.)
  *   · 화면 «밖»에는 얹지 않는다. 겹침 방지가 아니라 받지 않기 위해서다 — 60포인트
  *     기록에서 열자마자 60장을 받지 않겠다는 규칙(markerEl 의 🔴)이 여기 걸려 있다.
  *     이미지는 처음 보이는 순간 한 번만 받고, 그 뒤로는 브라우저 캐시가 맡는다.
@@ -188,10 +190,28 @@ function paintActive() {
 /** 마커 높이(썸네일 40 + 간격 4 + 알약 26 + 꼬리 7). 화면 밖 판정에만 쓴다. */
 const SHOT_H = 77
 
+/*
+ * 썸네일을 띄우는 한계 — «축척 막대가 가리키는 거리»로 잡는다.
+ *
+ * 줌 숫자로 잡으면 안 된다. 같은 줌도 위도가 다르면 실제 거리가 다르고(구마모토 33°와
+ * 강릉 37°가 그렇다), 무엇보다 화면에서 판단할 수 있는 양이 아니다. 축척 막대는 눈에
+ * 보이므로 「여기서부터 의미 없다」를 그대로 옮겨 적을 수 있다.
+ *
+ * 1000m = 「막대가 1km 를 가리키면 숨긴다」. 그 배율에서는 도보로 오간 포인트들이
+ * 한 덩어리로 뭉쳐 사진이 서로를 가린다 (실사용 판단).
+ */
+const SHOT_MAX_M = 1000
+
+/** 축척 막대가 지금 가리키는 거리(m). ScaleControl 과 같은 폭을 재므로 화면의 숫자와 맞는다. */
+function scaleMeters(m: mapboxgl.Map) {
+  const y = m.getContainer().clientHeight / 2
+  return m.unproject([0, y]).distanceTo(m.unproject([SCALE_MAX_PX, y]))
+}
+
 function paintLod() {
   const m = map.value
   if (!m || status.value !== 'ready') return
-  const dots = m.getZoom() < DOT_ZOOM
+  const tooWide = m.getZoom() < DOT_ZOOM || scaleMeters(m) >= SHOT_MAX_M
   const box = m.getContainer()
   const w = box.clientWidth
   const h = box.clientHeight
@@ -202,7 +222,7 @@ function paintLod() {
     if (!img) continue
     // 🔴 고른 마커에서는 .shown 을 «떼어»낸다. 남겨두면 map.css 에서 뒤에 오는 .shown 이
     //    이겨 활성 썸네일이 도리어 작아진다 (74 → 56).
-    if (dots || el.classList.contains('on')) {
+    if (tooWide || el.classList.contains('on')) {
       el.classList.remove('shown')
       continue
     }
@@ -334,20 +354,25 @@ onBeforeUnmount(clearMarkers)
 .chip .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--mid); }
 
 /*
- * 축척 막대 — Mapbox 기본값이 흰 바탕에 진회색 글씨라 야간 지도 위에서 홀로 밝다.
- * 범례 칩과 같은 옷을 입힌다 (지도 위에 얹히는 것은 전부 같은 규칙이어야 한다).
+ * 축척 막대 — 판이 아니라 «자»다.
+ *
+ * Mapbox 기본값은 흰 바탕에 진회색 글씨라 야간 지도 위에서 홀로 밝다. 그렇다고 칩으로
+ * 감싸면 「어느 만큼이 그 거리인가」를 말해주는 눈금이 사라진다 — 이건 읽는 글이 아니라
+ * 재는 물건이라 양 끝이 어디인지가 전부다. 바탕을 걷고 ㄴ자 괄호만 남긴다.
+ * 지도 위 아무 색에나 얹히므로 글자에는 그림자로 바닥을 깔아준다.
  */
 :deep(.mapboxgl-ctrl-scale) {
-  margin: 0 10px 10px 0;
-  padding: 3px 7px;
-  border: 1px solid rgb(var(--mid-rgb) / 0.16);
+  margin: 0 12px 12px 0;
+  padding: 0 3px 3px;
+  border: 1.5px solid rgb(var(--ink-rgb) / 0.72);
   border-top: 0;
-  border-radius: 0 0 var(--radius) var(--radius);
-  background: rgb(var(--s0-rgb) / 0.8);
-  color: var(--mid);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.9), 0 0 2px rgb(0 0 0 / 0.7);
 }
 /*
  * 파선 «모양»만 범례다. 색은 이제 날짜마다 다르므로(routeData 가 구간에 심는다) 여기서

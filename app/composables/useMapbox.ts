@@ -17,6 +17,12 @@ export type MapStatus = 'loading' | 'ready' | 'failed'
 
 const LOAD_TIMEOUT = 12_000
 
+/**
+ * 축척 막대가 차지하는 최대 폭(px). 막대가 «가리키는 거리»를 되짚으려면 그린 쪽과
+ * 재는 쪽이 같은 값을 봐야 한다 — TripMap 이 썸네일 표시 여부를 이걸로 정한다.
+ */
+export const SCALE_MAX_PX = 96
+
 export interface UseMapboxOptions {
   container: Ref<HTMLElement | null>
   /** [[west, south], [east, north]] — Mapbox 규약. boundsOf() 를 통과시킨 값만 넘긴다. */
@@ -126,7 +132,7 @@ export function useMapbox(options: UseMapboxOptions) {
       m.addControl(new mapboxgl.AttributionControl({ compact: true }), corner)
       // 로고·attribution 과 겹치지 않게 반대쪽 아래에 둔다 (corner 는 top-left 이거나 bottom-right)
       if (options.scale) {
-        m.addControl(new mapboxgl.ScaleControl({ unit: 'metric', maxWidth: 96 }), 'bottom-right')
+        m.addControl(new mapboxgl.ScaleControl({ unit: 'metric', maxWidth: SCALE_MAX_PX }), 'bottom-right')
       }
 
       timer = setTimeout(() => {
