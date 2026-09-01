@@ -61,7 +61,13 @@ export function addRouteLayers(m: Map, source: string, lineId: string) {
     source,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': ROUTE_COLOR,
+      /*
+       * 구간이 color 를 들고 있으면 그 색으로 (TripMap 이 날짜 색을 심는다).
+       * 없으면 난색 하나 — 날짜 개념이 없는 화면(ClusterPreviewMap)이 그렇다.
+       * 글로우는 갈라지지 않는다: 여러 색이 번지면 경계에서 탁해지고, 무엇보다
+       * 「선이 거기 있다」는 신호는 색과 무관하다.
+       */
+      'line-color': ['coalesce', ['get', 'color'], ROUTE_COLOR],
       'line-width': 2.75,
       'line-dasharray': [2, 5],
       'line-emissive-strength': 1,

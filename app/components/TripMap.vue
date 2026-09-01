@@ -54,17 +54,35 @@ const { map, status, fit, retry } = useMapbox({
 })
 
 let markers: mapboxgl.Marker[] = []
+/** 썸네일 자리를 다투는 순서 — 사진 많은 순. 화면과 무관해서 팬 해도 안 흔들린다 (paintLod) */
+let byPriority: mapboxgl.Marker[] = []
 
 /** first_shot_at 이 null 인 포인트는 선에서 빠지고 마커만 남는다 (설계문서 §6) */
 const routePoints = computed(() => props.points.filter((p) => p.first_shot_at))
 
+/*
+ * 동선을 «구간»으로 쪼갠다 — 한 줄이 아니라 이웃한 두 포인트마다 한 조각.
+ *
+ * 전부 같은 난색 하나였을 때는 며칠에 걸친 기록에서 어디가 어느 날의 이동인지 읽히지
+ * 않았다. 조각마다 날짜 색을 주면 마커와 레일의 날짜 탭이 쓰는 색과 같아져, 셋이 한
+ * 범례로 묶인다.
+ *
+ * 🔴 조각의 색은 «출발점»의 날짜다. 자정을 넘는 이동은 어느 날에도 온전히 속하지 않는데,
+ *    그때 도착점 색을 쓰면 다음 날의 선이 전날 자리에서 시작하는 것처럼 보인다.
+ *    떠난 날의 마지막 이동으로 읽는 쪽이 지도에서 자연스럽다.
+ */
 function routeData(): FeatureCollection {
-  const coordinates = routePoints.value.map((p) => toLngLat(p))
+  const pts = routePoints.value
   return {
     type: 'FeatureCollection',
-    features: coordinates.length > 1
-      ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } }]
-      : [],
+    features: pts.slice(1).map((to, i) => {
+      const from = pts[i]!
+      return {
+        type: 'Feature' as const,
+        properties: { color: props.badges.get(from.id)?.color ?? null },
+        geometry: { type: 'LineString' as const, coordinates: [toLngLat(from), toLngLat(to)] },
+      }
+    }),
   }
 }
 
@@ -109,6 +127,7 @@ function markerEl(p: Point) {
 function clearMarkers() {
   for (const m of markers) m.remove()
   markers = []
+  byPriority = []
 }
 
 function render() {
@@ -120,6 +139,7 @@ function render() {
     src.setData(routeData())
   } else {
     m.on('zoom', paintActive)
+    m.on('move', scheduleLod)
     m.addSource(ROUTE, { type: 'geojson', data: routeData() })
     addRouteLayers(m, ROUTE, `${ROUTE}-line`)
   }
@@ -132,6 +152,11 @@ function render() {
         .addTo(m),
     )
   })
+  // 겹칠 때 남는 순서 — 사진이 많은 포인트가 그 자리를 대표할 자격이 크다
+  const shots = new Map(props.points.map((p) => [String(p.id), p.photos.length]))
+  byPriority = [...markers].sort(
+    (a, b) => (shots.get(b.getElement().dataset.id ?? '') ?? 0) - (shots.get(a.getElement().dataset.id ?? '') ?? 0),
+  )
   paintActive()
 }
 
@@ -150,6 +175,85 @@ function paintActive() {
     const img = on ? el.querySelector<HTMLImageElement>('img.shot') : null
     if (img && !img.src && img.dataset.src) img.src = img.dataset.src
   }
+  paintLod()
+}
+
+/*
+ * 대표 사진을 «자리가 있는 마커에만» 얹는다.
+ *
+ * 60포인트짜리 기록에서 전부 켜면 지도가 썸네일 벽이 된다. 줌 단계를 잘라 「11 이상이면
+ * 전부」 같은 규칙을 두는 방법도 있지만, 같은 줌이라도 도심은 빽빽하고 이동 구간은
+ * 성기다 — 줌은 밀도의 대리 지표일 뿐이다. 그래서 «실제로 겹치는가»를 화면 좌표로 직접
+ * 재고, 겹치면 그 마커는 알약만 남긴다. 밀집한 곳은 대표 몇 장, 한적한 곳은 전부가 된다.
+ *
+ * 누가 남는가는 화면과 무관하게 정해둔다(byPriority: 활성 → 사진 많은 순 → 목록 순).
+ * 자리를 먼저 잡은 쪽이 이기는 방식이라, 순서가 화면에 따라 바뀌면 팬할 때마다 켜지고
+ * 꺼지는 것이 달라져 깜빡인다.
+ *
+ * 이미지는 켜지는 순간에 받는다 — 처음 그림에서 60장을 한꺼번에 받지 않기 위한 기존
+ * 규칙(markerEl 의 🔴)을 그대로 잇는다.
+ */
+const SHOT_W = 56
+/** 썸네일 40 + 간격 4 + 알약 26 + 꼬리 7 — map.css 의 .shown 과 함께 고쳐야 한다 */
+const SHOT_H = 77
+const GAP = 8
+
+function paintLod() {
+  const m = map.value
+  if (!m || status.value !== 'ready') return
+  const dots = m.getZoom() < DOT_ZOOM
+  const box = m.getContainer()
+  const w = box.clientWidth
+  const h = box.clientHeight
+  const taken: { l: number; r: number; t: number; b: number }[] = []
+
+  // 활성은 .on 이 순서와 무관하게 언제나 그리므로 자리를 «맨 먼저» 잡아야 한다.
+  // 남이 먼저 채우면 그 위에 활성 썸네일이 겹쳐 그려진다.
+  const active = byPriority.filter((mk) => mk.getElement().classList.contains('on'))
+  const rest = byPriority.filter((mk) => !mk.getElement().classList.contains('on'))
+
+  for (const mk of [...active, ...rest]) {
+    const el = mk.getElement()
+    const img = el.querySelector<HTMLImageElement>('img.shot')
+    // 점으로 접힌 구간에서는 아무 것도 얹지 않는다 — 12px 점 위의 썸네일은 읽히지 않는다
+    if (!img || dots) {
+      el.classList.remove('shown')
+      continue
+    }
+    const on = el.classList.contains('on')
+    const pt = m.project(mk.getLngLat())
+    // 활성 마커의 썸네일은 더 크다(.on) — 자리도 그만큼 잡아야 옆 마커가 파고들지 않는다
+    const half = (on ? 74 : SHOT_W) / 2
+    const tall = on ? 96 : SHOT_H
+    const q = { l: pt.x - half - GAP, r: pt.x + half + GAP, t: pt.y - tall - GAP, b: pt.y + GAP }
+
+    // 지도 밖으로 잘리는 자리에는 얹지 않는다. 반쯤 잘린 사진은 없느니만 못하다.
+    const clipped = q.l < 0 || q.r > w || q.t < 0 || q.b > h
+    const hit = taken.some((t) => q.l < t.r && q.r > t.l && q.t < t.b && q.b > t.t)
+
+    // 활성은 .on 이 이미 띄우므로 자리만 잡고 .shown 은 붙이지 않는다
+    // (map.css 에서 .shown 이 뒤에 있어 붙이면 활성 썸네일이 작아진다)
+    if (on) {
+      taken.push(q)
+      continue
+    }
+    const show = !clipped && !hit
+    el.classList.toggle('shown', show)
+    if (show) {
+      taken.push(q)
+      if (!img.src && img.dataset.src) img.src = img.dataset.src
+    }
+  }
+}
+
+/** move 는 팬 한 번에 수십 번 온다 — 프레임당 한 번으로 묶는다 */
+let lodRaf = 0
+function scheduleLod() {
+  if (lodRaf) return
+  lodRaf = requestAnimationFrame(() => {
+    lodRaf = 0
+    paintLod()
+  })
 }
 
 /** 선택된 포인트로 부드럽게 이동. 상세 시트가 가리는 만큼 오프셋을 준다. */
@@ -228,8 +332,11 @@ onBeforeUnmount(clearMarkers)
   padding: 6px 10px;
 }
 .chip .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--mid); }
-/* 지도의 동선 레이어와 같은 색이어야 범례 구실을 한다 (--route, route-style.ts 가 SSOT) */
-.dash { width: 26px; height: 0; border-top: 2px dashed var(--route); }
+/*
+ * 파선 «모양»만 범례다. 색은 이제 날짜마다 다르므로(routeData 가 구간에 심는다) 여기서
+ * 한 색을 골라 두면 그 날짜만 가리키는 것처럼 읽힌다 — 날짜 색의 범례는 레일의 날짜 탭이다.
+ */
+.dash { width: 26px; height: 0; border-top: 2px dashed var(--mid); }
 
 @media (max-width: 900px) {
   .legend { display: none; }
