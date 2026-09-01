@@ -193,7 +193,12 @@ function dayLabel(g: DayGroup<Point>) {
 }
 .tab:hover { background: rgb(var(--ink-rgb) / 0.07); }
 .tab.on { background: var(--ink); border-color: var(--ink); color: var(--s0); font-weight: 600; }
-.dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--day, var(--acc)); }
+/*
+ * 날짜 색 조각 — 원이 아니라 모서리 둥근 사각이다.
+ * 7 → 8px 인 이유: 같은 치수라면 사각이 원보다 작아 보인다(모서리를 깎지 않아 면적이 큰데도
+ * 시선은 «높이»가 아니라 «둥근 정도»를 따라간다). 한 픽셀 키워 원이던 때와 같은 무게로 맞춘다.
+ */
+.dot { width: 8px; height: 8px; flex: none; border-radius: 2.5px; background: var(--day, var(--acc)); }
 
 .list { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; }
 
