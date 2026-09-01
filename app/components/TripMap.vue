@@ -291,14 +291,24 @@ function focusActive() {
    * 아닌 땅이 빠르게 흘러 지나가 어디로 가는지 놓친다. flyTo 는 잠깐 물러났다가
    * 내려앉아서 두 지점의 관계가 보인다 — 날짜가 다른 포인트로 건너뛸 때가 그렇다.
    *
-   * essential 은 주지 않는다. 그래야 「동작 줄이기」를 켠 사람에게는 Mapbox 가 애니메이션을
-   * 통째로 건너뛴다 (그 판단을 여기서 다시 하지 않는다).
+   * 🔴 「동작 줄이기」를 켠 사람에게 Mapbox 는 essential 이 없으면 애니메이션을 «통째로»
+   *    건너뛴다 — 지도가 순간이동한다. 그런데 여기서 움직임은 장식이 아니라 「방금 고른
+   *    것이 아까 그것과 어떤 관계인가」를 말하는 정보다. 그렇다고 줌 아크(flyTo)를
+   *    강행하면 안 된다 — 어지럼을 부르는 것이 정확히 그 동작이다.
+   *    그래서 «줄인다»: 아크를 걷고 짧게 미는 것으로 바꾼다 (reduce 는 none 이 아니다).
    */
-  if (m.getBounds()?.contains(to)) {
+  if (reduceMotion()) {
+    m.easeTo({ center: to, zoom, offset, duration: 260, essential: true })
+  } else if (m.getBounds()?.contains(to)) {
     m.easeTo({ center: to, zoom, offset, duration: 620, easing: easeInOut })
   } else {
     m.flyTo({ center: to, zoom, offset, curve: 1.42, speed: 0.85 })
   }
+}
+
+/** 매번 물어본다 — 설정은 브라우저를 새로 고치지 않고도 바뀐다 */
+function reduceMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /** 양끝에서 눕고 가운데서 빠른 곡선 — 지도가 «출발하고 도착한다»는 느낌을 준다 */

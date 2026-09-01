@@ -665,8 +665,14 @@ useHead(() => ({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet-enter-active, .sheet-leave-active { transition: opacity 0.12s linear; }
-  .sheet-enter-from, .sheet-leave-to { transform: none; opacity: 0; }
+  /*
+   * reduce 는 none 이 아니다. 시트가 «어디에서» 올라오는지는 그대로 두되(그게 사라지면
+   * 화면이 툭 바뀐 것으로 보인다) 거리와 시간을 줄인다. 어지럼을 부르는 것은 짧은
+   * 미끄러짐이 아니라 큰 이동·확대·시차라서다.
+   */
+  .sheet-enter-active { transition: transform 0.16s ease-out, opacity 0.14s ease-out; }
+  .sheet-leave-active { transition: transform 0.12s ease-in, opacity 0.1s ease-in; }
+  .sheet-enter-from, .sheet-leave-to { transform: translateY(10px); opacity: 0; }
 }
 
 /* 빈·에러 상태 */
