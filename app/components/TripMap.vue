@@ -54,8 +54,6 @@ const { map, status, fit, retry } = useMapbox({
 })
 
 let markers: mapboxgl.Marker[] = []
-/** 썸네일 자리를 다투는 순서 — 사진 많은 순. 화면과 무관해서 팬 해도 안 흔들린다 (paintLod) */
-let byPriority: mapboxgl.Marker[] = []
 
 /** first_shot_at 이 null 인 포인트는 선에서 빠지고 마커만 남는다 (설계문서 §6) */
 const routePoints = computed(() => props.points.filter((p) => p.first_shot_at))
@@ -127,7 +125,6 @@ function markerEl(p: Point) {
 function clearMarkers() {
   for (const m of markers) m.remove()
   markers = []
-  byPriority = []
 }
 
 function render() {
@@ -152,11 +149,6 @@ function render() {
         .addTo(m),
     )
   })
-  // 겹칠 때 남는 순서 — 사진이 많은 포인트가 그 자리를 대표할 자격이 크다
-  const shots = new Map(props.points.map((p) => [String(p.id), p.photos.length]))
-  byPriority = [...markers].sort(
-    (a, b) => (shots.get(b.getElement().dataset.id ?? '') ?? 0) - (shots.get(a.getElement().dataset.id ?? '') ?? 0),
-  )
   paintActive()
 }
 
@@ -179,29 +171,20 @@ function paintActive() {
 }
 
 /*
- * 대표 사진을 «자리가 있는 마커에만» 얹는다.
+ * 대표 사진 — 화면에 들어온 마커에는 전부 얹는다.
  *
- * 60포인트짜리 기록에서 전부 켜면 지도가 썸네일 벽이 된다. 줌 단계를 잘라 「11 이상이면
- * 전부」 같은 규칙을 두는 방법도 있지만, 같은 줌이라도 도심은 빽빽하고 이동 구간은
- * 성기다 — 줌은 밀도의 대리 지표일 뿐이다. 그래서 «실제로 겹치는가»를 화면 좌표로 직접
- * 잰다.
+ * 한때 서로 겹치지 않게 자리를 다투게 했는데, 겹친 모습이 어색하지 않다는 판단이라
+ * 걷어냈다(목록 지도가 늘 그렇게 보인다). 겹침을 막으려 들면 정작 밀집한 곳에서
+ * 한두 장만 남아 볼 것이 사라진다.
  *
- * 🔴 다만 «겹침 자체»는 막지 않는다. 사진이 서로 조금 물리는 모습은 어색하지 않고
- *    (목록 지도가 늘 그렇게 보인다), 전부 떼어놓으려 들면 도심에서 한두 장만 남아
- *    정작 볼 것이 사라진다. 그래서 자리를 «썸네일 전체»가 아니라 가운데 작은 심(core)
- *    으로만 잡는다 — 거의 같은 점에 겹쳐 앉은 것만 걸러지고, 비켜 겹치는 것은 둘 다 뜬다.
- *
- * 누가 남는가는 화면과 무관하게 정해둔다(byPriority: 활성 → 사진 많은 순 → 목록 순).
- * 자리를 먼저 잡은 쪽이 이기는 방식이라, 순서가 화면에 따라 바뀌면 팬할 때마다 켜지고
- * 꺼지는 것이 달라져 깜빡인다.
- *
- * 이미지는 켜지는 순간에 받는다 — 처음 그림에서 60장을 한꺼번에 받지 않기 위한 기존
- * 규칙(markerEl 의 🔴)을 그대로 잇는다.
+ * 남은 조건은 둘뿐이다.
+ *   · 점으로 접히는 구간(zoom < DOT_ZOOM)에서는 얹지 않는다 — 12px 점 위의 썸네일은
+ *     무엇을 가리키는지 읽히지 않는다.
+ *   · 화면 «밖»에는 얹지 않는다. 겹침 방지가 아니라 받지 않기 위해서다 — 60포인트
+ *     기록에서 열자마자 60장을 받지 않겠다는 규칙(markerEl 의 🔴)이 여기 걸려 있다.
+ *     이미지는 처음 보이는 순간 한 번만 받고, 그 뒤로는 브라우저 캐시가 맡는다.
  */
-/** 자리다툼에 쓰는 «심» — 실제 썸네일(56×40)보다 훨씬 작다. 겹침을 허용하려고 일부러 작다. */
-const CORE_W = 34
-const CORE_H = 34
-/** 썸네일 40 + 간격 4 + 알약 26 + 꼬리 7 — 화면 밖 판정에 쓴다 */
+/** 마커 높이(썸네일 40 + 간격 4 + 알약 26 + 꼬리 7). 화면 밖 판정에만 쓴다. */
 const SHOT_H = 77
 
 function paintLod() {
@@ -211,49 +194,21 @@ function paintLod() {
   const box = m.getContainer()
   const w = box.clientWidth
   const h = box.clientHeight
-  const taken: { l: number; r: number; t: number; b: number }[] = []
 
-  // 활성은 .on 이 순서와 무관하게 언제나 그리므로 자리를 «맨 먼저» 잡아야 한다.
-  // 남이 먼저 채우면 그 위에 활성 썸네일이 겹쳐 그려진다.
-  const active = byPriority.filter((mk) => mk.getElement().classList.contains('on'))
-  const rest = byPriority.filter((mk) => !mk.getElement().classList.contains('on'))
-
-  for (const mk of [...active, ...rest]) {
+  for (const mk of markers) {
     const el = mk.getElement()
     const img = el.querySelector<HTMLImageElement>('img.shot')
-    // 점으로 접힌 구간에서는 아무 것도 얹지 않는다 — 12px 점 위의 썸네일은 읽히지 않는다
-    if (!img || dots) {
+    if (!img) continue
+    // 🔴 고른 마커에서는 .shown 을 «떼어»낸다. 남겨두면 map.css 에서 뒤에 오는 .shown 이
+    //    이겨 활성 썸네일이 도리어 작아진다 (74 → 56).
+    if (dots || el.classList.contains('on')) {
       el.classList.remove('shown')
       continue
     }
-    const on = el.classList.contains('on')
     const pt = m.project(mk.getLngLat())
-    // 활성 마커의 썸네일은 더 크다(.on) — 심도 그만큼 키워 바로 옆에 다른 장이 앉지 않게 한다
-    const half = (on ? CORE_W * 1.4 : CORE_W) / 2
-    const tall = on ? 96 : SHOT_H
-    // 심은 썸네일의 «가운데»다 — 알약 위 (tall - 20) 지점 언저리
-    const cy = pt.y - tall + CORE_H / 2
-    const q = { l: pt.x - half, r: pt.x + half, t: cy - CORE_H / 2, b: cy + CORE_H / 2 }
-
-    // 위로 잘리면 사진이 알약에서 떨어져 나간 것처럼 보인다. 옆으로 물리는 건 그대로 둔다 —
-    // 지도 가장자리에서 잘리는 건 마커·라벨도 마찬가지라 어색하지 않다.
-    const clipped = pt.y - tall < 0 || pt.x < 0 || pt.x > w || pt.y > h
-    const hit = taken.some((t) => q.l < t.r && q.r > t.l && q.t < t.b && q.b > t.t)
-
-    // 활성은 .on 이 이미 띄우므로 자리만 잡는다.
-    // 🔴 .shown 은 «떼어»내야 한다 — 남겨두면 map.css 에서 뒤에 오는 .shown 이 이겨서
-    //    골라놓은 마커의 썸네일이 도리어 작아진다 (74 → 56).
-    if (on) {
-      el.classList.remove('shown')
-      taken.push(q)
-      continue
-    }
-    const show = !clipped && !hit
-    el.classList.toggle('shown', show)
-    if (show) {
-      taken.push(q)
-      if (!img.src && img.dataset.src) img.src = img.dataset.src
-    }
+    const near = pt.x > -SHOT_H && pt.x < w + SHOT_H && pt.y > -SHOT_H && pt.y < h + SHOT_H
+    el.classList.toggle('shown', near)
+    if (near && !img.src && img.dataset.src) img.src = img.dataset.src
   }
 }
 
@@ -298,11 +253,17 @@ function focusActive() {
    *    그래서 «줄인다»: 아크를 걷고 짧게 미는 것으로 바꾼다 (reduce 는 none 이 아니다).
    */
   if (reduceMotion()) {
-    m.easeTo({ center: to, zoom, offset, duration: 260, essential: true })
+    m.easeTo({ center: to, zoom, offset, duration: 240, essential: true })
   } else if (m.getBounds()?.contains(to)) {
-    m.easeTo({ center: to, zoom, offset, duration: 620, easing: easeInOut })
+    m.easeTo({ center: to, zoom, offset, duration: 380, easing: easeInOut })
   } else {
-    m.flyTo({ center: to, zoom, offset, curve: 1.42, speed: 0.85 })
+    /*
+     * 🔴 duration 을 «준다». 안 주면 flyTo 가 거리로 시간을 정해서, 멀수록 눈에 띄게
+     *    느려진다 — 날짜를 건너뛰는 이동에서 답답했다. 고정하면 가까운 이동이든 먼
+     *    이동이든 같은 시간에 끝나고, 대신 먼 이동이 더 빠르게 흐를 뿐이다.
+     *    curve 도 낮춘다 — 덜 물러나면 지나갈 길이 짧아진다.
+     */
+    m.flyTo({ center: to, zoom, offset, curve: 1.25, duration: 620 })
   }
 }
 

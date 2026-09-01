@@ -655,8 +655,8 @@ useHead(() => ({
  * 가까웠다. 처음에 빠르게 붙고 끝에서 길게 눕는 곡선으로 바꾸고 이동 거리를 늘렸다.
  * 나갈 때는 더 짧게 — 닫기는 이미 마음이 떠난 동작이라 기다리게 하면 답답하다.
  */
-.sheet-enter-active { transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease-out; }
-.sheet-leave-active { transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease-in; }
+.sheet-enter-active { transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease-out; }
+.sheet-leave-active { transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1), opacity 0.14s ease-in; }
 .sheet-enter-from, .sheet-leave-to { transform: translateY(28px); opacity: 0; }
 
 @media (max-width: 900px) {
