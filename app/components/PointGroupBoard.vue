@@ -97,8 +97,24 @@ const mapPoints = computed<BoardMapPoint[]>(() =>
   }),
 )
 
+/**
+ * 지금 고른 포인트. 목록과 지도가 이 값 하나를 함께 본다 — 어느 쪽에서 골라도
+ * 다른 쪽이 따라가야 「같은 것을 가리키고 있다」가 성립한다.
+ */
+const activeId = ref<number | null>(null)
+
+/**
+ * 헤더를 누르면 그 포인트를 고른다 — 목록이 표시되고 지도가 그리로 옮겨간다.
+ * 🔴 헤더 안의 버튼(자리 메뉴 · 사진 추가)까지 삼키면 안 된다. 그쪽이 먼저다.
+ */
+function pickGroup(e: MouseEvent, id: number) {
+  if ((e.target as HTMLElement).closest('button, [role="menuitem"]')) return
+  activeId.value = id
+}
+
 /** 마커를 누르면 그 그룹으로 굴러간다 — 36개짜리 목록에서 눈으로 찾는 건 일이다 */
 function scrollToGroup(id: number) {
+  activeId.value = id
   const el = document.querySelector<HTMLElement>(`[data-group="${id}"]`)
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   el?.classList.add('flash')
@@ -271,7 +287,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
     </div>
 
     <!-- 지금 포인트들이 어디에 찍히는지 — 자리를 바꾸면 그 자리에서 마커가 움직인다 -->
-    <BoardMap v-if="mapPoints.length" :points="mapPoints" @select="scrollToGroup" />
+    <BoardMap v-if="mapPoints.length" :points="mapPoints" :focus-id="activeId" @select="scrollToGroup" />
 
     <!-- touchmove 는 여기서 받는다 — 드래그 중일 때만 브라우저 스크롤을 막는다 -->
     <div class="scroll-y board" :class="{ picking }" @touchmove="drag.onTouchMove">
@@ -279,13 +295,21 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
         v-for="(g, gi) in groups"
         :key="g.id"
         class="group"
-        :class="{ target: drag.over.value?.groupId === g.id, fresh: g.id < 0 }"
+        :class="{ target: drag.over.value?.groupId === g.id, fresh: g.id < 0, active: activeId === g.id }"
         :data-group="g.id"
         :data-count="g.photos.length"
         :data-testid="`board-group-${gi}`"
       >
-        <header class="ghead">
-          <span class="mono gnum">{{ String(gi + 1).padStart(2, '0') }}</span>
+        <header class="ghead" @click="pickGroup($event, g.id)">
+          <!-- 번호는 «누를 수 있는» 것이다 — 지도를 이 포인트로 옮긴다.
+               헤더 아무 곳이나 눌러도 같지만, 키보드로 닿으려면 진짜 버튼이 하나 있어야 한다. -->
+          <button
+            type="button"
+            class="mono gnum"
+            :aria-label="`${g.title} — 지도에서 보기`"
+            :data-testid="`board-gnum-${gi}`"
+            @click="activeId = g.id"
+          >{{ String(gi + 1).padStart(2, '0') }}</button>
           <span class="gname">{{ g.title }}</span>
           <span v-if="g.id < 0" class="mono badge-new">새 포인트</span>
           <span class="mono gmeta">{{ g.photos.length }}장</span>
@@ -479,8 +503,22 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 /* 손끝이 올라온 그룹 — 어디에 떨어질지 그룹 단위로 먼저 보여준다 */
 .group.target { border-color: rgb(var(--acc-rgb) / 0.6); background: rgb(var(--acc-rgb) / 0.09); }
 .group.fresh { border-style: dashed; border-color: rgb(var(--route-soft-rgb) / 0.5); }
+/*
+ * 지금 고른 포인트. 지도의 밝은 마커와 «한 쌍»이라, 둘 중 어디를 봐도 같은 것을
+ * 가리키고 있다는 게 읽혀야 한다.
+ * 🔴 테두리 색만으로 구분하지 않는다 — .target(드래그 중)과 색이 겹친다. 왼쪽에
+ *    굵은 띠를 둬서 «상태가 다른 것»임을 형태로도 말한다.
+ */
+.group.active {
+  border-color: rgb(var(--acc-rgb) / 0.45);
+  box-shadow: inset 3px 0 0 var(--acc);
+}
+.group.active .gnum { background: var(--acc); color: var(--s0); border-color: var(--acc); }
+.gnum:hover { border-color: var(--acc); color: var(--ink); }
+.gnum:focus-visible { box-shadow: var(--focus-ring); }
 
 .ghead {
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -494,6 +532,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   width: 24px;
   height: 24px;
   flex: none;
+  /* 버튼이 되었다 — UA 기본값을 지운다 */
+  padding: 0;
+  cursor: pointer;
   border-radius: 50%;
   font-size: var(--fs-2xs);
   font-weight: 600;

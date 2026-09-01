@@ -24,7 +24,11 @@ export interface BoardMapPoint {
   lng: number
 }
 
-const props = defineProps<{ points: BoardMapPoint[] }>()
+const props = defineProps<{
+  points: BoardMapPoint[]
+  /** 아래 목록에서 고른 포인트. 지도를 그리로 옮기고 그 마커만 밝힌다. */
+  focusId?: number | null
+}>()
 const emit = defineEmits<{ select: [id: number] }>()
 
 /** 캔버스는 MapFrame 이 갖는다 — 껍데기(스켈레톤·폴백·마커 z-index 가둠)를 함께 받는다 */
@@ -49,11 +53,14 @@ const { map, status, retry, fit } = useMapbox({
 })
 
 let markers: mapboxgl.Marker[] = []
+/** 포인트 id → 마커 요소. 강조는 다시 그리지 않고 이 표로 클래스만 바꾼다. */
+const elById = new Map<number, HTMLElement>()
 
 function render() {
   const m = map.value
   if (!m || status.value !== 'ready') return
   for (const mk of markers) mk.remove()
+  elById.clear()
   markers = props.points.map((p) => {
     const el = document.createElement('button')
     el.type = 'button'
@@ -65,11 +72,33 @@ function render() {
     // 이름이 아니라 번호다 — 사용자 입력이 아니지만 innerHTML 로 붙이지 않는다
     el.querySelector('.body')!.textContent = String(p.num).padStart(2, '0')
     el.addEventListener('click', () => emit('select', p.id))
+    elById.set(p.id, el)
     return new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat(toLngLat(p)).addTo(m)
   })
+  paintFocus()
   // 포인트가 바뀌었다(자리 이동·분리·삭제) — 시야도 새로 맞춘다
   fit(false)
 }
+
+/** 고른 마커만 밝힌다. .on 은 다른 지도들이 쓰는 것과 같은 강조다 (map.css). */
+function paintFocus() {
+  for (const [id, el] of elById) el.classList.toggle('on', id === props.focusId)
+}
+
+/**
+ * 고른 포인트로 지도를 옮긴다.
+ *
+ * 🔴 줌은 건드리지 않는다. 이 지도는 늘 «전부 보이는» 상태로 맞춰져 있고(refitOnResize),
+ *    확대해 버리면 방금까지 보던 전체 그림을 잃는다. 가까운 포인트끼리는 중심이 거의
+ *    안 움직이지만, 그때는 강조(.on)가 어느 것인지 말해 준다 — 둘이 한 쌍이다.
+ */
+watch(() => props.focusId, (id) => {
+  paintFocus()
+  const m = map.value
+  const p = props.points.find((x) => x.id === id)
+  if (!m || !p || status.value !== 'ready') return
+  m.easeTo({ center: toLngLat(p), duration: 420 })
+})
 
 watch(status, (s) => {
   if (s === 'ready') render()
