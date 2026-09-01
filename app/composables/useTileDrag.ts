@@ -41,7 +41,17 @@ const LONG_PRESS_SLOP = 10
 const MOUSE_SLOP = 5
 /** 이 안쪽으로 들어오면 목록이 저절로 굴러간다 */
 const EDGE_PX = 72
-const EDGE_SPEED = 14
+/**
+ * 가장자리 자동 스크롤의 «최고» 속도 — 초당 픽셀.
+ *
+ * 🔴 프레임당 상수(예전의 14px)로 재면 안 된다. rAF 는 화면 주사율을 따르므로 같은 코드가
+ *    60Hz 에서 840px/s, ProMotion 120Hz 에서 1680px/s 로 «두 배» 빨라진다. 아이폰에서
+ *    포인트 하나가 176px 쯤이니 초당 9~10개씩 지나간 셈이고, 「40번에서 끌었는데 12번으로
+ *    가 있다」는 보고가 정확히 그것이었다. 시간으로 재면 기기가 달라도 같은 속도다.
+ *
+ * 최고 속도로도 초당 3개 남짓이라 눈으로 따라갈 수 있다.
+ */
+const EDGE_SPEED_PPS = 600
 
 export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
   const from = ref<DragFrom | null>(null)
@@ -61,6 +71,8 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
   let scroller: HTMLElement | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
   let raf = 0
+  /** 자동 스크롤의 직전 프레임 시각. 0 이면 「띠 밖」이라 다음 프레임이 기준을 다시 잡는다. */
+  let lastTs = 0
   let startX = 0
   let startY = 0
   let lastY = 0
@@ -102,19 +114,40 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     return null
   }
 
-  /** 가장자리 자동 스크롤 — 손끝이 위/아래 끝에 머무는 동안만 돈다 */
-  function edgeScroll() {
+  /**
+   * 가장자리 자동 스크롤 — 손끝이 위/아래 끝에 머무는 동안만 돈다.
+   *
+   * 속도는 «시간»과 «깊이»로 정한다.
+   *   시간 — 프레임 간격을 곱한다. 그래야 60Hz 든 120Hz 든 같은 속도다 (EDGE_SPEED_PPS 의 🔴).
+   *   깊이 — 가장자리 띠에 얼마나 깊이 들어왔는지에 비례한다. 경계에서는 거의 안 움직이고
+   *          더 밀어 넣을수록 빨라진다. 예전에는 띠에 «닿는 순간» 최고 속도였는데,
+   *          띠가 72px 이고 폰의 보드는 300~500px 이라 의도치 않게 들어가기 쉬웠다.
+   */
+  function edgeScroll(now: number) {
     raf = 0
     if (!dragging.value) return
-    const top = scroller ? scroller.getBoundingClientRect().top : 0
-    const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight
-    const by = (dy: number) => {
-      if (scroller) scroller.scrollTop += dy
-      else window.scrollBy(0, dy)
+    const rect = scroller?.getBoundingClientRect()
+    const top = rect ? rect.top : 0
+    const bottom = rect ? rect.bottom : window.innerHeight
+
+    // 첫 프레임은 간격을 모른다 — 움직이지 않고 기준 시각만 잡는다.
+    // 탭을 다시 보는 등으로 간격이 크게 벌어졌을 때 한 번에 튀지 않게 위도 자른다.
+    const dt = lastTs ? Math.min((now - lastTs) / 1000, 0.05) : 0
+    lastTs = now
+
+    /** 띠 안쪽으로 들어온 정도 (0~1). 방향은 부호로 판다. */
+    let depth = 0
+    if (lastY < top + EDGE_PX) depth = -Math.min(1, (top + EDGE_PX - lastY) / EDGE_PX)
+    else if (lastY > bottom - EDGE_PX) depth = Math.min(1, (lastY - (bottom - EDGE_PX)) / EDGE_PX)
+    else {
+      lastTs = 0
+      return
     }
-    if (lastY < top + EDGE_PX) by(-EDGE_SPEED)
-    else if (lastY > bottom - EDGE_PX) by(EDGE_SPEED)
-    else return
+
+    const dy = depth * EDGE_SPEED_PPS * dt
+    if (scroller) scroller.scrollTop += dy
+    else window.scrollBy(0, dy)
+
     // 굴러간 만큼 손끝 아래의 칸이 바뀐다 — 다시 훑어야 드롭 위치가 따라온다
     resolveOver(Number(ghost?.dataset.px ?? 0), lastY)
     raf = requestAnimationFrame(edgeScroll)
@@ -236,6 +269,7 @@ export function useTileDrag(onDrop: (from: DragFrom, over: DragOver) => void) {
     timer = null
     if (raf) cancelAnimationFrame(raf)
     raf = 0
+    lastTs = 0
     ghost?.remove()
     ghost = null
     scroller = null
