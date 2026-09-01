@@ -29,6 +29,11 @@ export interface UseMapboxOptions {
    */
   controlPosition?: 'top-left' | 'bottom-right'
   /**
+   * 축척 막대(「200 m」)를 단다. 위도에 따라 같은 줌도 실제 거리가 달라지므로,
+   * 「이 지도에서 지금 1px 이 몇 m 인가」는 줌 숫자가 아니라 이것이 말해준다.
+   */
+  scale?: boolean
+  /**
    * Mapbox v3 는 저줌에서 globe 투영으로 전환한다. 넓은 범위를 낮고 넓은 띠에 담는
    * 목록 지도(아트보드 1a)는 지구본이 되어버리므로 mercator 로 고정한다.
    */
@@ -119,6 +124,10 @@ export function useMapbox(options: UseMapboxOptions) {
       })
       // compact = 'ⓘ' 버튼 하나로 접힌다. 지우는 게 아니라 자리를 덜 먹게 하는 것이다.
       m.addControl(new mapboxgl.AttributionControl({ compact: true }), corner)
+      // 로고·attribution 과 겹치지 않게 반대쪽 아래에 둔다 (corner 는 top-left 이거나 bottom-right)
+      if (options.scale) {
+        m.addControl(new mapboxgl.ScaleControl({ unit: 'metric', maxWidth: 96 }), 'bottom-right')
+      }
 
       timer = setTimeout(() => {
         if (status.value === 'loading') {

@@ -655,8 +655,8 @@ useHead(() => ({
  * 가까웠다. 처음에 빠르게 붙고 끝에서 길게 눕는 곡선으로 바꾸고 이동 거리를 늘렸다.
  * 나갈 때는 더 짧게 — 닫기는 이미 마음이 떠난 동작이라 기다리게 하면 답답하다.
  */
-.sheet-enter-active { transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.18s ease-out; }
-.sheet-leave-active { transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1), opacity 0.14s ease-in; }
+.sheet-enter-active { transition: transform 0.21s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.14s ease-out; }
+.sheet-leave-active { transition: transform 0.14s cubic-bezier(0.4, 0, 1, 1), opacity 0.11s ease-in; }
 .sheet-enter-from, .sheet-leave-to { transform: translateY(28px); opacity: 0; }
 
 @media (max-width: 900px) {
@@ -670,8 +670,8 @@ useHead(() => ({
    * 화면이 툭 바뀐 것으로 보인다) 거리와 시간을 줄인다. 어지럼을 부르는 것은 짧은
    * 미끄러짐이 아니라 큰 이동·확대·시차라서다.
    */
-  .sheet-enter-active { transition: transform 0.16s ease-out, opacity 0.14s ease-out; }
-  .sheet-leave-active { transition: transform 0.12s ease-in, opacity 0.1s ease-in; }
+  .sheet-enter-active { transition: transform 0.13s ease-out, opacity 0.11s ease-out; }
+  .sheet-leave-active { transition: transform 0.1s ease-in, opacity 0.08s ease-in; }
   .sheet-enter-from, .sheet-leave-to { transform: translateY(10px); opacity: 0; }
 }
 

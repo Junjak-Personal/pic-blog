@@ -51,6 +51,7 @@ const { map, status, fit, retry } = useMapbox({
   padding: { top: 60, right: 380, bottom: 60, left: 60 },
   // 하단은 상세 시트가 덮으므로 로고·attribution 을 좌상단으로 옮긴다
   controlPosition: 'top-left',
+  scale: true,
 })
 
 let markers: mapboxgl.Marker[] = []
@@ -253,9 +254,9 @@ function focusActive() {
    *    그래서 «줄인다»: 아크를 걷고 짧게 미는 것으로 바꾼다 (reduce 는 none 이 아니다).
    */
   if (reduceMotion()) {
-    m.easeTo({ center: to, zoom, offset, duration: 240, essential: true })
+    m.easeTo({ center: to, zoom, offset, duration: 190, essential: true })
   } else if (m.getBounds()?.contains(to)) {
-    m.easeTo({ center: to, zoom, offset, duration: 380, easing: easeInOut })
+    m.easeTo({ center: to, zoom, offset, duration: 300, easing: easeInOut })
   } else {
     /*
      * 🔴 duration 을 «준다». 안 주면 flyTo 가 거리로 시간을 정해서, 멀수록 눈에 띄게
@@ -263,7 +264,7 @@ function focusActive() {
      *    이동이든 같은 시간에 끝나고, 대신 먼 이동이 더 빠르게 흐를 뿐이다.
      *    curve 도 낮춘다 — 덜 물러나면 지나갈 길이 짧아진다.
      */
-    m.flyTo({ center: to, zoom, offset, curve: 1.25, duration: 620 })
+    m.flyTo({ center: to, zoom, offset, curve: 1.25, duration: 500 })
   }
 }
 
@@ -331,6 +332,23 @@ onBeforeUnmount(clearMarkers)
   padding: 6px 10px;
 }
 .chip .mono { font-size: var(--fs-2xs); letter-spacing: 0.1em; color: var(--mid); }
+
+/*
+ * 축척 막대 — Mapbox 기본값이 흰 바탕에 진회색 글씨라 야간 지도 위에서 홀로 밝다.
+ * 범례 칩과 같은 옷을 입힌다 (지도 위에 얹히는 것은 전부 같은 규칙이어야 한다).
+ */
+:deep(.mapboxgl-ctrl-scale) {
+  margin: 0 10px 10px 0;
+  padding: 3px 7px;
+  border: 1px solid rgb(var(--mid-rgb) / 0.16);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: rgb(var(--s0-rgb) / 0.8);
+  color: var(--mid);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+}
 /*
  * 파선 «모양»만 범례다. 색은 이제 날짜마다 다르므로(routeData 가 구간에 심는다) 여기서
  * 한 색을 골라 두면 그 날짜만 가리키는 것처럼 읽힌다 — 날짜 색의 범례는 레일의 날짜 탭이다.
