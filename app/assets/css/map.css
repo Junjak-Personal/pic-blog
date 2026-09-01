@@ -133,3 +133,23 @@
  */
 .map-marker.sm .body { width: 24px; height: 24px; font-size: var(--fs-micro); border-width: 1px; }
 .map-marker.sm:hover .body { background: var(--acc); border-color: var(--acc); color: var(--s0); }
+/*
+ * 🔴 작은 마커는 «보이는 크기»가 24×30 이라 손가락으로 맞히기 어렵다. 보드(2단계)에서는
+ *    이 번호를 눌러 해당 포인트로 가는 것이 유일한 「멀리 뛰기」 수단이라, 안 맞으면
+ *    기능이 없는 것처럼 읽힌다 — 실제로 「번호 누르면 이동되게 해달라」는 요청을 받았고
+ *    코드는 이미 그렇게 하고 있었다.
+ *    모양은 그대로 두고 «닿는 넓이»만 44px 로 넓힌다 (.kill 과 같은 처방).
+ *    지도 위라 겹칠 수 있으므로 좁은 화면에서만 켠다.
+ */
+@media (max-width: 900px) {
+  .map-marker.sm { position: relative; }
+  .map-marker.sm::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}

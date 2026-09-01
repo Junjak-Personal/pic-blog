@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppBack from '~/components/AppBack.vue'
+import ErrorNote from '~/components/ErrorNote.vue'
 import PostSettings from '~/components/PostSettings.vue'
 import PointGroupBoard, { type BoardGroup } from '~/components/PointGroupBoard.vue'
 import OverflowMenu from '~/components/OverflowMenu.vue'
@@ -1005,7 +1006,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               <span class="hd-title-text">{{ draftTitle || '기록 편집' }}</span>
             </button>
           </h1>
-          <span v-if="errorMessage" class="mono err">{{ errorMessage }}</span>
+          <ErrorNote class="err" :message="errorMessage" @close="errorMessage = null" />
         </div>
 
         <div class="top-right">
@@ -1088,7 +1089,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
          제목 옆에 이미 같은 값을 그린다. 이게 없으면 저장 실패·되돌림 같은 소식이
          폰에서 통째로 안 보인다: 정확히 「조용한 실패」다 (설계문서 §8).
     -->
-    <p v-if="errorMessage" class="mono err-bar">{{ errorMessage }}</p>
+    <ErrorNote class="err-bar" :message="errorMessage" @close="errorMessage = null" />
 
     <section v-if="!post" class="blank">
       <h3>기록을 찾을 수 없습니다</h3>
@@ -1526,13 +1527,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 /* 좁은 화면 전용 — 아래 미디어쿼리에서 켜진다 */
 .err-bar { display: none; }
-.err {
-  font-size: var(--fs-2xs);
-  color: var(--danger);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.err { font-size: var(--fs-2xs); min-width: 0; }
 
 
 /* 버튼은 base.css 의 .btn 한 벌을 쓴다 (여백이 여기만 8px 13px 이었는데 14px 로 맞춘다) */
@@ -1955,7 +1950,9 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .hd-desktop { display: none; }
   .hd-mobile { display: flex; align-items: center; gap: 8px; width: 100%; }
   .err-bar {
-    display: block;
+    /* 🔴 flex 여야 한다. block 으로 두면 ErrorNote 의 display:flex 를 «이 규칙이 이겨»
+       문구와 닫기 버튼이 두 줄로 쌓인다 (실제로 58px 짜리 두 줄이 됐다). */
+    display: flex;
     flex: none;
     margin: 0;
     padding: 9px var(--topbar-x-sm);

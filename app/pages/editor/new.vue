@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppBack from '~/components/AppBack.vue'
+import ErrorNote from '~/components/ErrorNote.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
@@ -426,7 +427,7 @@ async function onBack() {
         <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장</template>
       </p>
 
-      <p v-if="flow.errorMessage.value" class="mono error">{{ flow.errorMessage.value }}</p>
+      <ErrorNote class="error" :message="flow.errorMessage.value" @close="flow.errorMessage.value = null" />
 
       <template v-if="flow.stage.value === 'done' && flow.failed.value.length">
         <ul class="failed">
