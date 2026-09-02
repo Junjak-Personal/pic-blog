@@ -10,6 +10,18 @@
   z-index: 90;
 }
 
+/* 메뉴 제목 — 「이 메뉴가 무엇을 정하는가」. 항목이 아니므로 눌리지 않는다. */
+.ovf-label {
+  padding: 7px 12px 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 4px;
+  cursor: default;
+}
+
 .ovf-item {
   display: flex;
   align-items: center;

@@ -368,6 +368,31 @@ function dropDraft(id: number) {
 }
 
 /** 2단계 — 사진 한 장이 어디에서 어디로 */
+/**
+ * 「시각 순 정렬」 — 한 포인트 안의 사진 순서만 바꾼다.
+ *
+ * 🔴 resort() 를 부르지 않는다. 포인트의 정렬 키는 «가장 이른» 사진 시각이라(resort 의
+ *    times[0]) 그룹 «안»의 순서를 바꿔도 그 값은 그대로다. 괜히 부르면 아무 이유 없이
+ *    목록 전체가 다시 늘어선다.
+ *
+ * 시각이 없는 사진은 뒤로 몰되 서로의 순서는 건드리지 않는다 — 지어낸 시각으로
+ * 줄을 세우면 사람이 손으로 잡아둔 배치가 조용히 흐트러진다.
+ */
+function onSortPhotos(groupId: number) {
+  const d = pointDrafts.value.find((x) => x.id === groupId)
+  if (!d) return
+  const at = new Map(photosOf(d.ids).map((p) => [p.id, p.shot_at]))
+  d.ids = d.ids
+    .map((id, i) => ({ id, t: at.get(id) ?? null, i }))
+    .sort((a, b) => {
+      if (a.t === b.t) return a.i - b.i
+      if (a.t === null) return 1
+      if (b.t === null) return -1
+      return a.t < b.t ? -1 : 1
+    })
+    .map((x) => x.id)
+}
+
 async function onBoardDrop(from: DragFrom, over: DragOver) {
   const src = pointDrafts.value.find((d) => d.id === from.groupId)
   if (!src) return
@@ -1163,6 +1188,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           @set-anchor="onSetAnchor"
           @open-photo="onOpenPhoto"
           @add-to-point="onAddToPoint"
+          @sort-photos="onSortPhotos"
           @add="onAddPhotos"
         />
       </div>
