@@ -1764,11 +1764,23 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 /* 썸네일 픽커 */
 .pick-head { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .hint { font-size: var(--fs-2xs); color: var(--deep); }
+/*
+ * 🔴 트랙을 «1fr 로 늘리지 않는다».
+ *
+ * minmax(104px, 1fr) 이었을 때 판이 넓어지면 칸도 같이 넓어졌는데, 사진 높이는
+ * --tile-img-h 로 고정이라 상자만 옆으로 늘어났다 (104×74 = 1.40 → 116×74 = 1.57).
+ * object-fit: cover 라 늘어난 만큼 위아래가 잘려 나간다 — 세로 사진은 가운데 띠만
+ * 남아 무엇을 찍었는지 알아볼 수 없었다.
+ *
+ * 이 칸은 2단계 보드와 «같은» 칸이어야 한다(아래 PhotoTile 주석). 너비를 토큰으로
+ * 묶어 두고, 남는 폭은 칸이 아니라 «사이»가 가져가게 한다.
+ */
 .picks {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, var(--tile-w));
+  justify-content: space-between;
   gap: 9px;
   align-content: start;
 }
@@ -1945,7 +1957,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   .split { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
   .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); }
   .body { grid-template-columns: 280px 1fr; }
-  .picks { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 }
 /* 모바일 — 데스크탑의 「고정 높이 패널 격자」를 페이지 세로 스크롤 하나로 바꾼다.
    390px 에서는 상단바가 한 줄에 안 들어가 겹치고, min-width:0 인 flex 필드는
@@ -1980,7 +1991,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   /* 좁은 화면에서 46px 썸네일까지 넣으면 이름이 두 글자만 남는다 — 썸네일을 줄인다 */
   .prow { grid-template-columns: 24px 38px 1fr auto; padding: 10px 12px 10px 14px; }
   .pthumb { width: 38px; height: 30px; }
-  .picks { grid-template-columns: repeat(3, 1fr); }
   .points {
     /* 포인트가 60개여도 편집 블록에 닿을 수 있어야 한다 — 목록만 따로 스크롤 */
     max-height: 45dvh;

@@ -581,7 +581,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
    높이를 손으로 적지 않는다: 사진 높이를 바꾸면 여기가 조용히 어긋나던 자리다. */
 .addtile {
   flex: none;
-  width: 104px;
+  width: var(--tile-w);
   height: calc(var(--tile-img-h) + var(--tile-bar-h));
   display: flex;
   flex-direction: column;
@@ -613,7 +613,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 /* 상자의 겉모습(position·overflow·모서리·바탕)은 .phototile 이 준다 — PhotoTile.vue */
 .tile {
   flex: none;
-  width: 104px;
+  width: var(--tile-w);
   /*
    * 세로 스크롤은 브라우저에 맡긴다 — 사진이 화면 대부분이라 여기서 none 을 걸면
    * 목록을 굴릴 수 없다. 드래그가 실제로 시작된 뒤에만 touchmove 를 막는다.
