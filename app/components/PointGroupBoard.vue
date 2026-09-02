@@ -453,21 +453,18 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
             촬영 시각 순으로 다시 늘어놓기. 자리를 헤더가 아니라 «사진 옆»에 둔 이유:
             헤더는 좁은 화면에서 이미 [번호][이름][장수][꼬리표][아이콘]로 꽉 차 하나를
             더 넣으면 이름부터 줄어든다. 정렬은 사진을 만지는 동작이라 사진이 있는 자리가 맞다.
-            이미 시각 순이면 눌리지 않는다 — 눌러도 아무 일 없는 버튼은 고장으로 읽힌다.
+            이미 시간 순이면 칸 자체를 내지 않는다 — 할 일이 없는 버튼은 자리만 차지한다.
           -->
           <button
-            v-if="g.photos.length > 1"
+            v-if="g.photos.length > 1 && !inTimeOrder(g)"
             type="button"
             class="addtile sorttile"
-            :disabled="inTimeOrder(g)"
-            :aria-label="inTimeOrder(g)
-              ? `${g.title} — 사진이 이미 촬영 시각 순입니다`
-              : `${g.title}의 사진을 촬영 시각 순으로 정렬`"
+            :aria-label="`${g.title}의 사진을 시간 순으로 정렬`"
             :data-testid="`board-sort-${gi}`"
             @click="emit('sortPhotos', g.id)"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7a5 5 0 1 0 5 5" /><path d="M12 3v4l3 -2" /><path d="M12 9v3l2 2" /></svg>
-            <span class="mono addlabel">{{ inTimeOrder(g) ? '이미 시각 순' : '시각 순 정렬' }}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 7v5l3 3" /></svg>
+            <span class="mono addlabel">시간 순 정렬</span>
           </button>
         </div>
       </section>
@@ -645,7 +642,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
 .addtile:hover:not(:disabled) { border-color: var(--acc); color: var(--ink); background: rgb(var(--acc-rgb) / 0.08); }
 /* 점선은 「여기에 새로 들어온다」는 뜻이다 — 정렬은 있는 것을 다시 늘어놓을 뿐이라 실선 */
 .sorttile { border-style: solid; border-color: rgb(var(--mid-rgb) / 0.2); }
-.sorttile:disabled { border-style: solid; }
 /* 0.4 는 이유를 읽을 수 없을 만큼 흐리다 — 누를 수 없다는 것만 말하고 글자는 남긴다 */
 .addtile:disabled { border-style: dotted; color: var(--faint); cursor: default; }
 /* 이유가 「사진 추가」보다 길다 — 두 줄까지 접히게 두고 가운데로 맞춘다 */

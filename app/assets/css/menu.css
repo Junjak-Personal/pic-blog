@@ -10,9 +10,15 @@
   z-index: 90;
 }
 
-/* 메뉴 제목 — 「이 메뉴가 무엇을 정하는가」. 항목이 아니므로 눌리지 않는다. */
+/*
+ * 메뉴 제목 — 「이 메뉴가 무엇을 정하는가」. 항목이 아니므로 눌리지 않는다.
+ * 🔴 위아래를 같은 숫자로 적으면 안 맞는다. 둘 다 «글자»가 아니라 줄 상자를 기준으로
+ *    재기 때문이다 — 위에는 .ovf-content 의 padding 6px 이 더 깔려 있고, 줄 상자의
+ *    남는 높이(leading)도 위 2 · 아래 3.7 로 갈린다. 실측으로 맞춘 값이라 글자 크기를
+ *    바꾸면 다시 재야 한다 (판 안쪽 끝 → 글자 14px, 글자 → 구분선 13.7px).
+ */
 .ovf-label {
-  padding: 7px 12px 5px;
+  padding: 6px 12px 10px;
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
