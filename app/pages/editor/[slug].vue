@@ -1989,7 +1989,15 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .blank p { font-size: var(--fs-xs); color: var(--faint); }
 
 @media (max-width: 1240px) {
-  .split { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  /*
+   * 🔴 사진 줄에 «바닥»을 준다. 그냥 1fr 이면 오른쪽 판이 auto 라 콘텐츠만큼 다 가져가고
+   *    사진판에 남는 게 거의 없다 — 창 1200 에서 167px(한 줄 반), 1000 에서는 0px 이었다.
+   *    300px = 사진 두 줄(96·9·96) + 머리줄·발줄·안쪽 여백. 이 칸이 받는 높이가 그대로
+   *    사진판이 되는 게 아니라 머리·발이 먼저 떼어 가므로, 두 줄을 보장하려면 그만큼 더
+   *    깔아야 한다 (220 으로는 한 줄 반이었다 — 원래 값과 같아 아무 것도 안 바뀌었다).
+   *    밀린 만큼은 .side 가 스스로 굴러간다 (이미 overflow-y: auto 다).
+   */
+  .split { grid-template-columns: 1fr; grid-template-rows: minmax(300px, 1fr) minmax(0, auto); }
   .side { border-left: 0; border-top: 1px solid rgb(var(--mid-rgb) / 0.1); }
   .body { grid-template-columns: 280px 1fr; }
 }
