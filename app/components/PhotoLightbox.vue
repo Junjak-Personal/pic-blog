@@ -184,7 +184,21 @@ watch(() => props.photos, async () => {
             <SwiperSlide v-for="(ph, i) in props.photos" :key="ph.id">
               <!-- swiper-zoom-container 안이어야 핀치·더블탭 확대가 걸린다 -->
               <div class="swiper-zoom-container">
-                <img v-sk class="sk" :src="ph.display_path" :alt="`${props.pointName} 사진 ${i + 1}`">
+                <!--
+                  🔴 width/height 를 «적어 준다». 없으면 받기 전 <img> 의 고유 크기가 0 이라
+                     확대 컨테이너(width/height: auto)가 같이 접히고, 스켈레톤이 그려질 상자
+                     자체가 사라진다 — 아무 것도 없다가 사진이 뜨는 순간 판이 튀었다.
+                     두 값은 이미 DB 에 있다(아래 캡션이 같은 값을 적는다). 브라우저가 이걸로
+                     비율을 잡아 두므로 도착 전에도 «그 사진이 앉을 자리»가 정확히 잡힌다.
+                -->
+                <img
+                  v-sk
+                  class="sk"
+                  :src="ph.display_path"
+                  :width="ph.w ?? undefined"
+                  :height="ph.h ?? undefined"
+                  :alt="`${props.pointName} 사진 ${i + 1}`"
+                >
               </div>
               <!-- 사진 밑 한 줄에 「언제」와 「무엇」을 양 끝으로 나눈다 —
                    시각은 보는 사람의 값이고 크기·포맷은 파일의 값이라 섞으면 둘 다 안 읽힌다 -->

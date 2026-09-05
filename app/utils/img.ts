@@ -15,16 +15,37 @@ import type { Directive } from 'vue'
  * error 도 같이 뗀다 — 못 받은 그림 자리에서 영원히 훑고 있으면 「오는 중」으로 읽힌다.
  * 깨진 그림의 빈 상자가 차라리 정직하다.
  */
+/**
+ * 그림이 도착할 때까지 자기 상자에 스켈레톤을 깔아둔다.
+ *
+ * 🔴 complete «만» 보면 안 된다. src 가 아직 없는 <img> 도 complete 는 true 다 —
+ *    지도 마커가 그렇다(칸이 화면에 들어올 때 src 를 넣는다). naturalWidth 로 가른다.
+ * 🔴 리스너는 한 번만 건다. 같은 <img> 의 src 가 바뀌어 다시 무장할 때마다 걸면
+ *    안 받아진 채로 여러 번 바뀐 그림에 리스너가 쌓인다.
+ */
+export function skWhileLoading(el: HTMLImageElement) {
+  if (el.complete && el.naturalWidth > 0) {
+    el.classList.remove('sk')
+    return
+  }
+  el.classList.add('sk')
+  if (el.dataset.skArmed) return
+  el.dataset.skArmed = '1'
+  const clear = () => {
+    el.classList.remove('sk')
+    delete el.dataset.skArmed
+  }
+  el.addEventListener('load', clear, { once: true })
+  el.addEventListener('error', clear, { once: true })
+}
+
 export const vSk: Directive<HTMLImageElement> = {
-  mounted(el) {
-    const clear = () => el.classList.remove('sk')
-    if (el.complete) {
-      clear()
-      return
-    }
-    el.addEventListener('load', clear, { once: true })
-    el.addEventListener('error', clear, { once: true })
-  },
+  mounted: skWhileLoading,
+  /*
+   * src 가 «바뀌는» 경우 — Vue 가 같은 <img> 를 재사용하면 mounted 는 다시 불리지 않는다.
+   * 그대로 두면 새 그림이 도착할 때까지 옛 그림이 남거나 빈 상자가 보인다.
+   */
+  updated: skWhileLoading,
 }
 
 /**

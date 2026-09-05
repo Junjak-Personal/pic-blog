@@ -63,8 +63,9 @@
   border-radius: 6px;
   border: 1.5px solid var(--ink);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-  /* 이미지가 오기 전 빈 칸이 검은 구멍으로 보이지 않게 */
-  background: rgb(var(--marker-rgb));
+  /* 🔴 background-color 로 «만» 적는다. 단축(background)으로 적으면 .sk 가 깔아 둔
+     물결(background-image)까지 지워져, 받는 동안 밋밋한 검은 상자만 남는다. */
+  background-color: rgb(var(--marker-rgb));
 }
 /* 축소 모드에서도 활성 마커는 dot 이 되지 않으므로 썸네일이 그대로 남는다 */
 
@@ -82,7 +83,7 @@
   border-radius: 5px;
   border: 1.5px solid var(--ink);
   box-shadow: 0 5px 14px rgba(0, 0, 0, 0.55);
-  background: rgb(var(--marker-rgb));
+  background-color: rgb(var(--marker-rgb));
 }
 
 /* 활성 — 1.15× · #E8EBE9 배경 · #040408 텍스트 */

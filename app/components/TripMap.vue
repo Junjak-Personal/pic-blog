@@ -17,7 +17,7 @@ import type { PointBadge } from '#shared/utils/days'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers, routeDash } from '~/utils/route-style'
 import { SCALE_MAX_PX } from '~/composables/useMapbox'
-import { pointThumb } from '~/utils/img'
+import { pointThumb, skWhileLoading } from '~/utils/img'
 
 const props = defineProps<{
   points: Point[]
@@ -106,6 +106,8 @@ function markerEl(p: Point) {
     img.alt = ''
     img.decoding = 'async'
     img.dataset.src = thumb.thumb_path
+    // 아직 src 가 없다 — 켜지는 순간부터 도착까지 스켈레톤이 자리를 지킨다
+    skWhileLoading(img)
     el.appendChild(img)
   }
 

@@ -12,6 +12,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { PostSummary } from '#shared/types/db'
 import { boundsOf } from '#shared/utils/geo'
+import { skWhileLoading } from '~/utils/img'
 
 const props = defineProps<{ posts: PostSummary[] }>()
 
@@ -62,6 +63,8 @@ function render() {
       img.alt = ''
       img.decoding = 'async'
       img.src = post.cover_thumb
+      // 받는 동안 자리를 지킨다 — 없으면 마커 위에 깨진 그림 아이콘이 뜬다
+      skWhileLoading(img)
       el.appendChild(img)
     }
 
