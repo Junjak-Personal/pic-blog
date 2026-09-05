@@ -1806,6 +1806,15 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--tile-w));
+  /*
+   * 🔴 줄 높이를 «못 박는다». auto 로 두면 판이 낮을 때 줄이 통째로 눌린다 —
+   *    격자의 자동 최소 크기는 보통 내용 높이가 바닥이 되어 주는데, 칸(.phototile)이
+   *    overflow: hidden 이라 그 바닥이 0 으로 풀린다. 그러면 남은 높이를 줄들이 나눠
+   *    가져 96px 짜리 칸이 35px 가 되고, 사진은 잘리고 시각 줄은 사라지고 배지는
+   *    엉뚱한 데 걸린다 (창 1100~1240 에서 실제로 그랬다).
+   *    못 박아 두면 넘치는 만큼 .scroll-y 가 굴러간다 — 그게 원래 의도다.
+   */
+  grid-auto-rows: calc(var(--tile-img-h) + var(--tile-bar-h));
   justify-content: space-between;
   gap: 9px;
   align-content: start;
