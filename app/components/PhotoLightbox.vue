@@ -79,6 +79,21 @@ function onSwiper(sw: SwiperClass) {
 }
 
 /** 슬라이드가 바뀌면 부모의 index 와 맞춘다 (헤더의 「3 / 5」와 파일명이 따라간다) */
+/**
+ * 지금 볼 것과 그 «앞뒤 두 장»만 받는다.
+ *
+ * 예전에는 슬라이드를 다 그리면서 src 도 다 박아, 한 장 보려고 열었는데 그 포인트의
+ * 사진 전부(23장짜리 포인트면 23장, display 크기)를 받았다. 폰 데이터로는 부담이고
+ * 대부분은 끝까지 넘기지도 않는다.
+ *
+ * 둘인 이유: 한 장만 미리 받으면 빠르게 두 번 넘길 때 빈 화면을 본다. 넷은 아껴지는
+ * 게 별로 없다. 넘길 때마다 창이 따라 움직이므로 앞으로도 뒤로도 끊기지 않는다.
+ */
+const NEAR = 2
+function near(i: number) {
+  return props.index !== null && Math.abs(i - props.index) <= NEAR
+}
+
 function onSlideChange(sw: SwiperClass) {
   if (props.index !== null && sw.activeIndex !== props.index) emit('move', sw.activeIndex)
 }
@@ -185,18 +200,18 @@ watch(() => props.photos, async () => {
               <!-- swiper-zoom-container 안이어야 핀치·더블탭 확대가 걸린다 -->
               <div class="swiper-zoom-container">
                 <!--
-                  🔴 width/height 를 «적어 준다». 없으면 받기 전 <img> 의 고유 크기가 0 이라
-                     확대 컨테이너(width/height: auto)가 같이 접히고, 스켈레톤이 그려질 상자
-                     자체가 사라진다 — 아무 것도 없다가 사진이 뜨는 순간 판이 튀었다.
-                     두 값은 이미 DB 에 있다(아래 캡션이 같은 값을 적는다). 브라우저가 이걸로
-                     비율을 잡아 두므로 도착 전에도 «그 사진이 앉을 자리»가 정확히 잡힌다.
+                  🔴 aspect-ratio 다. width/height «속성»으로 적으면 안 된다 — 속성은 두 변을
+                     모두 「정해진 값」으로 만들어서, max-width/max-height 가 각각 잘라 버리고
+                     비율이 깨진다(2048×1536 사진이 1280×765 상자가 됐다). 그러면 액자 테두리와
+                     캡션이 사진이 아니라 슬라이드 폭에 붙는다. aspect-ratio 는 두 변을 auto 로
+                     둔 채 비율만 알려주므로, 받기 전에도 자리가 잡히고 받은 뒤에도 상자가
+                     사진에 딱 맞는다. 값은 이미 DB 에 있다(아래 캡션이 같은 값을 적는다).
                 -->
                 <img
                   v-sk
                   class="sk"
-                  :src="ph.display_path"
-                  :width="ph.w ?? undefined"
-                  :height="ph.h ?? undefined"
+                  :src="near(i) ? ph.display_path : undefined"
+                  :style="ph.w && ph.h ? { aspectRatio: `${ph.w} / ${ph.h}` } : undefined"
                   :alt="`${props.pointName} 사진 ${i + 1}`"
                 >
               </div>
@@ -324,6 +339,21 @@ watch(() => props.photos, async () => {
   object-fit: contain;
   border: 1px solid rgb(var(--mid-rgb) / 0.16);
   border-radius: var(--radius);
+}
+/*
+ * 아직 안 온(.sk) · 못 받은(.bad) 그림은 «고유 크기»가 없다. 그대로 두면 상자가 접혀서
+ * (실측 3×2) 스켈레톤도 실패 표시도 그려질 자리가 없다. 비율은 style 의 aspect-ratio 로
+ * 이미 알고 있으니 높이만 채우면 그 사진이 앉을 자리가 그대로 만들어진다.
+ */
+.carousel :deep(.swiper-zoom-container:has(img.sk, img.bad)) {
+  /* 🔴 감싼 칸의 높이가 «확정»이어야 아래 height: 100% 가 먹는다. 평소에는 auto 다 —
+     사진 크기만큼 줄어야 캡션이 사진에 붙기 때문(위 주석). 자리표시일 때만 채운다. */
+  height: 100%;
+}
+.carousel :deep(.swiper-zoom-container img.sk),
+.carousel :deep(.swiper-zoom-container img.bad) {
+  height: 100%;
+  width: auto;
 }
 /* 사진 폭에 맞춰 양 끝 정렬 — 왼쪽은 촬영 시각, 오른쪽은 크기·포맷 */
 .cap {

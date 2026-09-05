@@ -29,15 +29,29 @@ export function skWhileLoading(el: HTMLImageElement) {
     return
   }
   el.classList.add('sk')
+  el.classList.remove('bad')
   if (el.dataset.skArmed) return
   el.dataset.skArmed = '1'
-  const clear = () => {
+  const done = () => {
     el.classList.remove('sk')
     delete el.dataset.skArmed
   }
-  el.addEventListener('load', clear, { once: true })
-  el.addEventListener('error', clear, { once: true })
+  el.addEventListener('load', done, { once: true })
+  el.addEventListener('error', () => {
+    done()
+    el.classList.add('bad')
+    /*
+     * 🔴 실패한 src 를 «비운다». 그냥 두면 브라우저가 깨진-그림 아이콘과 alt 글자를
+     *    직접 그리는데, 그건 CSS 로 못 가린다 — 편집 격자가 「사진 1 / 사진 2 …」
+     *    글자판이 되던 것이 이것이다. 투명 1px 로 바꾸면 «성공한 그림»이 되어 UA 가
+     *    아무것도 안 그리고, .bad 가 깔아 둔 표시만 남는다. alt 는 그대로라 낭독에는 남는다.
+     */
+    el.src = BLANK_PX
+  }, { once: true })
 }
+
+/** 투명 1×1 GIF — 실패한 <img> 를 조용한 빈 그림으로 바꾼다 */
+const BLANK_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 export const vSk: Directive<HTMLImageElement> = {
   mounted: skWhileLoading,

@@ -301,6 +301,19 @@ select:focus-visible {
  */
 img.sk { border-radius: 0; }
 
+/*
+ * 못 받은 그림 — 자리는 지키되 「없다」고 조용히 말한다.
+ * 깨진-그림 아이콘과 alt 글자는 UA 가 그리는 것이라 CSS 로 못 가린다. 그래서 utils/img 가
+ * src 를 투명 1px 로 바꾸고, 그 위에 이 표시를 깐다 (금 간 사진 아이콘, --deep 색).
+ */
+img.bad {
+  background-color: var(--s3);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 22px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%237B8A93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M15 8h.01'/><path d='M12 21h-6a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6'/><path d='M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4'/><path d='M14 14l1 -1c.617 -.593 1.328 -.793 2.009 -.598'/><path d='M19 16v3'/><path d='M19 22v.01'/></svg>");
+}
+
 .spin {
   width: 22px;
   height: 22px;
