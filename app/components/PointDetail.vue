@@ -364,7 +364,7 @@ const deviceLine = computed(() => {
   padding: 4px 9px;
   white-space: nowrap;
 }
-.para { font-size: var(--fs-lg); line-height: 1.78; color: var(--mid); text-wrap: pretty; }
+.para { font-size: var(--fs-lg); line-height: 1.78; color: var(--mid); }
 
 .exif {
   margin-top: auto;

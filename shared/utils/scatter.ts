@@ -1,5 +1,5 @@
 /**
- * 스캐터 배치 — 지터 격자에서 시작해 타원 충돌 완화를 6회 돌린다.
+ * 스캐터 배치 — 지터 격자에서 시작해 타원 충돌 완화를 8회 돌린다.
  * 시드 기반 LCG 라 결정적이다: 새로고침해도 위치가 흔들리지 않는다. Math.random() 금지.
  * 원본은 _workspace/deisgn/data.js 의 scatter()/field()/relax()/jitterGrid().
  */
@@ -101,7 +101,7 @@ function field(
     sizes.map((z) => z[1] / 2),
     hw,
     hh,
-    6,
+    8,
     strength,
   )
   return pts.map((p) => [
@@ -111,15 +111,10 @@ function field(
 }
 
 /**
- * 장수 구간. 6장까지는 크게 조금 겹치고, 그 위는 가장자리까지 흩어 쌓임을 줄인다.
- * scale 이 클수록 카드가 크고, relax 가 클수록 더 밀어낸다.
- * edge 는 중심이 변에서 떨어지는 비율 — 작을수록 필드 끝까지 퍼진다.
+ * 크기는 장수에 반비례(면적 기준 1/√n). 겹침은 10–20% — relax 0.92 가 그 상한이다.
  */
 function pack(n: number) {
-  if (n <= 6) return { scale: 1.12, relax: 0.68, min: 88, jitter: n <= 4 ? 0.5 : 0.8, edge: 0.5 }
-  if (n <= 10) return { scale: 0.92, relax: 0.82, min: 82, jitter: 0.55, edge: 0.4 }
-  if (n <= 16) return { scale: 0.94, relax: 0.84, min: 80, jitter: 0.5, edge: 0.3 }
-  return { scale: 0.78, relax: 0.9, min: 72, jitter: 0.45, edge: 0.26 }
+  return { scale: 0.72, relax: 0.92, min: 56, jitter: n <= 4 ? 0.45 : 0.5, edge: 0.38 }
 }
 
 /** 카드 크기는 sqrt(필드 면적 / 장수) · 구간 배수를 따른다. */
@@ -157,7 +152,7 @@ export function scatter(
   const bw = baseW(n, fw, fh, scale, min)
 
   const base = Array.from({ length: n }, () => {
-    const v = 0.92 + rnd() * 0.16
+    const v = 0.96 + rnd() * 0.08
     return {
       w: Math.round(bw * v),
       rot: +((rnd() - 0.5) * 8).toFixed(2),

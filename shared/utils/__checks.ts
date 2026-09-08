@@ -149,12 +149,20 @@ assert.ok(
 )
 assert.ok(scatter(3, 11).every((c) => c.opacity === 1))
 assert.ok(
-  scatter(6, 9301, 390, 720).every((c) => c.w >= 130),
-  '6장 이하는 지금처럼 크게 둔다',
+  scatter(6, 9301, 390, 720).every((c) => c.w >= 120),
+  '6장 이하는 크게 둔다',
 )
 assert.ok(
-  scatter(15, 9301, 390, 720).every((c) => c.w >= 70),
-  '15장도 예전 60px 썸네일까지 줄이지는 않는다',
+  meanW(scatter(15, 9301, 390, 720)) < meanW(scatter(6, 9301, 390, 720)) * 0.8,
+  '15장은 6장보다 장수에 비례해 작아진다',
+)
+assert.ok(
+  meanW(scatter(23, 9301, 390, 720)) < meanW(scatter(15, 9301, 390, 720)),
+  '23장은 15장보다 더 작아진다',
+)
+assert.ok(
+  maxOverlapRatio(scatter(15, 9301, 390, 720), 390, 720) <= 0.22,
+  '15장 겹침은 20%를 넘기지 않는다',
 )
 assert.ok(
   maxHeavyOverlap(scatter(15, 9301, 390, 720), 390, 720) <= 3,
@@ -168,6 +176,31 @@ assert.ok(
 )
 assert.equal(scatter(0, 1).length, 0)
 
+/** 장수 평균 너비 */
+function meanW(cards: ReturnType<typeof scatter>) {
+  return cards.reduce((s, c) => s + c.w, 0) / cards.length
+}
+
+/** 한 쌍이 겹치는 비율의 최댓값 (짧은 변 기준). */
+function maxOverlapRatio(cards: ReturnType<typeof scatter>, fw: number, fh: number) {
+  let max = 0
+  for (let i = 0; i < cards.length; i++) {
+    for (let j = i + 1; j < cards.length; j++) {
+      const a = cards[i]!
+      const b = cards[j]!
+      const ox =
+        Math.min(a.x / 100 * fw + a.w / 2, b.x / 100 * fw + b.w / 2) -
+        Math.max(a.x / 100 * fw - a.w / 2, b.x / 100 * fw - b.w / 2)
+      const oy =
+        Math.min(a.y / 100 * fh + a.h / 2, b.y / 100 * fh + b.h / 2) -
+        Math.max(a.y / 100 * fh - a.h / 2, b.y / 100 * fh - b.h / 2)
+      if (ox <= 0 || oy <= 0) continue
+      const ratio = Math.min(ox / Math.min(a.w, b.w), oy / Math.min(a.h, b.h))
+      if (ratio > max) max = ratio
+    }
+  }
+  return max
+}
 /** 한 카드가 20% 이상 겹치는 이웃 수의 최댓값 — 스침은 무시하고 쌓임만 본다. */
 function maxHeavyOverlap(cards: ReturnType<typeof scatter>, fw: number, fh: number) {
   const boxes = cards.map((c) => ({
