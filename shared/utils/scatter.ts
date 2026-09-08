@@ -75,7 +75,16 @@ function relax(pts: Pt[], hws: number[], hhs: number[], bw: number, bh: number, 
 }
 
 /** 결과는 필드 기준 백분율 좌표 [x%, y%] */
-function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jitter: number): Pt[] {
+function field(
+  n: number,
+  seed: number,
+  fw: number,
+  fh: number,
+  sizes: Pt[],
+  jitter: number,
+  strength: number,
+  edge: number,
+): Pt[] {
   const rnd = lcg(seed)
   let maxW = 0
   let maxH = 0
@@ -83,8 +92,8 @@ function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jit
     if (z[0] > maxW) maxW = z[0]
     if (z[1] > maxH) maxH = z[1]
   }
-  const hw = Math.max(8, fw / 2 - maxW / 2 - 10)
-  const hh = Math.max(8, fh / 2 - maxH / 2 - 10)
+  const hw = Math.max(8, fw / 2 - maxW * edge - 8)
+  const hh = Math.max(8, fh / 2 - maxH * edge - 8)
   const pts = jitterGrid(n, hw, hh, rnd, jitter)
   relax(
     pts,
@@ -93,7 +102,7 @@ function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jit
     hw,
     hh,
     6,
-    0.68,
+    strength,
   )
   return pts.map((p) => [
     +(((p[0] + fw / 2) / fw) * 100).toFixed(2),
@@ -102,12 +111,21 @@ function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jit
 }
 
 /**
- * 카드 크기는 장수에 반응한다 — sqrt(필드 면적 / 장수).
- * 배수는 빈틈 없이 20–40% 겹치게 잡는다. 장이 많아도 88px 아래로 줄이지 않는다.
+ * 장수 구간. 6장까지는 크게 조금 겹치고, 그 위는 가장자리까지 흩어 쌓임을 줄인다.
+ * scale 이 클수록 카드가 크고, relax 가 클수록 더 밀어낸다.
+ * edge 는 중심이 변에서 떨어지는 비율 — 작을수록 필드 끝까지 퍼진다.
  */
-function baseW(n: number, fw: number, fh: number) {
-  const h = Math.sqrt((fw * fh) / Math.max(1, n) / CARD) * 1.12
-  return clamp(h * CARD, 88, 152)
+function pack(n: number) {
+  if (n <= 6) return { scale: 1.12, relax: 0.68, min: 88, jitter: n <= 4 ? 0.5 : 0.8, edge: 0.5 }
+  if (n <= 10) return { scale: 0.92, relax: 0.82, min: 82, jitter: 0.55, edge: 0.4 }
+  if (n <= 16) return { scale: 0.94, relax: 0.84, min: 80, jitter: 0.5, edge: 0.3 }
+  return { scale: 0.78, relax: 0.9, min: 72, jitter: 0.45, edge: 0.26 }
+}
+
+/** 카드 크기는 sqrt(필드 면적 / 장수) · 구간 배수를 따른다. */
+function baseW(n: number, fw: number, fh: number, scale: number, min: number) {
+  const h = Math.sqrt((fw * fh) / Math.max(1, n) / CARD) * scale
+  return clamp(h * CARD, min, 152)
 }
 
 export interface ScatterCard {
@@ -125,7 +143,7 @@ export interface ScatterCard {
 
 /**
  * seed 는 포인트마다 고정값을 준다 (예: 9301 + pointId * 7717).
- * fw/fh 는 실제 필드 픽셀 — 컨테이너가 커지면 카드도 커져 20–40% 겹침을 유지한다.
+ * fw/fh 는 실제 필드 픽셀 — 컨테이너가 커지면 카드도 커진다.
  */
 export function scatter(
   n: number,
@@ -135,8 +153,8 @@ export function scatter(
 ): ScatterCard[] {
   if (n <= 0) return []
   const rnd = lcg(seed * 3 + 11)
-  const bw = baseW(n, fw, fh)
-  const jitter = n <= 4 ? 0.5 : 0.8
+  const { scale, relax: strength, min, jitter, edge } = pack(n)
+  const bw = baseW(n, fw, fh, scale, min)
 
   const base = Array.from({ length: n }, () => {
     const v = 0.92 + rnd() * 0.16
@@ -147,7 +165,7 @@ export function scatter(
   })
 
   const sizes = base.map((o): Pt => [o.w, o.w * 1.34])
-  const pts = field(n, seed, fw, fh, sizes, jitter)
+  const pts = field(n, seed, fw, fh, sizes, jitter, strength, edge)
 
   return base.map((o, i) => ({
     w: o.w,

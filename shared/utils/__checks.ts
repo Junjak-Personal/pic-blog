@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { clusterAt, assignTo, GAP_MINUTES, type ClusterInput } from './cluster.ts'
-import { scatter, FIELD_MOBILE } from './scatter.ts'
+import { scatter } from './scatter.ts'
 import { distanceM, sameSpot, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
@@ -149,8 +149,16 @@ assert.ok(
 )
 assert.ok(scatter(3, 11).every((c) => c.opacity === 1))
 assert.ok(
-  scatter(15, 9301, FIELD_MOBILE.w, FIELD_MOBILE.h).every((c) => c.w >= 88),
-  '15장도 모바일에서 썸네일이 너무 작아지면 안 된다',
+  scatter(6, 9301, 390, 720).every((c) => c.w >= 130),
+  '6장 이하는 지금처럼 크게 둔다',
+)
+assert.ok(
+  scatter(15, 9301, 390, 720).every((c) => c.w >= 70),
+  '15장도 예전 60px 썸네일까지 줄이지는 않는다',
+)
+assert.ok(
+  maxHeavyOverlap(scatter(15, 9301, 390, 720), 390, 720) <= 3,
+  '15장이 한 장 위에 쌓이면 안 된다',
 )
 const short = scatter(15, 9301, 390, 430)
 const tall = scatter(15, 9301, 390, 720)
@@ -159,6 +167,34 @@ assert.ok(
   '필드가 커지면 카드도 커져서 빈틈을 메운다',
 )
 assert.equal(scatter(0, 1).length, 0)
+
+/** 한 카드가 20% 이상 겹치는 이웃 수의 최댓값 — 스침은 무시하고 쌓임만 본다. */
+function maxHeavyOverlap(cards: ReturnType<typeof scatter>, fw: number, fh: number) {
+  const boxes = cards.map((c) => ({
+    l: (c.x / 100) * fw - c.w / 2,
+    r: (c.x / 100) * fw + c.w / 2,
+    t: (c.y / 100) * fh - c.h / 2,
+    b: (c.y / 100) * fh + c.h / 2,
+    w: c.w,
+    h: c.h,
+  }))
+  let max = 0
+  for (let i = 0; i < boxes.length; i++) {
+    let d = 0
+    for (let j = 0; j < boxes.length; j++) {
+      if (i === j) continue
+      const a = boxes[i]!
+      const b = boxes[j]!
+      const ox = Math.min(a.r, b.r) - Math.max(a.l, b.l)
+      const oy = Math.min(a.b, b.b) - Math.max(a.t, b.t)
+      if (ox <= 0 || oy <= 0) continue
+      const ratio = Math.min(ox / Math.min(a.w, b.w), oy / Math.min(a.h, b.h))
+      if (ratio >= 0.2) d++
+    }
+    if (d > max) max = d
+  }
+  return max
+}
 
 // ── EXIF 표시형 ──────────────────────────────────────────────────────────
 assert.equal(formatExposure(0.008333333), '1/120')
