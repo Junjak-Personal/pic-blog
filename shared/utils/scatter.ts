@@ -93,7 +93,7 @@ function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jit
     hw,
     hh,
     6,
-    0.72,
+    0.68,
   )
   return pts.map((p) => [
     +(((p[0] + fw / 2) / fw) * 100).toFixed(2),
@@ -101,23 +101,21 @@ function field(n: number, seed: number, fw: number, fh: number, sizes: Pt[], jit
   ])
 }
 
-/** 카드 크기는 장수에 반응한다 — sqrt(필드 면적 / 장수). 3장이면 크게, 15장이면 썸네일로. */
+/**
+ * 카드 크기는 장수에 반응한다 — sqrt(필드 면적 / 장수).
+ * 배수는 빈틈 없이 20–40% 겹치게 잡는다. 장이 많아도 88px 아래로 줄이지 않는다.
+ */
 function baseW(n: number, fw: number, fh: number) {
-  const h = Math.sqrt((fw * fh) / Math.max(1, n) / CARD) * 0.62
-  return clamp(h * CARD, 60, 152)
+  const h = Math.sqrt((fw * fh) / Math.max(1, n) / CARD) * 1.12
+  return clamp(h * CARD, 88, 152)
 }
 
 export interface ScatterCard {
-  /** 데스크탑 크기 · 위치 (%) */
+  /** 필드 기준 크기(px) · 위치(%) */
   w: number
   h: number
   x: number
   y: number
-  /** 모바일 크기 · 위치 (%) */
-  wm: number
-  hm: number
-  xm: number
-  ym: number
   /** ±4° 회전 포함 transform */
   transform: string
   opacity: number
@@ -125,41 +123,40 @@ export interface ScatterCard {
   border: string
 }
 
-/** seed 는 포인트마다 고정값을 준다 (예: 9301 + pointId * 7717). */
-export function scatter(n: number, seed: number): ScatterCard[] {
+/**
+ * seed 는 포인트마다 고정값을 준다 (예: 9301 + pointId * 7717).
+ * fw/fh 는 실제 필드 픽셀 — 컨테이너가 커지면 카드도 커져 20–40% 겹침을 유지한다.
+ */
+export function scatter(
+  n: number,
+  seed: number,
+  fw: number = FIELD_DESKTOP.w,
+  fh: number = FIELD_DESKTOP.h,
+): ScatterCard[] {
   if (n <= 0) return []
   const rnd = lcg(seed * 3 + 11)
-  const bd = baseW(n, FIELD_DESKTOP.w, FIELD_DESKTOP.h)
-  const bm = baseW(n, FIELD_MOBILE.w, FIELD_MOBILE.h)
+  const bw = baseW(n, fw, fh)
   const jitter = n <= 4 ? 0.5 : 0.8
 
   const base = Array.from({ length: n }, () => {
     const v = 0.92 + rnd() * 0.16
     return {
-      w: Math.round(bd * v),
-      wm: Math.round(bm * v),
+      w: Math.round(bw * v),
       rot: +((rnd() - 0.5) * 8).toFixed(2),
-      ghost: n >= 10 && rnd() < 0.14,
     }
   })
 
-  const sizesD = base.map((o): Pt => [o.w, o.w * 1.34])
-  const sizesM = base.map((o): Pt => [o.wm, o.wm * 1.34])
-  const pd = field(n, seed, FIELD_DESKTOP.w, FIELD_DESKTOP.h, sizesD, jitter)
-  const pm = field(n, seed + 977, FIELD_MOBILE.w, FIELD_MOBILE.h, sizesM, jitter)
+  const sizes = base.map((o): Pt => [o.w, o.w * 1.34])
+  const pts = field(n, seed, fw, fh, sizes, jitter)
 
   return base.map((o, i) => ({
     w: o.w,
     h: Math.round(o.w * 1.34),
-    wm: o.wm,
-    hm: Math.round(o.wm * 1.34),
-    x: pd[i]![0],
-    y: pd[i]![1],
-    xm: pm[i]![0],
-    ym: pm[i]![1],
+    x: pts[i]![0],
+    y: pts[i]![1],
     transform: `translate(-50%,-50%) rotate(${o.rot}deg)`,
-    opacity: o.ghost ? 0.26 : 1,
-    z: o.ghost ? 1 : 2 + i,
-    border: o.ghost ? '1px solid rgba(177,199,193,0.06)' : '1px solid rgba(177,199,193,0.14)',
+    opacity: 1,
+    z: 2 + i,
+    border: '1px solid rgba(177,199,193,0.14)',
   }))
 }

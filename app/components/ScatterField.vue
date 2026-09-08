@@ -4,9 +4,10 @@ import { vSk } from '~/utils/img'
  * 갤러리 층 1 — 스캐터 필드. 가로 스트립이 아니라 흩뿌려진 필드다.
  * 배치는 시드 기반이라 새로고침해도 흔들리지 않는다 (Math.random 금지).
  * 시드는 point.id 로 고정 — 사진이 추가돼도 기존 카드는 같은 자리에 남는다.
+ * 카드 크기는 실제 필드 픽셀을 본다. 설계 상수(390×430)에 묶이면 시트가 클 때 성긴다.
  */
 import type { Photo } from '#shared/types/db'
-import { scatter } from '#shared/utils/scatter'
+import { FIELD_DESKTOP, FIELD_MOBILE, scatter } from '#shared/utils/scatter'
 
 const props = defineProps<{
   photos: Photo[]
@@ -17,21 +18,41 @@ const props = defineProps<{
 
 const emit = defineEmits<{ open: [index: number] }>()
 
-const cards = computed(() => scatter(props.photos.length, 9301 + props.pointId * 7717))
+const root = ref<HTMLElement | null>(null)
+const box = ref({ w: 0, h: 0 })
+
+const cards = computed(() => {
+  const fallback = props.mobile ? FIELD_MOBILE : FIELD_DESKTOP
+  const fw = box.value.w || fallback.w
+  const fh = box.value.h || fallback.h
+  return scatter(props.photos.length, 9301 + props.pointId * 7717, fw, fh)
+})
+
+onMounted(() => {
+  const el = root.value
+  if (!el) return
+  const ro = new ResizeObserver((entries) => {
+    const cr = entries[0]?.contentRect
+    if (!cr?.width || !cr.height) return
+    box.value = { w: cr.width, h: cr.height }
+  })
+  ro.observe(el)
+  onUnmounted(() => ro.disconnect())
+})
 </script>
 
 <template>
-  <div class="field">
+  <div ref="root" class="field">
     <button
       v-for="(photo, i) in props.photos"
       :key="photo.id"
       type="button"
       class="card"
       :style="{
-        left: `${props.mobile ? cards[i]?.xm : cards[i]?.x}%`,
-        top: `${props.mobile ? cards[i]?.ym : cards[i]?.y}%`,
-        width: `${props.mobile ? cards[i]?.wm : cards[i]?.w}px`,
-        height: `${props.mobile ? cards[i]?.hm : cards[i]?.h}px`,
+        left: `${cards[i]?.x}%`,
+        top: `${cards[i]?.y}%`,
+        width: `${cards[i]?.w}px`,
+        height: `${cards[i]?.h}px`,
         transform: cards[i]?.transform,
         opacity: cards[i]?.opacity,
         zIndex: cards[i]?.z,

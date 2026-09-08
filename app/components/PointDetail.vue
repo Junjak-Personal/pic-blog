@@ -388,7 +388,7 @@ const deviceLine = computed(() => {
     display: grid;
     place-items: center;
     flex: none;
-    height: 22px;
+    height: 16px;
     /* 손잡이·헤더에서 세로 제스처를 우리가 가져간다 */
     touch-action: none;
     cursor: grab;
@@ -401,8 +401,9 @@ const deviceLine = computed(() => {
   }
   /* 헤더는 한 줄 48px 고정 — [번호] [이름] ... [ⓘ] [✕]. 시각·좌표는 ⓘ 판으로 갔다.
      안쪽 여백으로 높이가 정해지면 47·49 로 흔들린다 — box-sizing 이 border-box(전역)라
-     아래 border-bottom 1px 까지 포함한 값이다. */
-  .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 0 12px 0 18px; touch-action: none; }
+     아래 border-bottom 1px 까지 포함한 값이다.
+     grabber 바↔제목 / 제목↔divider 가 둘 다 ~12px 이도록 위 6 · 아래 11. */
+  .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 6px 12px 11px 18px; touch-action: none; }
   .wide-only { display: none; }
   .name { font-size: var(--fs-display); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 본문은 스캐터만. 태그·본문·EXIF 는 전부 ⓘ 판에 모였다 — 흩어놓지 않는다. */

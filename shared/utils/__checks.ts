@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import { clusterAt, assignTo, GAP_MINUTES, type ClusterInput } from './cluster.ts'
-import { scatter } from './scatter.ts'
+import { scatter, FIELD_MOBILE } from './scatter.ts'
 import { distanceM, sameSpot, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
@@ -143,8 +143,21 @@ assert.deepEqual(s1, s2, '새로고침해도 스캐터 위치가 흔들리면 �
 assert.notDeepEqual(scatter(14, 9302), s1, '시드가 다르면 배치도 달라야 한다')
 assert.equal(s1.length, 14)
 assert.ok(s1.every((c) => c.x >= 0 && c.x <= 100 && c.y >= 0 && c.y <= 100), '카드가 필드 밖으로 나가면 안 된다')
-assert.ok(scatter(14, 86471).some((c) => c.opacity === 0.26), '10장 이상이면 일부가 고스트(0.26)가 된다')
-assert.ok(scatter(3, 11).every((c) => c.opacity === 1), '10장 미만은 고스트 없음')
+assert.ok(
+  scatter(14, 86471).every((c) => c.opacity === 1),
+  '장이 많아도 고스트로 흐리지 않는다',
+)
+assert.ok(scatter(3, 11).every((c) => c.opacity === 1))
+assert.ok(
+  scatter(15, 9301, FIELD_MOBILE.w, FIELD_MOBILE.h).every((c) => c.w >= 88),
+  '15장도 모바일에서 썸네일이 너무 작아지면 안 된다',
+)
+const short = scatter(15, 9301, 390, 430)
+const tall = scatter(15, 9301, 390, 720)
+assert.ok(
+  tall.every((c, i) => c.w > short[i]!.w),
+  '필드가 커지면 카드도 커져서 빈틈을 메운다',
+)
 assert.equal(scatter(0, 1).length, 0)
 
 // ── EXIF 표시형 ──────────────────────────────────────────────────────────
