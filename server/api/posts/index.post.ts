@@ -48,11 +48,12 @@ export default defineEventHandler(async (event): Promise<CreatePostResult> => {
     let firstPhotoId: number | null = null
 
     points.forEach((pt, pi) => {
+      // 대표가 될 첫 사진과 위치를 함께 정한다. 같은 시각이면 입력 순서를 유지한다.
+      const photos = [...pt.photos].sort((a, b) => (a.shot_at ?? '9999').localeCompare(b.shot_at ?? '9999'))
+      const anchor = photos[0]!
       const pointId = Number(
-        insertPoint.run(postId, pt.lat, pt.lng, pt.title, pt.first_shot_at, pi).lastInsertRowid,
+        insertPoint.run(postId, anchor.lat, anchor.lng, pt.title, pt.first_shot_at, pi).lastInsertRowid,
       )
-      // 사진도 촬영 시각 순으로 고정
-      const photos = [...pt.photos].sort((a, b) => (a.shot_at ?? '') < (b.shot_at ?? '') ? -1 : 1)
       photos.forEach((ph, phi) => {
         const id = Number(
           insertPhoto.run(

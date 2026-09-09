@@ -80,10 +80,11 @@ export default defineEventHandler(async (event) => {
        VALUES (?, ?, ?, NULL, NULL, '[]', ?, ?)`,
     )
     for (const pt of input.news) {
-      const sorted = [...pt.photos].sort((a, b) => (a.shot_at ?? '') < (b.shot_at ?? '') ? -1 : 1)
+      const sorted = [...pt.photos].sort((a, b) => (a.shot_at ?? '9999').localeCompare(b.shot_at ?? '9999'))
+      const anchor = sorted[0]!
       // order_index 는 아래에서 다시 매기므로 임시로 큰 값을 넣는다
       const pointId = Number(
-        insertPoint.run(post.id, pt.lat, pt.lng, pt.first_shot_at, 9999).lastInsertRowid,
+        insertPoint.run(post.id, anchor.lat, anchor.lng, pt.first_shot_at, 9999).lastInsertRowid,
       )
       sorted.forEach((ph, i) => addPhoto(pointId, ph, i))
     }

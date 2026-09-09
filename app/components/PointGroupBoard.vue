@@ -34,7 +34,7 @@ export interface BoardGroup {
   id: number
   title: string
   photos: Photo[]
-  /** 지금 지도에 찍히는 자리. 아직 저장 안 된 새 포인트는 null — 저장할 때 사진 평균으로 잡힌다. */
+  /** 지금 지도에 찍히는 자리. 새 포인트에서 null이면 대표 사진 위치를 사용한다. */
   anchor: { lat: number; lng: number } | null
   /** 이 포인트의 대표 사진. null 이면 첫 사진 (지도 마커와 같은 규칙). */
   coverPhotoId: number | null
@@ -139,8 +139,7 @@ function isCaret(groupId: number, index: number) {
 }
 
 /* ── 포인트 자리 ───────────────────────────────────────────────────────────
- * 기본은 사진 평균이다. 거리로 안 묶이는 것을 «맥락»으로 묶으면 (멀리 떨어진 두 곳을
- * 한 포인트로) 평균이 아무도 안 간 중간에 찍히므로, 대표 사진 자리로 옮길 길을 둔다.
+ * 기본은 대표 사진 위치다. 사진이 여러 장이면 명시적으로 사진 평균을 고를 수 있다.
  */
 type Spot = { lat: number; lng: number }
 
@@ -165,9 +164,9 @@ function coverOf(g: BoardGroup): Spot | null {
   return p ? { lat: p.lat, lng: p.lng } : null
 }
 
-/** 지금 찍히는 자리. 저장 전 새 포인트는 앵커가 없으므로 저장될 값(평균)을 보여준다. */
+/** 지금 찍히는 자리. 저장 전 새 포인트는 앵커가 없으므로 저장될 값(대표 사진 위치)을 보여준다. */
 function anchorOf(g: BoardGroup): Spot | null {
-  return g.anchor ?? centroidOf(g)
+  return g.anchor ?? coverOf(g)
 }
 
 function isAt(g: BoardGroup, target: Spot | null) {
@@ -189,13 +188,13 @@ function moveLabel(g: BoardGroup, target: Spot | null) {
  * 🔴 사다리를 한 번만 적는다. 두 후보가 같은 지점일 수 있어서(사진 한 장짜리 포인트,
  *    또는 평균이 우연히 대표 사진 위에 떨어진 경우) 우선순위가 필요한데, 세 군데에 각각
  *    적으면 하나만 고쳐진 날 꼬리표와 「활성」과 aria-label 이 서로 다른 말을 한다.
- *    평균이 먼저다 — 최초 자리가 평균이므로 그쪽이 「기본」이다.
+ *    대표 사진이 먼저다. 사진이 한 장이거나 두 후보가 같아도 기본 선택을 표시한다.
  */
 type AnchorMode = 'centroid' | 'cover' | 'origin'
 const anchorModes = computed(
   () => new Map<number, AnchorMode>(props.groups.map((g) => [
     g.id,
-    isAt(g, centroidOf(g)) ? 'centroid' : isAt(g, coverOf(g)) ? 'cover' : 'origin',
+    isAt(g, coverOf(g)) ? 'cover' : isAt(g, centroidOf(g)) ? 'centroid' : 'origin',
   ])),
 )
 function modeOf(g: BoardGroup): AnchorMode {
@@ -350,7 +349,9 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
           <DropdownMenuRoot>
             <DropdownMenuTrigger
               class="spotbtn"
-              :aria-label="`${g.title} 포인트 자리 — 지금 ${MODE_NOW[modeOf(g)]}`"
+              :disabled="g.photos.length <= 1"
+              :title="g.photos.length <= 1 ? '사진이 한 장이라 대표 사진 위치를 사용합니다' : undefined"
+              :aria-label="g.photos.length <= 1 ? `${g.title} 포인트 자리 — 사진 한 장, 대표 사진 위치 사용` : `${g.title} 포인트 자리 — 지금 ${MODE_NOW[modeOf(g)]}`"
               :data-testid="`board-spot-${gi}`"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
@@ -361,17 +362,6 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
                 <DropdownMenuLabel class="ovf-label">포인트 위치 지정</DropdownMenuLabel>
                 <DropdownMenuItem
                   class="ovf-item"
-                  :class="{ current: modeOf(g) === 'centroid' }"
-                  :data-testid="`board-spot-avg-${gi}`"
-                  @select="emit('setAnchor', g.id, 'centroid')"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
-                  사진 평균 자리로
-                  <span v-if="modeOf(g) === 'centroid'" class="ovf-state">활성</span>
-                  <span v-else-if="moveLabel(g, centroidOf(g))" class="ovf-state">{{ moveLabel(g, centroidOf(g)) }}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  class="ovf-item"
                   :class="{ current: modeOf(g) === 'cover' }"
                   :data-testid="`board-spot-cover-${gi}`"
                   @select="emit('setAnchor', g.id, 'cover')"
@@ -380,6 +370,17 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
                   대표 사진 자리로
                   <span v-if="modeOf(g) === 'cover'" class="ovf-state">활성</span>
                   <span v-else-if="moveLabel(g, coverOf(g))" class="ovf-state">{{ moveLabel(g, coverOf(g)) }}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="ovf-item"
+                  :class="{ current: modeOf(g) === 'centroid' }"
+                  :data-testid="`board-spot-avg-${gi}`"
+                  @select="emit('setAnchor', g.id, 'centroid')"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+                  사진 평균 자리로
+                  <span v-if="modeOf(g) === 'centroid'" class="ovf-state">활성</span>
+                  <span v-else-if="moveLabel(g, centroidOf(g))" class="ovf-state">{{ moveLabel(g, centroidOf(g)) }}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuPortal>
@@ -611,7 +612,8 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   color: var(--deep);
   cursor: pointer;
 }
-.spotbtn:hover { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
+.spotbtn:hover:not(:disabled) { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
+.spotbtn:disabled { opacity: 0.4; cursor: default; }
 .spotbtn[data-state='open'] { background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
 
 @media (max-width: 900px) {

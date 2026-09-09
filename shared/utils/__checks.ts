@@ -8,6 +8,7 @@ import { scatter } from './scatter.ts'
 import { distanceM, sameSpot, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
+import { pointAnchor, representativePhoto } from './point-anchor.ts'
 import { badgesOf, DAY_COLORS, groupByDay } from './days.ts'
 import {
   cleanExpenses, cleanLinks, formatMoney, googleMapsUrl, isSafeUrl, linkLabel,
@@ -24,6 +25,18 @@ assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763847, lng: 1
 assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.76385, lng: 128.899886 }))
 // 위도 0.00001° ≈ 1.1m — 움직인 것
 assert.ok(!sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763857, lng: 128.899886 }))
+
+// ── 포인트 위치: 대표 사진 기본, 기존 위치 보존, 한 장으로 줄었을 때 정리 ──
+const anchorPhotos = [{ id: 1, lat: 36, lng: 128 }, { id: 2, lat: 38, lng: 130 }]
+const savedAnchor = { lat: 37, lng: 129 }
+assert.deepEqual(pointAnchor(anchorPhotos, null, null, null), { lat: 36, lng: 128 })
+assert.deepEqual(pointAnchor(anchorPhotos, 2, null, null), { lat: 38, lng: 130 })
+assert.deepEqual(pointAnchor(anchorPhotos, 2, savedAnchor, null), savedAnchor, '기존 위치를 열기만 해서는 바꾸지 않는다')
+assert.deepEqual(pointAnchor(anchorPhotos, 2, savedAnchor, 'cover'), { lat: 38, lng: 130 })
+assert.deepEqual(pointAnchor(anchorPhotos, 2, null, 'centroid'), savedAnchor, '새 포인트도 평균을 명시적으로 고를 수 있다')
+assert.deepEqual(pointAnchor([anchorPhotos[1]!], 1, savedAnchor, 'centroid'), { lat: 38, lng: 130 }, '한 장만 남으면 그 사진 위치다')
+assert.deepEqual(representativePhoto(anchorPhotos, 999), anchorPhotos[0], '옮겨진 대표 사진은 현재 첫 사진으로 대체한다')
+assert.equal(pointAnchor([], null, savedAnchor, 'cover'), null)
 
 // ── 날짜 경계: 같은 자리, 다음 날 → 두 포인트 ────────────────────────────
 /** 로컬 벽시계로 못 박는다 — dayOf 가 로컬 날짜를 보므로 UTC 리터럴로 쓰면 TZ 에 따라 결과가 갈린다 */
@@ -86,6 +99,12 @@ const chain: ClusterInput[] = Array.from({ length: 6 }, (_, i) => ({
 const drifted = clusterAt(chain, 50)
 assert.equal(drifted.length, 1, '사슬은 하나로 이어진다')
 assert.ok(drifted[0]!.spread > 50, `퍼짐 ${drifted[0]!.spread}m — R=50 을 넘는 것이 정상`)
+assert.deepEqual(
+  { lat: drifted[0]!.lat, lng: drifted[0]!.lng },
+  { lat: chain[0]!.lat, lng: chain[0]!.lng },
+  '합류는 평균으로 판정하고 확정 위치는 대표 사진을 쓴다',
+)
+assert.equal(clusterAt([...chain].reverse(), 50)[0]!.lat, chain[0]!.lat, '입력 순서가 바뀌어도 촬영 시각 순 첫 사진이 대표다')
 
 // ── 반경을 키우면 포인트 수가 줄어든다 (단조성) ──────────────────────────
 const counts = [20, 50, 100, 200, 500].map((r) => clusterAt(chain, r).length)

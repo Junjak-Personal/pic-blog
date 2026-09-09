@@ -1,4 +1,5 @@
 import type { Directive } from 'vue'
+import { representativePhoto } from '#shared/utils/point-anchor'
 
 /**
  * `v-sk` — 이미지 자리표시 해제.
@@ -72,8 +73,5 @@ export const vSk: Directive<HTMLImageElement> = {
 export function pointThumb<T extends { id: number }>(
   point: { cover_photo_id: number | null; photos: T[] },
 ): T | null {
-  const picked = point.cover_photo_id === null
-    ? undefined
-    : point.photos.find((p) => p.id === point.cover_photo_id)
-  return picked ?? point.photos[0] ?? null
+  return representativePhoto(point.photos, point.cover_photo_id)
 }

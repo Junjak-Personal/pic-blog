@@ -18,7 +18,7 @@ export interface UploadPhotoInput {
 }
 
 export interface UploadPointInput {
-  /** 확정된 앵커. 저장된 뒤에는 사진이 붙어도 움직이지 않는다 (설계문서 §4.2) */
+  /** 대표 사진 기준 미리보기 위치. 서버는 실제 첫 사진 좌표로 확정하며 기존 포인트 합류 시에는 보존한다. */
   lat: number
   lng: number
   title: string | null

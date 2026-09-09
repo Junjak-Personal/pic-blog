@@ -39,7 +39,7 @@ export interface ClusterInput {
 }
 
 export interface Cluster<T extends ClusterInput> {
-  /** 소속 사진들의 centroid. 확정 저장되는 순간 point.lat/lng 가 되고 이후 불변이다. */
+  /** 확정 위치는 대표 사진(촬영 시각 순 첫 사진). 묶는 동안에만 평균 중심을 쓴다. */
   lat: number
   lng: number
   shots: T[]
@@ -57,9 +57,7 @@ export interface Cluster<T extends ClusterInput> {
 }
 
 /**
- * 좌표 평균. 클러스터 중심이자, 수동으로 새로 만든 포인트의 앵커이기도 하다
- * (regroup 엔드포인트가 같은 함수를 쓴다 — 두 곳이 다른 식으로 중심을 잡으면
- * 같은 사진 묶음이 화면마다 다른 자리에 찍힌다).
+ * 좌표 평균. 클러스터의 합류 판정과 편집 화면의 명시적인 「사진 평균」 선택에 쓴다.
  */
 export function centroid(shots: readonly { lat: number; lng: number }[]) {
   let lat = 0
@@ -123,7 +121,12 @@ export function clusterAt<T extends ClusterInput>(shots: readonly T[], radiusM: 
     out.push(cur)
   }
 
-  for (const c of out) c.spread = spreadOf(c.shots)
+  for (const c of out) {
+    c.spread = spreadOf(c.shots)
+    // 묶기가 끝난 뒤에만 앵커를 정한다. 도중에 바꾸면 클러스터 합류 판정이 달라진다.
+    c.lat = c.shots[0]!.lat
+    c.lng = c.shots[0]!.lng
+  }
   return out
 }
 

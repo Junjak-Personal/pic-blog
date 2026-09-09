@@ -14,7 +14,6 @@
  *    일부만 오면 언급되지 않은 사진의 소속·순서가 조용히 어긋난다.
  */
 import type { PhotoRow, PointRow } from '#shared/types/db'
-import { centroid } from '#shared/utils/cluster'
 
 interface GroupInput {
   /** 기존 포인트 id. null 이면 「사진을 끌어내 새로 만든 포인트」다. */
@@ -133,7 +132,7 @@ export default defineEventHandler(async (event) => {
       for (const id of deleteIds) dropPhoto.run(id)
     }
 
-    // ── 2) 새 포인트 — 앵커는 담긴 사진들의 centroid (clusterAt 과 같은 규칙) ──
+    // ── 2) 새 포인트 — 기본 대표인 첫 사진의 위치 ──
     const insertPoint = db.prepare<[number, number, number, string | null, number]>(
       `INSERT INTO point (post_id, lat, lng, title, body, tags, first_shot_at, order_index)
        VALUES (?, ?, ?, NULL, NULL, '[]', ?, ?)`,
@@ -146,7 +145,7 @@ export default defineEventHandler(async (event) => {
         continue
       }
       const shots = g.photoIds.map((id) => photoById.get(id)!)
-      const c = centroid(shots)
+      const c = shots[0]!
       // shot_at 은 타임존 없는 고정 폭 문자열이라 사전순 비교가 곧 시각 순이다
       const first = shots.map((s) => s.shot_at).filter((t): t is string => t !== null).sort()[0] ?? null
       resolved.push(Number(insertPoint.run(post.id, c.lat, c.lng, first, 0).lastInsertRowid))

@@ -4,6 +4,7 @@ import AppBack from '~/components/AppBack.vue'
 import ErrorNote from '~/components/ErrorNote.vue'
 import PostSettings from '~/components/PostSettings.vue'
 import PointGroupBoard, { type BoardGroup } from '~/components/PointGroupBoard.vue'
+import BulkPointAnchorItem from '~/components/BulkPointAnchorItem.vue'
 import OverflowMenu from '~/components/OverflowMenu.vue'
 import BottomCta from '~/components/BottomCta.vue'
 import BusyOverlay from '~/components/BusyOverlay.vue'
@@ -30,7 +31,7 @@ import { formatDateTime } from '#shared/utils/format'
 import { pointThumb, vSk } from '~/utils/img'
 import { vEnter } from '~/utils/enter'
 import PhotoTile from '~/components/PhotoTile.vue'
-import { centroid } from '#shared/utils/cluster'
+import { pointAnchor, type AnchorPick } from '#shared/utils/point-anchor'
 import { sameSpot } from '#shared/utils/geo'
 import {
   cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
@@ -54,7 +55,6 @@ interface ExpenseDraft {
 }
 
 /** 앵커를 무엇으로 잡을지. 좌표는 서버가 이 포인트의 사진에서 직접 계산한다 (§7.2 유지). */
-type AnchorPick = 'centroid' | 'cover'
 
 interface PointDraft {
   /** 서버 포인트 id. 🔴 음수면 2단계에서 사진을 끌어내 만든 «아직 없는» 포인트다. */
@@ -69,7 +69,7 @@ interface PointDraft {
   links: PointLink[]
   expenses: ExpenseDraft[]
   /**
-   * 지도에 찍힐 자리를 다시 잡았는가. null 이면 손대지 않은 것이다.
+   * 지도 위치 규칙. null이면 기존 저장 위치를 유지하고, 새 포인트는 대표 사진을 쓴다.
    * 좌표가 아니라 «규칙»을 든다 — 저장 전에 대표 사진을 바꾸면 'cover' 가 그걸 따라간다.
    */
   anchor: AnchorPick | null
@@ -281,7 +281,8 @@ function hydrate() {
     coverId: pt.cover_photo_id,
     links: pt.links.map((l) => ({ ...l })),
     expenses: pt.expenses.map((e) => ({ ...e, amount: String(e.amount) })),
-    anchor: null,
+    // 이미 대표 사진 위치를 쓰던 포인트는 대표를 바꿔도 그 사진을 따라간다.
+    anchor: sameSpot(pt, pointThumb(pt) ?? pt) ? 'cover' : null,
   }))
   if (!pointDrafts.value.some((d) => d.id === activeId.value)) {
     activeId.value = pointDrafts.value[0]?.id ?? null
@@ -413,7 +414,7 @@ async function onBoardDrop(from: DragFrom, over: DragOver) {
       coverId: null,
       links: [],
       expenses: [],
-      anchor: null,
+      anchor: 'cover',
     })
     resort()
     return
@@ -687,7 +688,7 @@ function addLink() {
   d.links.push({ label: '', url: '' })
 }
 
-/** 🔴 포인트 앵커가 아니라 «대표 사진»의 좌표다 — 앵커는 사진들의 평균이라 실제로 간 자리가 아니다 */
+/** 🔴 포인트 앵커가 아니라 «대표 사진»의 좌표다 — 앵커는 사진 평균을 선택했을 수도 있어 실제로 간 자리와 다를 수 있다 */
 const mapLink = computed(() => {
   const id = activeThumbId.value
   const ph = id === null ? undefined : photoById.value.get(id)
@@ -741,46 +742,32 @@ function badAmount(e: ExpenseDraft) {
 /** 편집 중에도 합계를 보여준다 — 화폐가 섞이면 화폐마다 한 줄 */
 const activeTotals = computed(() => (activeDraft.value ? totalsOf(outExpenses(activeDraft.value)) : []))
 
-/* ── 포인트 자리 (앵커) ────────────────────────────────────────────────────
- * 기본은 사진들의 평균이고 만들어질 때 한 번 정해진다. 거리로 안 묶이는 것을 맥락으로
- * 묶으면 평균이 아무도 안 간 중간에 찍히므로, 2단계에서 대표 사진 자리로 옮길 수 있다.
- * 좌표는 서버가 계산한다 — 여기서는 «무엇으로 잡을지»만 들고 미리보기를 그린다.
- */
-
-/** 그 포인트의 대표 사진 — 지정이 없으면 첫 사진 (지도 마커와 같은 규칙) */
+/* 새 포인트는 대표 사진 위치가 기본이다. 기존 위치와 명시적인 평균 선택은 보존한다. */
 function coverPhotoOf(d: PointDraft) {
-  const photos = photosOf(d.ids)
-  return photos.find((p) => p.id === d.coverId) ?? photos[0] ?? null
+  return pointThumb({ cover_photo_id: d.coverId, photos: photosOf(d.ids) })
 }
 
-/** 고른 규칙이 가리키는 자리. 안 골랐으면 지금 서버에 저장된 자리다. */
 function draftAnchor(d: PointDraft) {
-  if (d.anchor === 'centroid') {
-    const photos = photosOf(d.ids)
-    return photos.length ? centroid(photos) : null
-  }
-  if (d.anchor === 'cover') {
-    const p = coverPhotoOf(d)
-    return p ? { lat: p.lat, lng: p.lng } : null
-  }
-  const base = basePoint(d.id)
-  if (base) return { lat: base.lat, lng: base.lng }
-  // 아직 저장 안 된 포인트 — 저장될 값(사진 평균)을 미리 보여준다
-  const photos = photosOf(d.ids)
-  return photos.length ? centroid(photos) : null
+  return pointAnchor(photosOf(d.ids), d.coverId, basePoint(d.id) ?? null, d.anchor)
 }
 
-/** 자리가 실제로 «움직였는가». 이미 그 자리를 고른 것은 변경이 아니다. */
+/** 현재 저장 위치와 비교한다. 한 장만 남은 포인트도 대표 사진 위치로 정리한다. */
 function anchorMoved(d: PointDraft) {
-  if (!d.anchor) return false
   const now = draftAnchor(d)
-  const base = basePoint(d.id)
-  const photos = photosOf(d.ids)
-  const from = base
-    ? { lat: base.lat, lng: base.lng }
-    : (photos.length ? centroid(photos) : null)
-  if (!now || !from) return false
-  return !sameSpot(from, now)
+  const from = basePoint(d.id) ?? photosOf(d.ids)[0]
+  return !!now && !!from && !sameSpot(from, now)
+}
+
+/** 모바일에서는 상단 기록 메뉴에 담고, 실제로 이동하는 포인트 수를 미리 보여준다. */
+const coverAnchorCount = computed(() => pointDrafts.value.filter((d) => {
+  const now = draftAnchor(d)
+  const cover = coverPhotoOf(d)
+  return now && cover && !sameSpot(now, cover)
+}).length)
+
+function setAllCoverAnchors() {
+  if (saving.value || reclustering.value || !coverAnchorCount.value) return
+  for (const d of pointDrafts.value) d.anchor = 'cover'
 }
 
 /** 3단계 헤더에 뜨는 좌표 — 2단계에서 자리를 다시 잡았으면 그 값이 먼저다 */
@@ -789,7 +776,7 @@ const activeSpot = computed(() => (activeDraft.value ? draftAnchor(activeDraft.v
 /** 2단계 — 이 포인트를 어느 자리에 찍을지 */
 function onSetAnchor(groupId: number, kind: AnchorPick) {
   const d = pointDrafts.value.find((x) => x.id === groupId)
-  if (d) d.anchor = kind
+  if (d && d.ids.length > 1) d.anchor = kind
 }
 
 /*
@@ -955,7 +942,7 @@ async function save() {
           // 'cover' 는 여기서 실제 사진 id 로 굳힌다 — 서버가 그 사진의 좌표를 쓴다
           anchor: !anchorMoved(d)
             ? null
-            : d.anchor === 'centroid'
+            : d.ids.length > 1 && d.anchor === 'centroid'
               ? 'centroid'
               : { photoId: coverPhotoOf(d)?.id ?? null },
         },
@@ -1047,6 +1034,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             되돌릴 수 없는 것(기록 삭제)은 메뉴 안이다. 저장 옆에 두면 손이 미끄러진다.
           -->
           <OverflowMenu label="기록 메뉴" always testid="editor-menu-wide">
+            <BulkPointAnchorItem v-if="step === 'points'" :count="coverAnchorCount" :disabled="saving || reclustering" @select="setAllCoverAnchors" />
             <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
               변경 취소
@@ -1092,6 +1080,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           </button>
         </h1>
         <OverflowMenu label="기록 메뉴" testid="editor-menu-narrow">
+          <BulkPointAnchorItem v-if="step === 'points'" :count="coverAnchorCount" :disabled="saving || reclustering" @select="setAllCoverAnchors" />
           <DropdownMenuItem class="ovf-item" :disabled="!changes" @select="revert">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
             변경 취소
@@ -1257,10 +1246,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
                 </template>
               </span>
             </span>
-            <!-- 아직 저장 전인 포인트는 앵커가 없다 — 저장할 때 담긴 사진들의 평균 좌표로 정해진다 -->
+            <!-- 사진이 없어서 위치를 계산할 수 없는 경우의 안내 -->
             <span v-else class="lockrow fresh">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-              <span class="mono">저장하면 담긴 사진들의 평균 좌표에 자리를 잡습니다</span>
+              <span class="mono">저장하면 대표 사진 위치에 자리를 잡습니다</span>
             </span>
           </div>
 
