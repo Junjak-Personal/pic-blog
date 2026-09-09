@@ -1230,27 +1230,13 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
               class="input title ptitle"
               maxlength="200"
               placeholder="포인트 이름"
+              aria-label="포인트 이름"
               data-testid="editor-point-title-input"
             >
-            <span v-if="activePoint" class="lockrow">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
-              <!--
-                꼬리표를 뗐다. 「자리가 무엇인지」는 2단계 메뉴가 「지금 …」으로 말하고,
-                여기서까지 되풀이하면 좁은 화면에서 이 줄이 가로로 넘친다.
-                못 고친다는 신호는 자물쇠 아이콘이 이미 하고 있다.
-              -->
-              <span class="mono locktext">
-                {{ formatDateTime(activePoint.first_shot_at) || '시각 없음' }}
-                <template v-if="activeSpot">
-                  · {{ activeSpot.lat.toFixed(5) }}, {{ activeSpot.lng.toFixed(5) }}
-                </template>
-              </span>
-            </span>
-            <!-- 사진이 없어서 위치를 계산할 수 없는 경우의 안내 -->
-            <span v-else class="lockrow fresh">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-              <span class="mono">저장하면 대표 사진 위치에 자리를 잡습니다</span>
-            </span>
+            <p class="point-meta mono">
+              <span>{{ activePoint ? formatDateTime(activePoint.first_shot_at) || '시각 없음' : '새 포인트' }}</span>
+              <span v-if="activeSpot">· {{ activeSpot.lat.toFixed(5) }}, {{ activeSpot.lng.toFixed(5) }}</span>
+            </p>
           </div>
 
           <div class="split">
@@ -1708,9 +1694,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 .ehead {
   flex: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
+  gap: 8px 14px;
   padding: 14px 24px 12px;
   border-bottom: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
@@ -1726,23 +1713,20 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   font-size: var(--fs-sm);
   font-weight: 600;
 }
-.ptitle { flex: 1; min-width: 0; }
-.lockrow {
+.ptitle { width: 100%; min-width: 0; }
+/* 날짜·좌표는 제목 폭을 차지하지 않는 보조 정보다. 좁으면 이 줄만 접힌다. */
+.point-meta {
+  grid-column: 2;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  padding: 8px 12px;
-  border: 1px dashed rgb(var(--mid-rgb) / 0.18);
-  border-radius: var(--radius);
-  font-size: var(--fs-2xs);
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
   color: var(--faint);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
-/* 좁아지면 줄이 넘치는 대신 말줄임표로 접힌다 — 가로 스크롤은 만들지 않는다 */
-.locktext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* 아직 저장 전인 포인트 — 좌표가 없다는 걸 색으로도 구분한다 */
-.lockrow.fresh { border-color: rgb(var(--route-soft-rgb) / 0.42); color: var(--route); white-space: normal; }
 
 .split { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
 .grid-col {
@@ -2008,7 +1992,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     border-bottom: 1px solid var(--hair);
   }
   .editor, .split { display: block; min-height: 0; }
-  .ehead { flex-wrap: wrap; padding: 12px 16px; }
+  .ehead { padding: 12px 16px; column-gap: 12px; }
   .grid-col { min-height: 0; padding: 14px 16px; }
   /* 굴러가는 칸은 .body 하나다 — 여기서 또 스크롤하면 중첩이라 어느 쪽이 움직일지 모른다 */
   .side { min-height: 0; overflow: visible; padding: 14px 16px calc(var(--cta-h) + env(safe-area-inset-bottom)); }
