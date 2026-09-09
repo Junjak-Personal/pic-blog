@@ -38,7 +38,7 @@ watch(() => props.activeId, async (id) => {
   await nextTick()
   listEl.value?.querySelector<HTMLElement>(`[data-row="${id}"]`)?.scrollIntoView({
     block: 'nearest',
-    behavior: 'smooth',
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
   })
 })
 
@@ -148,8 +148,7 @@ function dayLabel(g: DayGroup<Point>) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgb(var(--s1-rgb) / 0.92);
-  backdrop-filter: blur(12px);
+  background: var(--s1);
   border-left: 1px solid var(--hair);
 }
 
@@ -192,7 +191,7 @@ function dayLabel(g: DayGroup<Point>) {
   white-space: nowrap;
 }
 .tab:hover { background: rgb(var(--ink-rgb) / 0.07); }
-.tab.on { background: var(--ink); border-color: var(--ink); color: var(--s0); font-weight: 600; }
+.tab.on { background: var(--selected); border-color: var(--selected-border); color: var(--ink); font-weight: 600; }
 /*
  * 날짜 색 조각 — 원이 아니라 모서리 둥근 사각이다.
  * 7 → 8px 인 이유: 같은 치수라면 사각이 원보다 작아 보인다(모서리를 깎지 않아 면적이 큰데도
@@ -231,7 +230,7 @@ function dayLabel(g: DayGroup<Point>) {
   cursor: pointer;
 }
 .row:hover { background: rgb(var(--ink-rgb) / 0.06); }
-.row.on { background: rgb(var(--ink-rgb) / 0.1); }
+.row.on { background: var(--selected); }
 
 .num {
   display: grid;

@@ -71,7 +71,7 @@ const props = defineProps<{
   top: 4px;
   left: 4px;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-micro);
   background: rgb(var(--s0-rgb) / 0.72);
   color: var(--mid);
@@ -85,7 +85,7 @@ const props = defineProps<{
   position: absolute;
   bottom: calc(var(--tile-bar-h) + 4px);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-micro);
 }
 /* 이 포인트의 대표 — 왼쪽.
@@ -119,7 +119,7 @@ const props = defineProps<{
 .phototile {
   position: relative;
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: rgb(var(--s1-rgb) / 0.9);
   /*
    * 🔴 테두리가 «칸의 경계»를 만든다. 바탕이 90% 반투명이라 합성 결과가 뒤에 뭐가 있느냐에

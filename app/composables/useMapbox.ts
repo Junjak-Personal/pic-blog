@@ -66,6 +66,7 @@ export function useMapbox(options: UseMapboxOptions) {
   const status = ref<MapStatus>('loading')
   const map = shallowRef<mapboxgl.Map | null>(null)
 
+  let bootFrame = 0
   let timer: ReturnType<typeof setTimeout> | null = null
   let observer: ResizeObserver | null = null
 
@@ -94,6 +95,8 @@ export function useMapbox(options: UseMapboxOptions) {
   }
 
   function teardown() {
+    cancelAnimationFrame(bootFrame)
+    bootFrame = 0
     if (timer) clearTimeout(timer)
     timer = null
     observer?.disconnect()
@@ -103,10 +106,17 @@ export function useMapbox(options: UseMapboxOptions) {
   }
 
   function boot() {
+    bootFrame = 0
     const el = options.container.value
     const token = config.public.mapboxToken
 
     if (!el) return
+    // Nuxt can mount the next page in Suspense's detached container during a transition.
+    // Mapbox must see the attached element to measure CSS and the actual viewport.
+    if (!el.isConnected) {
+      bootFrame = requestAnimationFrame(boot)
+      return
+    }
     if (!token) {
       status.value = 'failed'
       console.warn('[pic-blog] NUXT_PUBLIC_MAPBOX_TOKEN 이 없습니다')

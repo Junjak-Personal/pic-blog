@@ -5,7 +5,7 @@ topic: design-system
 kind: spec
 scope: frontend
 created: 2026-08-26
-updated: 2026-08-29
+updated: 2026-09-09
 owner: jhyoon
 related:
   - _docs/reference/product-spec/2026-08-25-product-spec.md
@@ -70,8 +70,8 @@ related:
 전부 `app/assets/css/tokens.css` 에 CSS 변수로 있다. 다크 단일 테마이고 라이트 테마는 없다.
 
 주의 두 가지:
-- `--font-display` 의 Bricolage Grotesque 에는 **한글 글리프가 없다.** 한글은 Pretendard 로
-  떨어뜨린다 — 플랫폼마다 다른 `system-ui` 대신 디자인된 얼굴을 쓰려고 명시했다.
+- 제목·본문·데이터는 Pretendard 계열로 통일한다. JP를 먼저 두어 일본어 가나·한자를 처리하고,
+  JP 웹 서브셋에 없는 한글은 한국어판 Pretendard가 처리한다. 숫자 정렬은 `tabular-nums`로 유지한다.
 - `--route`(#FFB454)는 **팔레트 밖 난색이다.** 아트보드는 동선을 `--acc`(세이지)로 그렸지만
   마커 테두리와 같은 색이라 구분이 안 됐다. SSOT 는 `app/utils/route-style.ts`.
 
@@ -111,3 +111,36 @@ v3 는 낮은 줌에서 지구본으로 바뀌므로 `projection: 'mercator'` �
   렌더리스라 밖에서 준 class 는 루트에 안 붙고 버려진다.
 - 터치 타깃 44px.
 - 검색은 Enter·버튼으로만 실행한다(타이핑마다 아님).
+
+
+## 8. 부드러운 UI 정리 (2026-09-09)
+
+사용자 확인 방향: 차분하고 친근하며 사진에 집중되는 사용감. 색상·모서리·모션의
+실제 값은 `app/assets/css/tokens.css`, 상태 전환은 `app/assets/css/motion.css`가 기준이다.
+
+- **색**: 사용자 피드백에 따라 기존 파란 검정 배경과 차분한 틸 팔레트로 복원한다.
+  Primary는 #2B3C40, 강조색은 #92ACB2다. 선택·포커스·위험의 공통 역할은 유지한다.
+  UI 색은 OKLCH로 정의한다. RGB 채널은 기존 알파 표현과 Mapbox 색 파서에 함께 공급한다.
+  지도 CSS는 nuxt.config.ts에서 한 번 로드하고, 전환 중 지도 초기화는 DOM 연결을 기다린다.
+  네이티브 사진 선택기는 `app-ios/lib/picker_theme.dart`가 같은 채널 값을 사용한다.
+- **모서리**: 작은 사진·배지 8px, 버튼·입력 12px, 카드·팝업 18px, 다이얼로그·시트 24px.
+  원형 번호와 알약은 원래 의미를 유지한다.
+- **버튼·입력**: `.btn`과 `.input`을 기본으로 쓴다. 날짜·통화·비밀번호처럼 입력 역할을 하는
+  컨트롤은 `.field-control`로 표면과 포커스를 공유한다. 일반 액션 글자는 본문 서체,
+  날짜·좌표·금액도 같은 서체에 `tabular-nums`를 적용한다.
+- **팝업**: 메뉴·통화·달력은 `.popover-surface`. 확인창과 정보창은 `.dialog-surface`를 공유한다.
+  화면별 CSS는 배치와 폭을 맡고 배경·선·그림자·모서리를 다시 정의하지 않는다.
+- **공통 컴포넌트**: `EmptyState`(제목·설명·아이콘·액션 슬롯), `AppDialog`(네이티브 포커스 관리·닫기),
+  `ProgressBar`(0~100 보정·진행률 접근성·transform 전환).
+- **모션**: 피드백 150ms, 상태 변화 200ms, 등장 220ms, 닫기 150ms.
+  라우트·편집 단계는 짧은 페이드, 팝업은 6px 이동과 작은 확대, 시트는 방향이 있는 이동.
+  페이지 전체에는 transform을 걸지 않는다. 고정 CTA와 iOS 시각 뷰포트의 기준이 바뀌기 때문이다.
+  진행률은 width 대신 scaleX로 움직인다. `prefers-reduced-motion`에서는 CSS 움직임을 생략하며,
+  네이티브 정보창과 Swiper도 설정을 따른다. 기존 지도 카메라의 별도 축소 모션은 유지한다.
+- **기기 제약**: iOS `--top-inset`, 문서 스크롤, 키보드, CTA 높이 관찰은 그대로 유지한다.
+
+새 UI를 만들 때는 이 기준과 `PRODUCT.md`를 먼저 읽는다. 이전 절의 아트보드 설명과
+현재 스타일이 다르면 이 절과 코드가 우선한다.
+
+지도 후속 조정: 화면 밖 먼 포인트로 가는 비행은 500ms에서 300ms로 단축하고 curve를 1로 줄였다.
+화면 안 가까운 포인트의 300ms 이동과 모션 줄이기의 190ms 이동은 유지한다.

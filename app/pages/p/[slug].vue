@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialog from '~/components/AppDialog.vue'
 /**
  * 포스트 뷰 — 아트보드 1b. 공개 경로라 절대 잠기지 않는다.
  * 지도 + 목록 → 마커 선택 → 스캐터 상세 → 사진 확대, 네 층이 한 화면에서 겹친다.
@@ -25,9 +26,9 @@ const detailOpen = ref(false)
 const stageEl = useTemplateRef<HTMLElement>('stageEl')
 const mapEl = useTemplateRef<InstanceType<typeof TripMap>>('mapEl')
 /** 잘린 제목 전체를 보여주는 판. 네이티브 <dialog> — 포커스 가둠·ESC·배경은 브라우저가 한다 */
-const titleDlg = useTemplateRef<HTMLDialogElement>('titleDlg')
+const titleDlg = useTemplateRef<InstanceType<typeof AppDialog>>('titleDlg')
 /** 소비 금액 — 화폐가 늘면 헤더가 자라므로 값은 판에서 본다 */
-const spendDlg = useTemplateRef<HTMLDialogElement>('spendDlg')
+const spendDlg = useTemplateRef<InstanceType<typeof AppDialog>>('spendDlg')
 const stageHeight = ref(0)
 
 /**
@@ -243,6 +244,7 @@ useHead(() => ({
 </script>
 
 <template>
+  <div class="viewer-root">
   <!--
     불러오는 중. 목록에서 이 화면으로 넘어오는 사이를 덮는다 — lazy 라 라우팅이 막히지
     않으므로 그 «사이»가 실제로 보인다. 지도·레일 두 칸을 미리 잡아두면 도착했을 때
@@ -286,10 +288,9 @@ useHead(() => ({
   </main>
 
   <!-- 없는 기록 -->
-  <main v-else-if="error || !post" class="state">
-    <h3>기록을 찾을 수 없습니다</h3>
-    <NuxtLink to="/" class="mono back-link">기록 목록으로</NuxtLink>
-  </main>
+  <EmptyState v-else-if="error || !post" title="기록을 찾을 수 없습니다">
+    <template #action><NuxtLink to="/" class="btn ghost big">기록 목록으로</NuxtLink></template>
+  </EmptyState>
 
   <main v-else class="page">
     <header class="topbar">
@@ -364,14 +365,14 @@ useHead(() => ({
           </button>
 
           <!-- 좁은 화면 — 이 판이 「기록 정보」다. 편집으로 가는 문도 여기 둔다 -->
-          <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link narrow-only">
+          <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="btn ghost edit-link narrow-only">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
             기록 편집
           </NuxtLink>
         </div>
 
         <!-- 넓은 화면 — 헤더 가장 오른쪽 -->
-        <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="mono edit-link wide-only">
+        <NuxtLink v-if="loggedIn" :to="`/editor/${slug}`" class="btn ghost edit-link wide-only">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
           기록 편집
         </NuxtLink>
@@ -419,7 +420,7 @@ useHead(() => ({
     </div>
 
     <!-- 소비 금액 — 화폐별 합계. 헤더는 이름만 말하고 값은 여기서 본다 -->
-    <dialog ref="spendDlg" class="titledlg" aria-label="소비 금액">
+    <AppDialog ref="spendDlg" label="소비 금액">
       <h2 class="mono dlg-head">소비 금액</h2>
       <!--
         합계만 보여주면 「4,455원」이 어디서 나온 값인지 알 길이 없다 —
@@ -441,18 +442,14 @@ useHead(() => ({
         <span class="mono spendsum-label">합계</span>
         <b v-for="t in spendTotals" :key="t.currency" class="mono spendsum-amt">{{ formatMoney(t.amount, t.currency) }}</b>
       </div>
-      <form method="dialog">
-        <button type="submit" class="mono titledlg-close">닫기</button>
-      </form>
-    </dialog>
 
-    <!-- 제목 전체. form method="dialog" 라 닫기에 스크립트가 필요 없다 -->
-    <dialog ref="titleDlg" class="titledlg" aria-label="기록 제목">
+    </AppDialog>
+
+    <!-- 제목 전체, 닫기와 포커스 복원은 AppDialog가 맡는다 -->
+    <AppDialog ref="titleDlg" label="기록 제목">
       <p class="titledlg-text">{{ post.title }}</p>
-      <form method="dialog">
-        <button type="submit" class="mono titledlg-close">닫기</button>
-      </form>
-    </dialog>
+
+    </AppDialog>
 
     <PhotoLightbox
       v-if="activePoint && activeBadge"
@@ -466,9 +463,11 @@ useHead(() => ({
       @step="stepPoint"
     />
   </main>
+  </div>
 </template>
 
 <style scoped>
+.viewer-root { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 /* 지도가 주인공인 화면이라 뷰포트에 고정한다.
    min-height 만 주면 레일 13행이 stage 를 밀어올려 지도가 화면 밖으로 넘친다. */
 .page {
@@ -530,42 +529,10 @@ useHead(() => ({
 .title:hover { color: var(--mid); }
 
 /* 제목 전체 판 — 네이티브 <dialog> (top layer · ::backdrop · ESC 는 브라우저 몫) */
-.titledlg {
-  margin: auto;
-  width: min(520px, calc(100vw - 32px));
-  background: var(--s1);
-  color: var(--ink);
-  border: 1px solid rgb(var(--acc-rgb) / 0.28);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-}
-.titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .titledlg-text { font-size: var(--fs-2xl); line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
-.titledlg-close {
-  display: block;
-  margin: 16px 0 0 auto;
-  min-height: 40px;
-  padding: 0 15px;
-  border: 1px solid rgb(var(--mid-rgb) / 0.2);
-  border-radius: var(--radius);
-  font-size: var(--fs-sm);
-  color: var(--mid);
-  cursor: pointer;
-}
 /* wrap — 합계가 아래 줄을 통째로 쓴다. 두 줄이어도 11px×2 + 여백이라 56px 상단바 안이다 */
 /* 편집으로 가는 문 — 목록 헤더의 「기록 관리」와 같은 모양이다 */
-.edit-link {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: none;
-  padding: 0 13px;
-  border: 1px solid rgb(var(--mid-rgb) / 0.2);
-  border-radius: var(--radius);
-  font-size: var(--fs-sm);
-  color: var(--mid);
-}
-.edit-link:hover { border-color: var(--focus-border); color: var(--ink); }
+.edit-link { flex: none; }
 .edit-link.narrow-only { display: none; }
 
 .stats { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: var(--fs-xs); color: var(--deep); flex: none; }
@@ -635,8 +602,8 @@ useHead(() => ({
 .sk-rail { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-left: 1px solid var(--hair); }
 .sk-line-row { display: flex; align-items: center; gap: 12px; }
 .sk-num { width: 30px; height: 30px; border-radius: 50%; flex: none; }
-.sk-bar { flex: 1; height: 12px; border-radius: 4px; }
-.sk-title { display: block; width: 190px; height: 20px; border-radius: 5px; }
+.sk-bar { flex: 1; height: 12px; border-radius: var(--radius-sm); }
+.sk-title { display: block; width: 190px; height: 20px; border-radius: var(--radius-sm); }
 
 .rail { position: relative; z-index: 3; min-height: 0; overflow: hidden; }
 
@@ -655,8 +622,8 @@ useHead(() => ({
  * 가까웠다. 처음에 빠르게 붙고 끝에서 길게 눕는 곡선으로 바꾸고 이동 거리를 늘렸다.
  * 나갈 때는 더 짧게 — 닫기는 이미 마음이 떠난 동작이라 기다리게 하면 답답하다.
  */
-.sheet-enter-active { transition: transform 0.21s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.14s ease-out; }
-.sheet-leave-active { transition: transform 0.14s cubic-bezier(0.4, 0, 1, 1), opacity 0.11s ease-in; }
+.sheet-enter-active { transition: transform var(--duration-enter) var(--ease-out), opacity var(--duration-fast) var(--ease-out); }
+.sheet-leave-active { transition: transform var(--duration-exit) var(--ease-out), opacity var(--duration-exit) ease-out; }
 .sheet-enter-from, .sheet-leave-to { transform: translateY(28px); opacity: 0; }
 
 @media (max-width: 900px) {
@@ -665,14 +632,7 @@ useHead(() => ({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /*
-   * reduce 는 none 이 아니다. 시트가 «어디에서» 올라오는지는 그대로 두되(그게 사라지면
-   * 화면이 툭 바뀐 것으로 보인다) 거리와 시간을 줄인다. 어지럼을 부르는 것은 짧은
-   * 미끄러짐이 아니라 큰 이동·확대·시차라서다.
-   */
-  .sheet-enter-active { transition: transform 0.13s ease-out, opacity 0.11s ease-out; }
-  .sheet-leave-active { transition: transform 0.1s ease-in, opacity 0.08s ease-in; }
-  .sheet-enter-from, .sheet-leave-to { transform: translateY(10px); opacity: 0; }
+  .sheet-enter-from, .sheet-leave-to { transform: none; opacity: 0; }
 }
 
 /* 빈·에러 상태 */
@@ -691,7 +651,7 @@ useHead(() => ({
   place-items: center;
   width: 56px;
   height: var(--topbar-h);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
@@ -753,7 +713,7 @@ useHead(() => ({
     border-bottom: 1px solid var(--hair);
     font-size: var(--fs-2xs);
   }
-  .stats.open { display: flex; }
+  .stats.open { display: flex; animation: ui-fade-in var(--duration-fast) var(--ease-out); }
   /* 넓은 화면 몫은 감추고, 판 안의 것만 남긴다 */
   .edit-link.wide-only { display: none; }
   .edit-link.narrow-only { display: flex; flex-basis: 100%; justify-content: center; min-height: 40px; margin-top: 2px; }

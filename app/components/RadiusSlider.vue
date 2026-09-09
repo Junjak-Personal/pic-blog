@@ -132,14 +132,14 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   display: block;
   width: 100%;
   height: 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--hair);
 }
 .fill {
   position: absolute;
   left: 0;
   height: 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--acc);
 }
 
@@ -159,11 +159,10 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   border-radius: 50%;
   background: var(--s0);
   border: 1.5px solid rgb(var(--acc-rgb) / 0.5);
-  transition: all 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 .dot.on {
-  width: 13px;
-  height: 13px;
+  transform: scale(1.4);
   background: var(--acc);
   border-color: var(--ink);
   box-shadow: 0 0 0 4px rgb(var(--acc-rgb) / 0.18);
@@ -192,7 +191,7 @@ const fill = computed(() => `${(stopIndex.value / (RADII.length - 1)) * 100}%`)
   white-space: nowrap;
   font-size: var(--fs-2xs);
   color: var(--faint);
-  transition: color 0.12s;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 .labels span.on { color: var(--ink); }
 .labels.sub span { color: var(--faint); }

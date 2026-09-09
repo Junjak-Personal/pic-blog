@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialog from '~/components/AppDialog.vue'
 import AppBack from '~/components/AppBack.vue'
 import ErrorNote from '~/components/ErrorNote.vue'
 import PostSettings from '~/components/PostSettings.vue'
@@ -150,7 +151,7 @@ const errorMessage = ref<string | null>(null)
 /** 새 포인트의 임시 id — 서버 id 와 절대 겹치지 않게 음수로 센다 */
 const nextTempId = ref(-1)
 /** 상단바에서 잘린 제목의 전체를 띄우는 판 */
-const titleDlg = useTemplateRef<HTMLDialogElement>('titleDlg')
+const titleDlg = useTemplateRef<InstanceType<typeof AppDialog>>('titleDlg')
 
 const photoById = computed(
   () => new Map((post.value?.points ?? []).flatMap((p) => p.photos).map((ph) => [ph.id, ph])),
@@ -1161,6 +1162,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
         </button>
       </nav>
 
+      <Transition name="panel" mode="out-in">
       <PostSettings
         v-if="step === 'basic'"
         v-model:title="draftTitle"
@@ -1471,6 +1473,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
           <p class="mono">왼쪽 목록에서 편집할 포인트를 고릅니다</p>
         </section>
       </div>
+      </Transition>
     </template>
 
     <!--
@@ -1492,15 +1495,12 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     />
 
     <!--
-      네이티브 <dialog> 다. 포커스 가둠 · ESC · ::backdrop · top layer 를 브라우저가 주고,
-      닫기는 form method="dialog" 라 스크립트가 0줄이다.
+      AppDialog가 네이티브 포커스 관리와 닫기 모션을 함께 맡는다.
     -->
-    <dialog ref="titleDlg" class="titledlg" aria-label="기록 제목">
+    <AppDialog ref="titleDlg" label="기록 제목">
       <p class="titledlg-text">{{ draftTitle || '기록 편집' }}</p>
-      <form method="dialog">
-        <button type="submit" class="mono titledlg-close">닫기</button>
-      </form>
-    </dialog>
+
+    </AppDialog>
 
     <!-- 모바일: 저장은 화면 아래에서 손이 닿는 곳에 둔다 -->
     <BottomCta v-if="post">
@@ -1539,7 +1539,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   justify-content: space-between;
   gap: 20px;
   padding: 0 var(--topbar-x);
-  border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
+  border-bottom: 1px solid var(--hair);
   background: rgb(var(--acc-rgb) / 0.06);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
@@ -1593,28 +1593,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 /* 제목 전체 판 — 네이티브 <dialog> (top layer · ::backdrop · ESC 는 브라우저 몫).
    공개 상세(p/[slug].vue)와 같은 값을 쓴다. */
-.titledlg {
-  margin: auto;
-  width: min(520px, calc(100vw - 32px));
-  background: var(--s1);
-  color: var(--ink);
-  border: 1px solid rgb(var(--acc-rgb) / 0.28);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-}
-.titledlg::backdrop { background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
 .titledlg-text { font-size: var(--fs-2xl); line-height: 1.5; letter-spacing: -0.02em; text-wrap: pretty; overflow-wrap: anywhere; }
-.titledlg-close {
-  display: block;
-  margin: 16px 0 0 auto;
-  min-height: 40px;
-  padding: 0 15px;
-  border: 1px solid rgb(var(--mid-rgb) / 0.2);
-  border-radius: var(--radius);
-  font-size: var(--fs-sm);
-  color: var(--mid);
-  cursor: pointer;
-}
 
 /* 단계 탭 */
 .steps {
@@ -1639,7 +1618,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   letter-spacing: 0.04em;
   cursor: pointer;
 }
-.stepbtn.on { border-color: var(--focus-border); background: rgb(var(--acc-rgb) / 0.14); color: var(--ink); }
+.stepbtn.on { border-color: var(--selected-border); background: var(--selected); color: var(--ink); }
 .sdot {
   display: grid;
   place-items: center;
@@ -1655,7 +1634,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 .stepbtn.on .sdot { background: var(--mid); border-color: var(--mid); color: var(--s0); }
 
 .field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
-.flabel { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
 /* 입력은 base.css 의 .input / .input.small 한 벌을 쓴다 */
 
@@ -1698,7 +1676,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
 }
 .prow:hover { background: rgb(var(--ink-rgb) / 0.06); }
-.prow.on { background: rgb(var(--ink-rgb) / 0.1); }
+.prow.on { background: var(--selected); }
 .pnum {
   display: grid;
   place-items: center;
@@ -1732,7 +1710,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   height: 34px;
   flex: none;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--s3);
 }
 
@@ -1863,7 +1841,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   place-items: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: rgb(var(--s0-rgb) / 0.5);
   border: 1px solid var(--hair);
   color: var(--deep);
@@ -1891,7 +1869,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   border: 1px dashed rgb(var(--mid-rgb) / 0.24);
   border-radius: var(--radius);
   padding: 4px 9px;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 /* 테두리 없는 input 에 outline 을 그리면 점선 칩 안쪽에 사각형이 하나 더 생긴다.
    감싸는 칩이 대신 빛나게 하고 input 자신의 링은 끈다. */
@@ -1943,7 +1921,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   place-items: center;
   width: 24px;
   height: 24px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--faint);
   cursor: pointer;
 }

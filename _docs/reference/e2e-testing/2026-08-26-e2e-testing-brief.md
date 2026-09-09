@@ -5,7 +5,7 @@ topic: e2e-testing
 kind: brief
 scope: frontend
 created: 2026-08-26
-updated: 2026-08-29
+updated: 2026-09-09
 owner: jhyoon
 related:
   - _docs/reference/design-system/2026-08-26-design-system.md
@@ -61,15 +61,15 @@ aside "이 페이지의 레이아웃 문제를 찾아줘"                       
 
 | 토큰 | 값 | 쓰임 |
 |---|---|---|
-| `--ink` | `#E8EBE9` | 본문·제목 |
-| `--mid` | `#B1C7C1` | 보조 텍스트·버튼 |
-| `--acc` | `#92B2A9` | 링크·강조 |
-| `--deep` | `#83A79E` | 데이터·캡션 |
-| `--faint` | `#6B837E` | 3차 캡션 |
-| `--s0` `--s1` `--s2` `--s3` | `#040408` `#0B0E12` `#1E2125` `#2A2A30` | 표면 |
+| `--ink` / `--mid` | `#E8EBEA` / `#B1C2C7` | 본문·보조 텍스트 |
+| `--acc` / `--deep` / `--faint` | `#92ACB2` / `#839FA7` / `#6B7C83` | 선택·데이터·캡션 |
+| `--s0` / `--s1` | `#040408` / `#0B0E12` | 배경·패널 |
+| `--s2` / `--s3` | `#1E2125` / `#2A2A30` | 밝은 면·스켈레톤 |
+| `--primary-fill` | `#2B3C40` | 주 액션·대표 배지 |
 | `--field` | `#101317` | 입력 필드 |
-| `--route` | `#FFB454` | **동선 전용 난색.** 팔레트 밖이고 여기 말고는 쓰지 않는다 |
+| `--route` | `#FFB454` | 동선 전용 난색 |
 | `--danger` | `#FF8080` | 파괴적 동작 |
+
 
 **다크 단일 테마다. 라이트 테마는 없다.**
 
@@ -77,12 +77,12 @@ aside "이 페이지의 레이아웃 문제를 찾아줘"                       
 
 | 토큰 | 얼굴 | 쓰임 |
 |---|---|---|
-| `--font-display` | Bricolage Grotesque → Pretendard | 제목·수치 강조 |
-| `--font-body` | Pretendard | 본문 |
-| `--font-mono` | Geist Mono | **데이터** — 좌표·시각·거리·파일명·EXIF |
+| `--font-display` | Pretendard / Pretendard JP | 제목·수치 강조 |
+| `--font-body` | Pretendard / Pretendard JP | 본문 |
+| `--font-mono` | Pretendard / Pretendard JP + tabular-nums | **데이터** — 좌표·시각·거리·파일명·EXIF |
 
-숫자·좌표·시각이 mono 가 아니면 결함이다. Bricolage 에는 한글 글리프가 없어
-한글은 Pretendard 로 떨어진다 — 제목의 한글/라틴이 섞여 보이는 건 정상이다.
+제목·본문·라벨·데이터는 같은 Pretendard 계열을 쓴다. 한글은 한국어판, 일본어는 JP로
+렌더링되어야 한다. 숫자·좌표·시각은 `tabular-nums`로 정렬한다.
 
 ### 크기 (`app/assets/css/base.css`, ≤900px)
 
@@ -91,7 +91,7 @@ aside "이 페이지의 레이아웃 문제를 찾아줘"                       
 | **헤더 안** 버튼·링크 | **36px** 고정, 내용 두 축 중앙 |
 | **헤더 밖** 조작 요소 | **44px** (터치 타깃) |
 | 모든 `input` / `textarea` / `select` | **16px 이상** — iOS 가 그 미만이면 페이지를 확대한다 |
-| `--radius` / `--radius-lg` | 8px / 10px |
+| `--radius-sm` / `--radius` / `--radius-lg` / `--radius-xl` | 8px / 12px / 18px / 24px |
 
 ### 버튼 규칙
 
@@ -206,3 +206,15 @@ aside "이 페이지의 레이아웃 문제를 찾아줘"                       
 
 「이상해 보인다」만으로는 못 고친다 — **어느 규칙의 어느 값에서 벗어났는지**를 적는다.
 규칙에 없는 문제라면 그렇게 적고 근거(스크린샷·측정값)를 붙인다.
+
+
+## 8. 전환·공통 UI 추가 점검 (2026-09-09)
+
+- 일반 모션과 `prefers-reduced-motion` 양쪽에서 라우팅·편집 단계·정보창·사진 확대가 열린다.
+- 제목 보기의 닫기와 Escape 후 원래 버튼으로 포커스가 돌아온다.
+- 범위 변경을 취소하면 슬라이더가 원래 값으로 복원된다.
+- 팝업을 닫은 뒤 overlay나 스크롤 잠금이 남지 않는다.
+- 단계 전환 뒤 모바일 CTA가 뷰포트 바닥에 있고 입력을 가리지 않는다.
+- 빈 비밀번호 제출은 실제 오류를 표시하며 입력에 연결한다.
+- 메뉴·달력·통화 목록의 표면과 모서리는 같은 토큰을 읽는다.
+- 진행률은 접근성 이름과 현재 값을 가지며 레이아웃을 흔들지 않는다.

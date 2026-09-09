@@ -42,7 +42,7 @@ const emit = defineEmits<{ close: [] }>()
   height: 20px;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   opacity: 0.75;

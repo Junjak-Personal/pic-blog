@@ -84,7 +84,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         </span>
         <!-- 아이콘을 단다 — 「기록 관리」의 반대편 짝인 편집 화면의 「뷰어 이동」이
              눈 아이콘을 달고 있다. 오가는 두 문이 같은 모양이라야 짝으로 읽힌다. -->
-        <NuxtLink v-if="loggedIn" to="/editor" class="mono editor-link">
+        <NuxtLink v-if="loggedIn" to="/editor" class="btn ghost editor-link">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
           기록 관리
         </NuxtLink>
@@ -117,17 +117,12 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
     </template>
 
     <!-- 아트보드 1c ① 기록 0 -->
-    <section v-else-if="!posts.length" class="empty">
-      <span class="empty-icon">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-      </span>
-      <h3>아직 기록이 없습니다</h3>
-      <p>사진을 올리면 EXIF 의 GPS 좌표로 포인트가 만들어지고, 촬영 시각 순으로 동선이 이어집니다.</p>
-      <NuxtLink to="/editor/new" class="mono cta">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-        첫 기록 만들기
-      </NuxtLink>
-    </section>
+    <EmptyState v-else-if="!posts.length" title="아직 기록이 없습니다" description="사진을 올려 여행의 장소와 순간을 한곳에 남겨보세요.">
+      <template #icon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg></template>
+      <template #action>
+        <NuxtLink to="/editor/new" class="btn primary big">첫 기록 만들기</NuxtLink>
+      </template>
+    </EmptyState>
 
     <template v-else>
       <div class="map-strip">
@@ -195,7 +190,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   background: none;
   cursor: pointer;
 }
-.mark { flex: none; color: var(--ink); transition: color 0.15s, transform 0.15s; }
+.mark { flex: none; color: var(--ink); transition: color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); }
 /* 세는 중이라는 최소한의 신호. 문을 광고하지는 않는다. */
 .markbtn.armed .mark { color: var(--route); transform: scale(1.06); }
 .wordmark {
@@ -210,18 +205,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 
 .right { display: flex; align-items: center; gap: 22px; }
 .totals { font-size: var(--fs-xs); color: var(--deep); }
-.editor-link {
-  /* 헤더 버튼은 높이가 36px 로 고정된다(base.css). 글자가 11px 이면 상자 안이
-     텅 비어 「빈 테두리」처럼 보인다 — 글자를 상자에 맞춘다. */
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: var(--fs-sm);
-  color: var(--mid);
-  border: 1px solid rgb(var(--mid-rgb) / 0.2);
-  border-radius: var(--radius);
-  padding: 0 13px;
-}
 
 .map-strip { position: relative; height: 236px; flex: none; border-bottom: 1px solid var(--hair); }
 
@@ -238,8 +221,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
      0 이고, 높이가 확정된 격자 안에서 카드가 찌부러져 커버가 잘렸다.
      행은 내용 높이 그대로 두고, 넘치는 만큼 격자가 스크롤한다. */
   grid-auto-rows: max-content;
-  gap: 24px;
-  padding: 26px 32px;
+  gap: 20px;
+  padding: 24px;
   align-content: start;
 }
 .grid::-webkit-scrollbar { width: 0; }
@@ -249,10 +232,10 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   flex-direction: column;
   background: var(--s2);
   border: 1px solid rgb(var(--mid-rgb) / 0.13);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   color: inherit;
-  transition: border-color 0.14s, transform 0.14s;
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 .card:hover { border-color: rgb(var(--acc-rgb) / 0.45); transform: translateY(-2px); }
 
@@ -260,7 +243,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   height: 196px;
   flex: none;
   position: relative;
-  background: repeating-linear-gradient(135deg, #26262C 0 9px, #1E1E24 9px 18px);
+  background: var(--field);
 }
 .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cover-empty {
@@ -296,7 +279,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
  */
 .sk-card { pointer-events: none; }
 .sk-cover { height: 196px; border-radius: 0; }
-.line { display: block; height: 11px; border-radius: 4px; }
+.line { display: block; height: 11px; border-radius: var(--radius-sm); }
 .line.lg { height: 20px; width: 64%; }
 .line.sm { height: 9px; width: 32%; }
 .title {
@@ -327,44 +310,6 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 
 
 /* 1c ① 기록 0 */
-.empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 40px;
-  text-align: center;
-  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
-     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
-  overflow-y: auto;
-}
-.empty-icon {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
-  background: rgb(var(--acc-rgb) / 0.1);
-  border: 1px solid var(--hair);
-  color: var(--deep);
-}
-.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
-.cta {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 6px;
-  /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
-  background: var(--primary-fill);
-  color: var(--ink);
-  border-radius: var(--radius);
-  padding: 11px 18px;
-  font-size: var(--fs-sm);
-}
-.cta:hover { filter: brightness(1.2); }
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
@@ -399,7 +344,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
    * 커버를 크게 깔면 한 화면에 한 기록 반쯤만 들어가고, 그만큼 지도가 밀린다.
    * 훑어보는 목록에서 세로는 비싸다 — 썸네일 · 제목 한 줄 · 메타 한 줄이면 충분하다.
    */
-  .grid { grid-template-columns: 1fr; gap: 10px; padding: 12px 12px 16px; }
+  .grid { grid-template-columns: 1fr; gap: 10px; padding: 16px; }
   .card {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
@@ -409,7 +354,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
     align-items: center;
   }
   .card:hover { transform: none; }
-  .cover { grid-row: 1 / 3; width: 64px; height: 48px; border-radius: 6px; overflow: hidden; }
+  .cover { grid-row: 1 / 3; width: 64px; height: 48px; border-radius: var(--radius-sm); overflow: hidden; }
   /* 64px 칸에 상자를 두르면 커버가 안 보인다 — 글자만 남긴다 */
   .private { right: 2px; top: 2px; gap: 0; padding: 1px 3px; font-size: var(--fs-micro); letter-spacing: 0; }
   .private svg { display: none; }
@@ -433,7 +378,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   .stat.extra { display: none; }
 
   /* 자리표시는 실제 행과 같은 상자를 쓴다 — 도착했을 때 레이아웃이 튀지 않게 */
-  .sk-cover { width: 64px; height: 48px; border-radius: 6px; }
+  .sk-cover { width: 64px; height: 48px; border-radius: var(--radius-sm); }
   .line.lg { height: 15px; }
 }
 </style>

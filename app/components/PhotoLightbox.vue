@@ -27,6 +27,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: []; move: [index: number]; step: [dir: -1 | 1] }>()
 
+const reducedMotion = useReducedMotion()
+
 const open = computed({
   get: () => props.index !== null,
   set: (v: boolean) => {
@@ -167,8 +169,8 @@ watch(() => props.photos, async () => {
   <DialogRoot v-model:open="open">
     <DialogPortal>
       <!-- 배경에 스캐터가 흐리게 비친다 -->
-      <DialogOverlay class="overlay" />
-      <DialogContent class="box" :aria-label="`${props.pointName} 사진 확대`">
+      <DialogOverlay class="overlay lightbox-overlay" />
+      <DialogContent class="box lightbox-content" :aria-label="`${props.pointName} 사진 확대`">
         <DialogTitle class="sr-only">{{ props.pointName }} 사진 {{ (props.index ?? 0) + 1 }}</DialogTitle>
 
         <header class="head">
@@ -191,6 +193,7 @@ watch(() => props.photos, async () => {
             :initial-slide="props.index ?? 0"
             :zoom="{ maxRatio: 4, toggle: true }"
             :space-between="24"
+            :speed="reducedMotion ? 0 : 220"
             @swiper="onSwiper"
             @slide-change="onSlideChange"
             @touch-end="onTouchEnd"

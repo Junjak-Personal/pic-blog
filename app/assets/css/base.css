@@ -193,7 +193,12 @@ select:focus-visible {
  * 계속 맡는다 — 여기보다 명시도가 높아 그대로 이긴다.
  */
 .btn {
-  display: flex;
+  display: inline-flex;
+  min-height: 36px;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.2;
   align-items: center;
   /* 늘어나는 자리(하단 CTA · 완료 화면의 flex:1)에서 글자가 왼쪽에 붙어 있었다 —
      버튼 글자는 언제나 가운데다. 폭이 내용에 맞는 버튼에서는 아무 차이가 없다. */
@@ -201,7 +206,7 @@ select:focus-visible {
   gap: 7px;
   padding: 8px 14px;
   border-radius: var(--radius);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -209,15 +214,15 @@ select:focus-visible {
 /* 채우는 면은 어둡고 글자는 --ink 다 — 이유는 tokens.css 의 --primary-fill 주석 참고 */
 .btn.primary { background: var(--primary-fill); color: var(--ink); }
 /* 어두운 면이라 눌린 티가 옅다. 색을 하나 더 만들지 않고 밝기로만 올린다 */
-.btn.primary:hover:not(:disabled) { filter: brightness(1.2); }
-.btn.ghost { border: 1px solid rgb(var(--mid-rgb) / 0.2); color: var(--mid); }
-.btn.ghost:hover:not(:disabled) { border-color: rgb(var(--acc-rgb) / 0.45); color: var(--ink); }
+.btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn.ghost { border-color: var(--border-control); background: var(--surface-hover); color: var(--mid); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--border-hover); background: var(--selected); color: var(--ink); }
 /* 크게 — 빈 화면 한가운데의 「사진 선택」처럼 그 화면의 유일한 행동일 때 */
-.btn.big { padding: 12px 20px; font-size: var(--fs-sm); }
+.btn.big { min-height: 44px; padding: 12px 20px; font-size: var(--fs-sm); }
 /* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.
    🔴 이름이 .dlg 면 안 된다 — 그건 다이얼로그 «상자»가 이미 쓰는 클래스라 버튼이 상자
       스타일(padding 22px · 바탕 --s1)을 그대로 먹는다. 실제로 한 번 그렇게 깨졌다. */
-.btn.foot { min-height: 40px; padding: 0 15px; font-size: var(--fs-sm); }
+.btn.foot { min-height: 44px; padding: 0 15px; font-size: var(--fs-sm); }
 /* 「확인」과 「삭제」는 되돌리기 어려운 쪽이라 취소보다 무겁게 */
 .btn.foot.primary, .btn.danger { font-weight: 600; }
 /* --danger 는 어두운 바탕 «위의 글자»용 밝은 빨강이다 — 채우는 면은 tokens.css 참고 */
@@ -236,7 +241,7 @@ select:focus-visible {
   min-height: var(--field-h);
   padding: 0 14px;
   background: var(--field);
-  border: 1px solid rgb(var(--mid-rgb) / 0.16);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   font-size: var(--fs-lg);
   color: var(--ink);
@@ -373,7 +378,7 @@ img.bad {
   z-index: 200;
   pointer-events: none;
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--s2);
   opacity: 0.85;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
@@ -395,14 +400,14 @@ img.bad {
   border: 1px solid rgb(var(--acc-rgb) / 0.3);
   border-radius: var(--radius);
   background: var(--s1);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-float);
   color: var(--ink);
   font-size: var(--fs-sm);
   line-height: 1.45;
   /* 손끝·마우스가 툴팁 자신에게 걸리면 곧바로 mouseleave 가 돌아 깜빡인다 */
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 .eltip.on { opacity: 1; }
 
@@ -436,3 +441,62 @@ img.bad {
   /* 문서가 길어지면 .page 바닥은 화면 밖이다 — 주 액션은 뷰포트에 붙어 있어야 한다 */
   html.doc-scroll .cta { position: fixed; }
 }
+
+/* Shared chrome. Pages own layout and responsive visibility, never surface styling. */
+:where(.topbar) { background: var(--s0); border-bottom: 1px solid var(--hair); }
+.btn.danger:hover:not(:disabled) { background: color-mix(in oklch, var(--danger-fill), var(--danger) 12%); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn.mono { font-family: var(--font-body); }
+.btn svg { flex: none; }
+.input:hover:not(:disabled):not(:focus) { border-color: var(--border-hover); }
+.input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Shared field shell for button-based inputs and password/tag wrappers. */
+.field-control {
+  background: var(--field);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+.field-control:hover { border-color: var(--border-hover); }
+.field-control:focus-within,
+.field-control:focus-visible,
+.field-control[data-state='open'] {
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* Reused by native title/expense dialogs and Reka confirmation dialogs. */
+.dialog-surface {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dialog);
+}
+.dialog-overlay { position: fixed; inset: 0; z-index: 100; background: var(--overlay); }
+.dialog-surface::backdrop { background: var(--overlay); }
+.dialog-title { font-size: var(--title-size); line-height: 1.4; letter-spacing: -0.02em; }
+.dialog-description { font-size: var(--fs-md); line-height: 1.7; color: var(--mid); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+@media (max-width: 900px) {
+  .dialog-actions .btn { flex: 1; }
+}
+
+.dialog-alert {
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.flabel { font-family: var(--font-body); font-size: var(--fs-sm); color: var(--mid); }

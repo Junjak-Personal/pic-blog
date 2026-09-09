@@ -8,7 +8,6 @@ import MapFrame from '~/components/MapFrame.vue'
  *    아래에서 지도로 나가는 좌표는 전부 toLngLat() 를 통과한다.
  */
 import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Cluster, ClusterInput } from '#shared/utils/cluster'
 import { boundsOf, toLngLat } from '#shared/utils/geo'

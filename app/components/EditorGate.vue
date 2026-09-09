@@ -43,7 +43,7 @@ async function submit() {
     <form class="card" method="post" @submit.prevent="submit">
       <header>
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
-        <span>{{ error ? '비밀번호가 맞지 않습니다' : '편집 잠금' }}</span>
+        <span>편집 잠금</span>
       </header>
 
       <div class="body">
@@ -67,7 +67,7 @@ async function submit() {
           aria-hidden="true"
         >
 
-        <label class="field" :class="{ bad: !!error }">
+        <label class="field field-control" :class="{ bad: !!error }">
           <input
             v-model="password"
             type="password"
@@ -75,15 +75,17 @@ async function submit() {
             autocomplete="current-password"
             :disabled="busy"
             aria-label="편집 비밀번호"
+            :aria-invalid="!!error"
+            :aria-describedby="error ? 'gate-error' : undefined"
           >
         </label>
 
-        <p class="note mono">비밀번호는 서버 환경변수에 있습니다 — 재발급은 배포로만.</p>
+        <Transition name="fade"><p v-if="error" id="gate-error" class="error" role="alert">{{ error }}</p></Transition>
 
         <!-- 오른쪽 정렬 · 가장 오른쪽이 주 동작. 순서를 바꿔야 하는 자리라 마크업을 뒤집는다 -->
         <div class="actions">
-          <NuxtLink to="/" class="ghost mono">읽기로 돌아가기</NuxtLink>
-          <button type="submit" class="primary mono" :disabled="busy">
+          <NuxtLink to="/" class="btn foot ghost">읽기로 돌아가기</NuxtLink>
+          <button type="submit" class="btn foot primary" :disabled="busy">
             {{ busy ? '확인 중…' : '편집 시작' }}
           </button>
         </div>
@@ -105,7 +107,8 @@ async function submit() {
 
 .card {
   width: min(640px, 100%);
-  background: var(--s1);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
   border: 1px solid var(--hair);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -134,16 +137,8 @@ h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
   align-items: center;
   height: 46px;
   padding: 0 14px;
-  background: var(--field);
   /* 평상시는 중립. 예전엔 --focus-border + --focus-ring 이 상시 걸려 있어
      늘 포커스된 것처럼 보였고, 거기에 input 자신의 outline 이 겹쳐 이중 링이 됐다. */
-  border: 1px solid rgb(var(--mid-rgb) / 0.16);
-  border-radius: var(--radius);
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-.field:focus-within {
-  border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
 }
 .field.bad { border-color: rgb(var(--danger-rgb) / 0.6); box-shadow: 0 0 0 3px rgb(var(--danger-rgb) / 0.12); }
 /* 화면에서는 감추되 DOM 에는 남긴다 — display:none 이면 암호 관리자가 못 본다 */
@@ -167,33 +162,15 @@ h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
   color: var(--ink);
 }
 
-.note { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
+.error { font-size: var(--fs-sm); line-height: 1.7; color: var(--danger); }
 
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 2px; }
 /* 두 버튼 높이를 맞춘다 — 테두리 유무 때문에 37.6 / 39.6 으로 어긋나 있었다.
    헤더 밖 조작 요소라 44px. */
 .actions > * { min-height: 44px; box-sizing: border-box; }
-.primary {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  /* base.css 의 .btn.primary 와 같은 처방 — tokens.css 의 --primary-fill 주석 참고 */
-  background: var(--primary-fill);
-  color: var(--ink);
-  border-radius: var(--radius);
-  padding: 9px 15px;
-  font-size: var(--fs-xs);
-  cursor: pointer;
-}
-.primary:hover:not(:disabled) { filter: brightness(1.2); }
-.primary:disabled { opacity: 0.5; cursor: default; }
-.ghost {
-  display: flex;
-  align-items: center;
-  padding: 9px 15px;
-  border: 1px solid rgb(var(--mid-rgb) / 0.2);
-  border-radius: var(--radius);
-  font-size: var(--fs-xs);
-  color: var(--mid);
+@media (max-width: 900px) {
+  .body { padding: 24px; }
+  .actions { flex-wrap: wrap; }
+  .actions > * { flex: 1; }
 }
 </style>

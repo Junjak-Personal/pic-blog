@@ -10,7 +10,7 @@
   border: 0;
   background: none;
   cursor: pointer;
-  transition: filter 0.12s;
+  transition: filter var(--duration-fast) var(--ease-out);
 }
 
 .map-marker .body {
@@ -33,7 +33,7 @@
   color: var(--day, var(--mid));
   border: 1.5px solid var(--day, rgb(var(--acc-rgb) / 0.55));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
-  transition: transform 0.12s, background 0.12s, color 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
 .map-marker .tail {
@@ -134,3 +134,18 @@
  */
 .map-marker.sm .body { width: 24px; height: 24px; font-size: var(--fs-micro); border-width: 1px; }
 .map-marker.sm:hover .body { background: var(--acc); border-color: var(--acc); color: var(--s0); }
+
+/* Map controls belong to the same dark surface vocabulary as the surrounding UI. */
+.mapboxgl-ctrl-group {
+  background: var(--surface-raised);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+.mapboxgl-ctrl-group button + button { border-top-color: var(--hair); }
+.mapboxgl-ctrl-group button:not(:disabled):hover { background: var(--surface-hover); }
+.mapboxgl-ctrl-group .mapboxgl-ctrl-icon { filter: invert(0.85); }
+.mapboxgl-ctrl-attrib, .mapboxgl-ctrl-attrib.mapboxgl-compact { background: var(--surface-raised); color: var(--mid); }
+.mapboxgl-ctrl-attrib a { color: var(--mid); }
+.mapboxgl-ctrl-attrib-button { filter: invert(0.85); }

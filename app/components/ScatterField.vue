@@ -83,7 +83,7 @@ onMounted(() => {
   background: var(--s3);
   cursor: pointer;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-  transition: filter 0.14s;
+  transition: filter var(--duration-fast) var(--ease-out);
 }
 .card:hover { filter: brightness(1.35); }
 .card img { display: block; width: 100%; height: 100%; object-fit: cover; }

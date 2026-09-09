@@ -9,7 +9,6 @@ import MapFrame from '~/components/MapFrame.vue'
  *    실제로 운영에서 기록 하나의 마커가 띠 위로 완전히 빠져나가 있었다.
  */
 import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
 import type { PostSummary } from '#shared/types/db'
 import { boundsOf } from '#shared/utils/geo'
 import { skWhileLoading } from '~/utils/img'

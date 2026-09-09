@@ -12,7 +12,6 @@ import MapFrame from '~/components/MapFrame.vue'
  * 🔴 좌표 순서: 초안은 lat/lng, Mapbox 는 [lng, lat] 다. toLngLat() 를 통과시킨다.
  */
 import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
 import { boundsOf, toLngLat } from '#shared/utils/geo'
 
 export interface BoardMapPoint {

@@ -144,6 +144,7 @@ const deviceLine = computed(() => {
         화면 곳곳에 흩어져 있으면 읽는 사람이 세 군데를 훑어야 한다.
         흐름에서 빼서(position: absolute) 열고 닫아도 레이아웃이 움직이지 않는다.
       -->
+      <Transition name="fade">
       <div v-if="props.mobile && infoOpen" class="infopane scroll-y" role="region" aria-label="포인트 정보">
         <dl class="ipair">
           <dt class="mono">시각</dt>
@@ -170,6 +171,8 @@ const deviceLine = computed(() => {
 
         <PointExtras :links="props.point.links" :expenses="props.point.expenses" />
       </div>
+
+      </Transition>
 
       <div class="scatter-slot">
         <!--
@@ -229,14 +232,14 @@ const deviceLine = computed(() => {
 
 .sheet {
   /* 끄는 동안은 손가락을 그대로 따라가고, 놓으면 제자리로 돌아간다 */
-  transition: transform 0.22s ease;
+  transition: transform var(--duration-enter) var(--ease-out);
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: rgb(var(--sheet-rgb) / 0.96);
   backdrop-filter: blur(14px);
   border-top: 1px solid rgb(var(--acc-rgb) / 0.3);
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 /* 손잡이 — 데스크탑에는 시트가 없다 */

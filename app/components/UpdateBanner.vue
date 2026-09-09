@@ -67,7 +67,7 @@ const dismissed = ref(false)
 }
 .x:active { background: rgb(var(--acc-rgb) / 0.14); }
 
-.rise-enter-active, .rise-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.rise-enter-active, .rise-leave-active { transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out); }
 .rise-enter-from, .rise-leave-to { opacity: 0; transform: translate(-50%, 10px); }
 .rise-enter-to, .rise-leave-from { transform: translateX(-50%); }
 </style>

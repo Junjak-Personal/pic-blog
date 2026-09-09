@@ -12,7 +12,7 @@ defineProps<{ label: string }>()
 </script>
 
 <template>
-  <div class="busy" role="status" aria-live="polite">
+  <div class="busy stage-entry" role="status" aria-live="polite">
     <div class="card">
       <span class="spin" />
       <span class="mono text">{{ label }}</span>
@@ -40,9 +40,9 @@ defineProps<{ label: string }>()
   gap: 12px;
   padding: 14px 20px;
   border-radius: var(--radius-lg);
-  background: rgb(var(--s1-rgb) / 0.92);
+  background: var(--surface-raised);
   border: 1px solid rgb(var(--acc-rgb) / 0.28);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-float);
 }
 .text { font-size: var(--fs-sm); color: var(--mid); }
 </style>

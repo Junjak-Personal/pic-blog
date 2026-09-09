@@ -26,19 +26,19 @@ const { pending, open } = useConfirmState()
 <template>
   <AlertDialogRoot v-model:open="open">
     <AlertDialogPortal>
-      <AlertDialogOverlay class="ovl" />
+      <AlertDialogOverlay class="dialog-overlay" />
       <!--
         마운트·언마운트는 Reka 에 맡긴다. 여기에 v-if 를 겹쳐 걸면 닫히는 도중
         콘텐츠가 먼저 사라져 포커스 복원·스크롤 잠금 해제가 어긋날 수 있다.
         값은 옵셔널로 읽는다.
       -->
-      <AlertDialogContent class="dlg" @escape-key-down="settleConfirm(false)">
-        <AlertDialogTitle class="dlg-title">{{ pending?.title }}</AlertDialogTitle>
-        <AlertDialogDescription v-if="pending?.body" class="dlg-desc">
+      <AlertDialogContent class="dialog-alert dialog-surface" @escape-key-down="settleConfirm(false)">
+        <AlertDialogTitle class="dialog-title">{{ pending?.title }}</AlertDialogTitle>
+        <AlertDialogDescription v-if="pending?.body" class="dialog-description">
           {{ pending.body }}
         </AlertDialogDescription>
 
-        <div class="dlg-actions">
+        <div class="dialog-actions">
           <AlertDialogCancel class="btn foot ghost mono" @click="settleConfirm(false)">
             {{ pending?.cancelLabel ?? '취소' }}
           </AlertDialogCancel>
@@ -54,33 +54,3 @@ const { pending, open } = useConfirmState()
     </AlertDialogPortal>
   </AlertDialogRoot>
 </template>
-
-<style scoped>
-/* PostSettings 의 다이얼로그와 같은 값 — 두 창이 나란히 뜨는 일은 없지만 같아야 한다 */
-.ovl { position: fixed; inset: 0; z-index: 100; background: rgb(var(--s0-rgb) / 0.72); backdrop-filter: blur(3px); }
-.dlg {
-  position: fixed;
-  z-index: 101;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(460px, calc(100vw - 32px));
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 22px;
-  background: var(--s1);
-  border: 1px solid rgb(var(--acc-rgb) / 0.3);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-}
-.dlg-title { font-size: var(--title-size); letter-spacing: -0.01em; color: var(--ink); }
-.dlg-desc { font-size: var(--fs-md); line-height: 1.7; color: var(--mid); }
-.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-/* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
-
-@media (max-width: 900px) {
-  /* 엄지로 누른다 — 두 버튼이 폭을 나눠 갖고 44px */
-  .dlg-actions .btn { flex: 1; min-height: 44px; }
-}
-</style>

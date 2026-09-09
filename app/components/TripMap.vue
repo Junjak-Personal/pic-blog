@@ -10,7 +10,6 @@ import MapFrame from '~/components/MapFrame.vue'
  *   - 🔴 좌표는 전부 toLngLat() 를 통과한다. lat/lng 를 그대로 넘기면 지구 반대편에 찍힌다
  */
 import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
@@ -289,9 +288,10 @@ function focusActive() {
      * 🔴 duration 을 «준다». 안 주면 flyTo 가 거리로 시간을 정해서, 멀수록 눈에 띄게
      *    느려진다 — 날짜를 건너뛰는 이동에서 답답했다. 고정하면 가까운 이동이든 먼
      *    이동이든 같은 시간에 끝나고, 대신 먼 이동이 더 빠르게 흐를 뿐이다.
-     *    curve 도 낮춘다 — 덜 물러나면 지나갈 길이 짧아진다.
+     *    먼 이동만 500 → 300ms로 줄이고 줌아웃 아크도 낮춘다 (2026-09-09 피드백).
+     *    화면 안의 짧은 이동은 위의 300ms 설정을 그대로 유지한다.
      */
-    m.flyTo({ center: to, zoom, offset, curve: 1.25, duration: 500 })
+    m.flyTo({ center: to, zoom, offset, curve: 1, duration: 300, easing: easeInOut })
   }
 }
 

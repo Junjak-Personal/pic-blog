@@ -121,7 +121,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 
 <template>
   <div v-if="!post" class="page">
-    <section class="empty"><h3>기록을 찾을 수 없습니다</h3></section>
+    <section class="empty stage-entry"><h3>기록을 찾을 수 없습니다</h3></section>
   </div>
 
   <div v-else class="page">
@@ -182,7 +182,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     </p>
 
     <!-- 파일 선택 -->
-    <section v-if="flow.stage.value === 'idle'" class="empty">
+    <section v-if="flow.stage.value === 'idle'" class="empty stage-entry">
       <h3>추가할 사진을 선택하세요</h3>
       <p>기존 포인트 중심에서 반경 안이고 «같은 날»이면 그 포인트에 합류하고, 아니면 새 포인트가 만들어집니다.</p>
       <button type="button" class="btn primary mono big" @click="pick()">사진 선택</button>
@@ -193,24 +193,20 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       </p>
     </section>
 
-    <section v-else-if="flow.stage.value === 'loading'" class="empty">
+    <section v-else-if="flow.stage.value === 'loading'" class="empty stage-entry">
       <h3>사진을 가져오는 중</h3>
       <p class="mono">{{ flow.loadProgress.value.done }} / {{ flow.loadProgress.value.total }}</p>
-      <div class="bar">
-        <span class="bar-fill" :style="{ width: `${(flow.loadProgress.value.done / Math.max(1, flow.loadProgress.value.total)) * 100}%` }" />
-      </div>
+      <ProgressBar :value="flow.loadProgress.value.done" :total="flow.loadProgress.value.total" label="사진 가져오기" />
     </section>
 
-    <section v-else-if="flow.stage.value === 'scanning'" class="empty">
+    <section v-else-if="flow.stage.value === 'scanning'" class="empty stage-entry">
       <h3>사진을 검사하는 중</h3>
       <p class="mono">{{ flow.scanProgress.value.done }} / {{ flow.scanProgress.value.total }}</p>
-      <div class="bar">
-        <span class="bar-fill" :style="{ width: `${(flow.scanProgress.value.done / Math.max(1, flow.scanProgress.value.total)) * 100}%` }" />
-      </div>
+      <ProgressBar :value="flow.scanProgress.value.done" :total="flow.scanProgress.value.total" label="사진 검사" />
     </section>
 
     <!-- 좌표 있는 사진이 하나도 없음 -->
-    <section v-else-if="flow.stage.value === 'preview' && !flow.scanned.value.length" class="empty">
+    <section v-else-if="flow.stage.value === 'preview' && !flow.scanned.value.length" class="empty stage-entry">
       <h3>선택한 사진에 위치 정보가 없습니다</h3>
       <p>좌표 없는 사진은 어떤 반경에서도 포인트가 되지 않습니다.</p>
       <SkippedList :files="flow.skipped.value" />
@@ -326,7 +322,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
       채우려면 여러 번 올려야 하는데, 매번 편집 화면을 거쳐 「사진 추가」를 다시 찾는 건
       같은 일을 네 번 하는 것이다.
     -->
-    <section v-else-if="flow.stage.value === 'done' && !flow.failed.value.length && done" class="empty">
+    <section v-else-if="flow.stage.value === 'done' && !flow.failed.value.length && done" class="empty stage-entry">
       <span class="tick">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10" /></svg>
       </span>
@@ -353,11 +349,11 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     </section>
 
     <!-- 업로드 진행 · 부분 실패. 조치는 «끝난 뒤»에만 낸다 — new.vue 의 같은 자리 주석 참고 -->
-    <section v-else class="empty">
+    <section v-else class="empty stage-entry">
       <h3 v-if="flow.stage.value === 'uploading'">업로드 중</h3>
       <h3 v-else-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
       <h3 v-else>저장했습니다</h3>
-      <div class="bar"><span class="bar-fill" :style="{ width: `${flow.uploadPercent.value}%` }" /></div>
+      <ProgressBar :value="flow.uploadPercent.value" label="사진 업로드" />
       <p class="mono">
         업로드 {{ flow.uploaded.value }} / {{ flow.totalPhotos.value }}장 ({{ flow.uploadPercent.value }}%)
         <template v-if="flow.failed.value.length">· 실패 {{ flow.failed.value.length }}장</template>
@@ -404,7 +400,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   justify-content: space-between;
   gap: 20px;
   padding: 0 var(--topbar-x);
-  border-bottom: 1px solid rgb(var(--acc-rgb) / 0.28);
+  border-bottom: 1px solid var(--hair);
   background: rgb(var(--acc-rgb) / 0.06);
   /*
    * standalone 은 레이아웃 뷰포트가 상태바 밑까지 올라간다. 상단바가 직접
@@ -426,7 +422,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
   gap: 7px;
   background: var(--acc);
   color: var(--s0);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 4px 9px;
   font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
@@ -594,7 +590,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
 .pick-hint { max-width: 420px; font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 
-.t-bar { flex: 1; display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: rgb(var(--mid-rgb) / 0.1); }
+.t-bar { flex: 1; display: flex; height: 6px; border-radius: var(--radius-sm); overflow: hidden; background: rgb(var(--mid-rgb) / 0.1); }
 .t-fill { display: block; height: 100%; }
 .t-fill.join { background: rgb(var(--acc-rgb) / 0.35); }
 .t-fill.new { background: var(--acc); }
@@ -641,8 +637,6 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 }
 .empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
 .empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
-.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
-.bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .failed { display: flex; flex-direction: column; gap: 6px; width: min(460px, 100%); margin: 0; padding: 0; list-style: none; }
 .failed li {
   display: flex;

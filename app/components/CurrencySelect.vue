@@ -26,7 +26,7 @@ const model = defineModel<CurrencyCode>({ required: true })
 
 <template>
   <SelectRoot v-model="model">
-    <SelectTrigger class="curtrigger mono" :aria-label="label">
+    <SelectTrigger class="curtrigger field-control mono" :aria-label="label">
       <SelectValue class="curvalue" />
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6" /></svg>
     </SelectTrigger>
@@ -36,7 +36,7 @@ const model = defineModel<CurrencyCode>({ required: true })
         popper — 기본값(item-aligned)은 고른 항목을 트리거 «위»에 겹쳐 띄우는 맥OS 방식이라
         좁은 편집 칸에서 목록이 화면 밖으로 밀린다. 부가 메뉴와 같은 방식으로 통일한다.
       -->
-      <SelectContent class="cur-content" position="popper" :side-offset="6" :collision-padding="12">
+      <SelectContent class="cur-content popover-surface" position="popper" :side-offset="6" :collision-padding="12">
         <SelectViewport class="cur-viewport">
           <SelectItem
             v-for="c in CURRENCIES"
@@ -84,16 +84,10 @@ const model = defineModel<CurrencyCode>({ required: true })
   justify-content: space-between;
   gap: 4px;
   padding: 0 8px 0 10px;
-  background: var(--field);
-  border: 1px solid rgb(var(--mid-rgb) / 0.16);
-  border-radius: var(--radius);
   font-size: var(--fs-sm);
   color: var(--ink);
   cursor: pointer;
 }
-.curtrigger:hover { border-color: rgb(var(--acc-rgb) / 0.34); }
-.curtrigger:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
-.curtrigger[data-state='open'] { border-color: var(--focus-border); }
 .curtrigger svg { flex: none; color: var(--deep); }
 .curvalue { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

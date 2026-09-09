@@ -524,7 +524,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   border: 1px solid var(--hair);
   border-radius: var(--radius-lg);
   background: rgb(var(--acc-rgb) / 0.03);
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
   /*
    * 가상 스크롤 — 화면 밖 그룹은 브라우저가 통째로 건너뛴다 (레이아웃도 페인트도).
    *
@@ -594,7 +594,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.badge-new { flex: none; padding: 2px 6px; border-radius: 4px; font-size: var(--fs-micro); background: rgb(var(--route-soft-rgb) / 0.16); color: var(--route); }
+.badge-new { flex: none; padding: 2px 6px; border-radius: var(--radius-sm); font-size: var(--fs-micro); background: rgb(var(--route-soft-rgb) / 0.16); color: var(--route); }
 .gmeta { flex: none; font-size: var(--fs-2xs); color: var(--faint); }
 .gspot { flex: none; font-size: var(--fs-2xs); color: var(--deep); }
 
@@ -633,7 +633,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   justify-content: center;
   gap: 5px;
   border: 1px dashed rgb(var(--acc-rgb) / 0.34);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--deep);
   font-size: var(--fs-micro);
@@ -690,7 +690,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: rgb(var(--s0-rgb) / 0.72);
   color: var(--mid);
   cursor: pointer;
@@ -703,7 +703,7 @@ function onKey(e: KeyboardEvent, groupIndex: number, photoIndex: number) {
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--deep);
   cursor: grab;
   /* 손잡이 위에서는 브라우저 스크롤을 아예 넘겨받는다 — 여기서 시작하면 곧바로 드래그다 */

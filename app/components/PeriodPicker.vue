@@ -66,12 +66,12 @@ const label = computed(() => {
 <template>
   <!-- closeOnSelect 는 기본 false 다 — 시작을 찍은 뒤 종료를 찍을 때까지 열려 있어야 한다 -->
   <DateRangePickerRoot v-model="range" locale="ko-KR">
-    <DateRangePickerTrigger class="periodtrigger mono" data-testid="settings-period-trigger">
+    <DateRangePickerTrigger class="periodtrigger field-control mono" data-testid="settings-period-trigger">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
       <span class="periodtext">{{ label }}</span>
     </DateRangePickerTrigger>
 
-    <DateRangePickerContent class="cal-content" :side-offset="6" :collision-padding="12">
+    <DateRangePickerContent class="cal-content popover-surface" :side-offset="6" :collision-padding="12">
       <DateRangePickerCalendar v-slot="{ weekDays, grid }" class="cal">
         <DateRangePickerHeader class="cal-head">
           <DateRangePickerPrev class="cal-nav" aria-label="이전 달">
@@ -115,16 +115,10 @@ const label = computed(() => {
   /* 위아래 입력들과 같은 높이 — 버튼이지만 «입력 자리»에 서므로 같은 토큰을 읽는다 */
   min-height: var(--field-h);
   padding: 0 12px;
-  background: var(--field);
-  border: 1px solid rgb(var(--mid-rgb) / 0.16);
-  border-radius: var(--radius);
   font-size: var(--fs-md);
   color: var(--ink);
   cursor: pointer;
 }
-.periodtrigger:hover { border-color: rgb(var(--acc-rgb) / 0.34); }
-.periodtrigger:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; }
-.periodtrigger[data-state='open'] { border-color: var(--focus-border); }
 .periodtrigger svg { flex: none; color: var(--deep); }
 /* 글자는 왼쪽에 붙는다 — 100% 라 가운데로 두면 아이콘이 칸 한복판에 떠 있게 된다 */
 .periodtext { letter-spacing: 0.02em; }

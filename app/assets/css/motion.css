@@ -1,0 +1,46 @@
+/* Motion is state feedback. No layout properties or persistent layer promotion. */
+:where(button, a, .input, .field-control, .phototile, .ovf-item, .cur-item, .cal-day, .stepbtn, .tab, .prow, .row) {
+  transition: color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+.btn { transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); }
+
+/* Opacity only on routes: transforms would change fixed-position descendants' viewport. */
+.page-enter-active, .panel-enter-active, .fade-enter-active { transition: opacity var(--duration-fast) var(--ease-out); }
+.page-leave-active, .panel-leave-active, .fade-leave-active { transition: opacity 80ms ease-out; }
+.page-enter-from, .page-leave-to, .panel-enter-from, .panel-leave-to, .fade-enter-from, .fade-leave-to { opacity: 0; }
+.page-leave-active, .panel-leave-active { pointer-events: none; }
+
+.popover-surface[data-state='open'] { animation: ui-pop-in var(--duration-enter) var(--ease-out); }
+.popover-surface[data-state='closed'] { animation: ui-pop-out var(--duration-exit) var(--ease-out); }
+.dialog-overlay[data-state='open'], .lightbox-overlay[data-state='open'] { animation: ui-fade-in var(--duration-normal) var(--ease-out); }
+.dialog-overlay[data-state='closed'], .lightbox-overlay[data-state='closed'] { animation: ui-fade-out var(--duration-exit) ease-out; }
+.dialog-alert[data-state='open'] { animation: ui-alert-in var(--duration-enter) var(--ease-out); }
+.dialog-alert[data-state='closed'] { animation: ui-alert-out var(--duration-exit) var(--ease-out); }
+.dialog-native[open] { animation: ui-pop-in var(--duration-enter) var(--ease-out); }
+.dialog-native[open]::backdrop { animation: ui-fade-in var(--duration-normal) var(--ease-out); }
+.lightbox-content[data-state='open'], .stage-entry { animation: ui-fade-in var(--duration-normal) var(--ease-out); }
+.lightbox-content[data-state='closed'] { animation: ui-fade-out var(--duration-exit) ease-out; }
+
+@keyframes ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ui-pop-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ui-pop-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(4px) scale(0.98); } }
+@keyframes ui-alert-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(0.98); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes ui-alert-out { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) scale(0.98); } }
+
+/* This also covers component-scoped motion and third-party CSS transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .btn:active:not(:disabled) { transform: none; }
+}

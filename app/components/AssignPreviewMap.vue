@@ -7,7 +7,6 @@ import MapFrame from '~/components/MapFrame.vue'
  */
 import mapboxgl from 'mapbox-gl'
 import { tokenColor } from '~/utils/route-style'
-import 'mapbox-gl/dist/mapbox-gl.css'
 import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
 import type { AssignResult, ClusterInput } from '#shared/utils/cluster'

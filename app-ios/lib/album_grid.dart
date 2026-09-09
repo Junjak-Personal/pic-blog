@@ -108,7 +108,7 @@ class AlbumGridPickerDelegate extends DefaultAssetPickerBuilderDelegate {
              *    모서리가 깨져 보였다. 잘라낸 다음 그 위에 테두리를 얹으면 깨끗하다.
              */
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(kControlRadius),
               child: Stack(
                 fit: StackFit.expand,
                 children: <Widget>[
@@ -121,8 +121,8 @@ class AlbumGridPickerDelegate extends DefaultAssetPickerBuilderDelegate {
                     Image.memory(wrapper.thumbnailData!, fit: BoxFit.cover),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      border: Border.all(color: current ? kAcc : const Color(0x24B1C2C7)),
-                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: current ? kAcc : kHair),
+                      borderRadius: BorderRadius.circular(kControlRadius),
                     ),
                   ),
                 ],

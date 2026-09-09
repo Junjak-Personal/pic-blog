@@ -54,17 +54,12 @@ useHead({ title: '기록 관리 — pic·blog' })
     </ul>
 
     <!-- 아트보드 1c ① 기록 0 -->
-    <section v-else-if="!posts.length" class="empty">
-      <span class="empty-icon">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg>
-      </span>
-      <h3>아직 기록이 없습니다</h3>
-      <p>사진을 올리면 EXIF 의 GPS 좌표로 포인트가 만들어지고, 촬영 시각 순으로 동선이 이어집니다.</p>
-      <NuxtLink to="/editor/new" class="btn primary mono big">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-        첫 기록 만들기
-      </NuxtLink>
-    </section>
+    <EmptyState v-else-if="!posts.length" title="아직 기록이 없습니다" description="사진을 올려 여행의 장소와 순간을 한곳에 남겨보세요.">
+      <template #icon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg></template>
+      <template #action>
+        <NuxtLink to="/editor/new" class="btn primary big">첫 기록 만들기</NuxtLink>
+      </template>
+    </EmptyState>
 
     <ul v-else class="list safe-bottom">
       <li v-for="post in posts" :key="post.slug" class="row">
@@ -153,7 +148,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   flex-direction: column;
   gap: 12px;
   margin: 0;
-  padding: 22px 32px;
+  padding: 24px;
   list-style: none;
   align-content: start;
 }
@@ -167,8 +162,8 @@ useHead({ title: '기록 관리 — pic·blog' })
   padding: 14px 18px;
   background: var(--s2);
   border: 1px solid rgb(var(--mid-rgb) / 0.13);
-  border-radius: var(--radius);
-  transition: border-color 0.14s;
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 }
 .row { position: relative; cursor: pointer; }
 
@@ -178,12 +173,12 @@ useHead({ title: '기록 관리 — pic·blog' })
  * .sk 의 배경을 통째로 덮어 투명해진다.
  */
 .sk-row { pointer-events: none; }
-.sk-cover { display: block; width: 88px; height: 62px; border-radius: 6px; }
+.sk-cover { display: block; width: 88px; height: 62px; border-radius: var(--radius-sm); }
 .sk-row .main { display: flex; flex-direction: column; gap: 8px; }
-.line { display: block; height: 11px; border-radius: 4px; }
+.line { display: block; height: 11px; border-radius: var(--radius-sm); }
 .line.lg { height: 17px; width: 46%; }
 .line.sm { height: 9px; width: 62%; }
-.row:hover { border-color: rgb(var(--acc-rgb) / 0.45); }
+.row:hover { border-color: var(--border-hover); background: var(--s2); }
 
 .cover {
   position: relative;
@@ -191,9 +186,9 @@ useHead({ title: '기록 관리 — pic·blog' })
   width: 88px;
   height: 62px;
   flex: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: repeating-linear-gradient(135deg, #26262C 0 9px, #1E1E24 9px 18px);
+  background: var(--field);
 }
 .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cover-empty {
@@ -233,7 +228,7 @@ useHead({ title: '기록 관리 — pic·blog' })
   margin-right: 6px;
   padding: 1px 5px;
   border: 1px solid rgb(var(--mid-rgb) / 0.28);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--mid);
 }
 
@@ -257,31 +252,6 @@ useHead({ title: '기록 관리 — pic·blog' })
 .view:active { background: rgb(var(--acc-rgb) / 0.18); }
 
 /* 아트보드 1c ① 기록 0 */
-.empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 40px;
-  text-align: center;
-  /* 셸이 overflow: hidden 이라 문서 스크롤이 없다 — 짧은 화면(가로 모드 등)에서
-     내용이 넘치면 여기서 굴러야 잘리지 않는다 */
-  overflow-y: auto;
-}
-.empty-icon {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: var(--topbar-h);
-  border-radius: 16px;
-  background: rgb(var(--acc-rgb) / 0.1);
-  border: 1px solid var(--hair);
-  color: var(--deep);
-}
-.empty h3 { font-size: var(--fs-display); letter-spacing: -0.02em; color: var(--ink); }
-.empty p { max-width: 460px; font-size: var(--fs-lg); line-height: 1.7; color: var(--mid); opacity: 0.85; }
 
 @media (max-width: 900px) {
   .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; }

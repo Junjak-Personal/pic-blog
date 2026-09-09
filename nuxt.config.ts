@@ -2,8 +2,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-08-26',
   devtools: { enabled: false },
   modules: ['nuxt-auth-utils', 'reka-ui/nuxt'],
-  css: ['~/assets/css/tokens.css', '~/assets/css/base.css', '~/assets/css/map.css', '~/assets/css/menu.css'],
+  css: ['mapbox-gl/dist/mapbox-gl.css', '~/assets/css/tokens.css', '~/assets/css/base.css', '~/assets/css/map.css', '~/assets/css/menu.css', '~/assets/css/motion.css'],
   app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'page', mode: 'out-in' },
     head: {
       htmlAttrs: { lang: 'ko' },
       link: [
@@ -11,12 +13,7 @@ export default defineNuxtConfig({
         // iOS 는 manifest 의 icons 를 홈 화면에 쓰지 않는다 — apple-touch-icon 이 따로 필요하다
         { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png', sizes: '180x180' },
         { rel: 'icon', href: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Geist+Mono:wght@400;500;600&display=swap',
-        },
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' },
         // Pretendard is not on Google Fonts — jsdelivr CDN (design doc §11.3)
         {
           rel: 'stylesheet',

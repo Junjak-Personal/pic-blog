@@ -208,9 +208,9 @@ function cancelRecluster() {
 
     <AlertDialogRoot v-model:open="dialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="ovl" />
-        <AlertDialogContent class="dlg" @escape-key-down="cancelRecluster">
-          <AlertDialogTitle class="dlg-title">포인트 범위 변경</AlertDialogTitle>
+        <AlertDialogOverlay class="dialog-overlay" />
+        <AlertDialogContent class="dialog-alert dialog-surface" @escape-key-down="cancelRecluster">
+          <AlertDialogTitle class="dialog-title">포인트 범위 변경</AlertDialogTitle>
 
           <div class="dlg-diff mono">
             <span>{{ currentRadius ?? '?' }}m</span>
@@ -222,7 +222,7 @@ function cancelRecluster() {
             <b>{{ pendingCount }}개</b>
           </div>
 
-          <AlertDialogDescription class="dlg-desc">
+          <AlertDialogDescription class="dialog-description">
             <template v-if="atRisk.length">
               아래 내용이 사라집니다. 되돌릴 수 없습니다.
             </template>
@@ -240,7 +240,7 @@ function cancelRecluster() {
 
           <p class="mono dlg-note">사진과 촬영 정보는 그대로 남습니다. 포인트 안 사진 순서는 촬영 시각 순으로 돌아갑니다.</p>
 
-          <div class="dlg-actions">
+          <div class="dialog-actions">
             <AlertDialogCancel class="btn foot ghost mono" @click="cancelRecluster">취소</AlertDialogCancel>
             <AlertDialogAction class="btn foot danger mono" @click="confirmRecluster">
               {{ atRisk.length ? '바꾸고 지우기' : '범위 바꾸기' }}
@@ -272,17 +272,16 @@ function cancelRecluster() {
 .warn { font-size: var(--fs-2xs); color: var(--danger); }
 
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.blabel { font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+.blabel { font-family: var(--font-body); font-size: var(--fs-sm); letter-spacing: 0.02em; color: var(--ink); }
 .bnow { font-size: var(--fs-xs); color: var(--deep); }
 
 .field { display: flex; flex-direction: column; gap: 7px; }
-.flabel { font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 /* 입력은 base.css 의 .input 한 벌을 쓴다 */
 
 .switch { position: relative; display: flex; align-items: center; gap: 11px; cursor: pointer; }
 .switch input { position: absolute; width: 42px; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
-.track { position: relative; display: block; width: 42px; height: 24px; flex: none; border-radius: 999px; background: rgb(var(--mid-rgb) / 0.2); transition: background 0.14s; }
-.knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--mid); transition: transform 0.14s, background 0.14s; }
+.track { position: relative; display: block; width: 42px; height: 24px; flex: none; border-radius: 999px; background: rgb(var(--mid-rgb) / 0.2); transition: background-color var(--duration-fast) var(--ease-out); }
+.knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--mid); transition: transform var(--duration-normal) var(--ease-out), background-color var(--duration-fast) var(--ease-out); }
 .switch input:checked ~ .track { background: rgb(var(--acc-rgb) / 0.9); }
 .switch input:checked ~ .track .knob { transform: translateX(18px); background: var(--s0); }
 .switch input:focus-visible ~ .track { box-shadow: var(--focus-ring); }
@@ -300,29 +299,9 @@ function cancelRecluster() {
 .hint { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 .warn { font-size: var(--fs-2xs); line-height: 1.7; color: var(--danger); }
 
-.ovl { position: fixed; inset: 0; z-index: 100; background: rgb(var(--s0-rgb) / 0.7); backdrop-filter: blur(3px); }
-.dlg {
-  position: fixed;
-  z-index: 101;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(460px, calc(100vw - 32px));
-  max-height: calc(100dvh - 64px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: var(--s1);
-  border: 1px solid rgb(var(--acc-rgb) / 0.28);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-}
-.dlg-title { font-size: var(--title-size); color: var(--ink); }
 .dlg-diff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--deep); }
 .dlg-diff b { color: var(--ink); font-size: var(--fs-md); }
 .dlg-sep { color: var(--faint); }
-.dlg-desc { font-size: var(--fs-md); line-height: 1.6; color: var(--mid); }
 
 .lose { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 10px 12px; list-style: none; background: rgb(var(--danger-rgb) / 0.07); border: 1px solid rgb(var(--danger-rgb) / 0.3); border-radius: var(--radius); }
 .lose li { display: flex; align-items: baseline; gap: 10px; }
@@ -330,7 +309,6 @@ function cancelRecluster() {
 .lose-detail { margin-left: auto; font-size: var(--fs-2xs); color: var(--danger); }
 
 .dlg-note { font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
-.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* 버튼은 base.css 의 .btn / .btn.foot 한 벌을 쓴다 */
 
 @media (max-width: 900px) {
@@ -355,6 +333,5 @@ function cancelRecluster() {
   /* 「EXIF 값으로」는 자기 줄로 내려간다 */
   .revert { flex: 1 1 100%; }
   .revert { min-height: 44px; }
-  .dlg-actions .btn { flex: 1; min-height: 44px; }
 }
 </style>

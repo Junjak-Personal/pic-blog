@@ -49,7 +49,7 @@ defineExpose({ canvas })
 <style scoped>
 .mapframe {
   overflow: hidden;
-  background: #06070A;
+  background: var(--s0);
   /* 마커의 z-index 가 루트로 새어 나가 라이트박스·시트 위에 그려지는 걸 막는다 */
   isolation: isolate;
 }

@@ -202,7 +202,7 @@ async function onBack() {
     </BottomCta>
 
     <!-- 1단계 — 파일 선택 -->
-    <section v-if="flow.stage.value === 'idle'" class="empty">
+    <section v-if="flow.stage.value === 'idle'" class="empty stage-entry">
       <span class="empty-icon">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>
       </span>
@@ -224,31 +224,21 @@ async function onBack() {
       가져오기는 껍데기가 사진첩에서 원본을 꺼내는 시간이고(500장이면 여러 초),
       검사는 그 원본의 EXIF 를 읽는 시간이다. 둘 다 조용하면 멈춘 것처럼 보인다.
     -->
-    <section v-else-if="flow.stage.value === 'loading'" class="empty">
+    <section v-else-if="flow.stage.value === 'loading'" class="empty stage-entry">
       <h3>사진을 가져오는 중</h3>
       <p class="mono scan-count">
         {{ flow.loadProgress.value.done }} / {{ flow.loadProgress.value.total }}
       </p>
-      <div class="bar">
-        <span
-          class="bar-fill"
-          :style="{ width: `${(flow.loadProgress.value.done / Math.max(1, flow.loadProgress.value.total)) * 100}%` }"
-        />
-      </div>
+      <ProgressBar :value="flow.loadProgress.value.done" :total="flow.loadProgress.value.total" label="사진 가져오기" />
       <p class="hint mono">사진첩에서 원본을 꺼내고 있습니다</p>
     </section>
 
-    <section v-else-if="flow.stage.value === 'scanning'" class="empty">
+    <section v-else-if="flow.stage.value === 'scanning'" class="empty stage-entry">
       <h3>사진을 검사하는 중</h3>
       <p class="mono scan-count">
         {{ flow.scanProgress.value.done }} / {{ flow.scanProgress.value.total }}
       </p>
-      <div class="bar">
-        <span
-          class="bar-fill"
-          :style="{ width: `${(flow.scanProgress.value.done / Math.max(1, flow.scanProgress.value.total)) * 100}%` }"
-        />
-      </div>
+      <ProgressBar :value="flow.scanProgress.value.done" :total="flow.scanProgress.value.total" label="사진 검사" />
       <p class="hint mono">EXIF 를 읽고 좌표가 없는 사진을 걸러냅니다</p>
     </section>
 
@@ -276,7 +266,7 @@ async function onBack() {
       </p>
 
       <!-- 통과한 사진이 하나도 없다 — 사유는 아래 목록이 한 장씩 말한다 -->
-      <section v-if="!flow.scanned.value.length" class="empty">
+      <section v-if="!flow.scanned.value.length" class="empty stage-entry">
         <h3>올릴 수 있는 사진이 없습니다</h3>
         <p>스크린샷이나 메신저로 받은 사진은 좌표가 지워진 상태로 저장됩니다. 같은 사진이 두 번 들어간 경우도 한 장만 남깁니다.</p>
         <SkippedList :files="flow.skipped.value" />
@@ -424,14 +414,12 @@ async function onBack() {
          («건너뛰고 저장»이 그랬다) 남은 사진이 전부 변환 실패로 떨어졌다 — 포인트는
          있는데 이미지가 전부 깨진 기록이 그렇게 만들어졌다. 진행 중에는 숫자로만 알린다.
     -->
-    <section v-else class="empty">
+    <section v-else class="empty stage-entry">
       <h3 v-if="flow.stage.value === 'uploading'">업로드 중</h3>
       <h3 v-else-if="flow.failed.value.length">사진 {{ flow.failed.value.length }}장이 올라가지 않았습니다</h3>
       <h3 v-else>저장했습니다</h3>
 
-      <div class="bar">
-        <span class="bar-fill" :style="{ width: `${flow.uploadPercent.value}%` }" />
-      </div>
+      <ProgressBar :value="flow.uploadPercent.value" label="사진 업로드" />
       <!-- 퍼센트만으로는 「얼마나 남았는지」가 안 잡힌다 — 장수를 앞에 둔다 -->
       <p class="mono progress-line">
         업로드 {{ flow.uploaded.value }} / {{ flow.totalPhotos.value }}장 ({{ flow.uploadPercent.value }}%)
@@ -624,7 +612,7 @@ async function onBack() {
   cursor: pointer;
 }
 .row:hover { background: rgb(var(--ink-rgb) / 0.06); }
-.row.on { background: rgb(var(--ink-rgb) / 0.1); }
+.row.on { background: var(--selected); }
 .num {
   position: relative;
   display: grid;
@@ -704,8 +692,8 @@ async function onBack() {
 /* 「무엇을 해야 하는지」를 말하는 줄이라 눈에 띄어야 한다 */
 .pick-hint { max-width: 420px; font-size: var(--fs-2xs); line-height: 1.7; color: var(--faint); }
 
-.t-bar { flex: 1; height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.1); overflow: hidden; }
-.t-fill { display: block; height: 100%; border-radius: 6px; background: var(--acc); }
+.t-bar { flex: 1; height: 6px; border-radius: var(--radius-sm); background: rgb(var(--mid-rgb) / 0.1); overflow: hidden; }
+.t-fill { display: block; height: 100%; border-radius: var(--radius-sm); background: var(--acc); }
 .t-count { width: 44px; text-align: right; font-size: var(--fs-xs); color: var(--faint); }
 
 .rules {
@@ -747,7 +735,7 @@ async function onBack() {
   place-items: center;
   width: 60px;
   height: var(--topbar-h);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: rgb(var(--acc-rgb) / 0.1);
   border: 1px solid var(--hair);
   color: var(--deep);
@@ -770,8 +758,6 @@ async function onBack() {
 }
 .picked-range { font-size: var(--fs-sm); color: var(--faint); }
 
-.bar { width: min(420px, 100%); height: 6px; border-radius: 6px; background: rgb(var(--mid-rgb) / 0.12); overflow: hidden; }
-.bar-fill { display: block; height: 100%; background: var(--acc); transition: width 0.2s; }
 .progress-line { font-size: var(--fs-xs); color: var(--deep); }
 
 .failed {

@@ -40,7 +40,7 @@ withDefaults(defineProps<{
       </svg>
     </DropdownMenuTrigger>
     <DropdownMenuPortal>
-      <DropdownMenuContent class="ovf-content" :align="align" :side-offset="8" :collision-padding="12">
+      <DropdownMenuContent class="ovf-content popover-surface" :align="align" :side-offset="8" :collision-padding="12">
         <slot />
       </DropdownMenuContent>
     </DropdownMenuPortal>
