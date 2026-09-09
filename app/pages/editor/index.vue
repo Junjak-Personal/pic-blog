@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { vSk } from '~/utils/img'
+import { SKELETON_COUNTS } from '~/utils/skeleton'
 import { vTip } from '~/utils/tip'
 /**
  * 기록 관리 목록 — 편집 진입점.
@@ -43,7 +44,7 @@ useHead({ title: '기록 관리 — pic·blog' })
 
     <!-- 불러오는 중 — 행의 «모양»을 잡아둔다. pending 에도 posts 는 [] 라 이 갈래가 먼저다. -->
     <ul v-if="status === 'pending'" class="list safe-bottom" role="status" aria-label="기록을 불러오는 중">
-      <li v-for="i in 3" :key="i" class="row sk-row" aria-hidden="true">
+      <li v-for="i in SKELETON_COUNTS.posts" :key="i" class="row sk-row" aria-hidden="true">
         <span class="sk sk-cover" />
         <div class="main">
           <span class="sk line lg" />

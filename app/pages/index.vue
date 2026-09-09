@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { vSk } from '~/utils/img'
+import { SKELETON_COUNTS } from '~/utils/skeleton'
 import { vTip } from '~/utils/tip'
 import BrandMark from '~/components/BrandMark.vue'
 import MapSkeleton from '~/components/MapSkeleton.vue'
@@ -102,7 +103,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         <MapSkeleton />
       </div>
       <div class="grid" role="status" aria-label="기록을 불러오는 중">
-        <div v-for="i in 2" :key="i" class="card sk-card" aria-hidden="true">
+        <div v-for="i in SKELETON_COUNTS.posts" :key="i" class="card sk-card" aria-hidden="true">
           <div class="sk sk-cover" />
           <div class="body">
             <span class="sk line lg" />

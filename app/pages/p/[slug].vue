@@ -6,6 +6,7 @@ import AppDialog from '~/components/AppDialog.vue'
  */
 import AppBack from '~/components/AppBack.vue'
 import MapSkeleton from '~/components/MapSkeleton.vue'
+import { SKELETON_COUNTS } from '~/utils/skeleton'
 // 날짜 탭이 지도를 그 날짜 범위로 다시 담아야 해서 fit() 을 직접 부른다 — 타입 때문에 명시적 임포트
 import TripMap from '~/components/TripMap.vue'
 import type { PostDetail } from '#shared/types/db'
@@ -263,7 +264,7 @@ useHead(() => ({
         <MapSkeleton />
       </div>
       <div class="rail sk-rail" aria-hidden="true">
-        <span v-for="i in 7" :key="i" class="sk-line-row">
+        <span v-for="i in SKELETON_COUNTS.points" :key="i" class="sk-line-row">
           <span class="sk sk-num" />
           <span class="sk sk-bar" />
         </span>
@@ -599,8 +600,8 @@ useHead(() => ({
 /* 자리표시 — 실제 화면과 같은 .stage / .rail 을 쓰므로 모바일 규칙이 그대로 적용된다.
    MapSkeleton 은 inset: 0 이라 .stage 가 아니라 «지도 칸»을 기준 삼게 한 겹 둔다. */
 .mapslot { position: relative; min-width: 0; }
-.sk-rail { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-left: 1px solid var(--hair); }
-.sk-line-row { display: flex; align-items: center; gap: 12px; }
+.sk-rail { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-left: 1px solid var(--hair); overflow: hidden; }
+.sk-line-row { display: flex; flex: none; align-items: center; gap: 12px; }
 .sk-num { width: 30px; height: 30px; border-radius: 50%; flex: none; }
 .sk-bar { flex: 1; height: 12px; border-radius: var(--radius-sm); }
 .sk-title { display: block; width: 190px; height: 20px; border-radius: var(--radius-sm); }
