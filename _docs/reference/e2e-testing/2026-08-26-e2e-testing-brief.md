@@ -91,7 +91,7 @@ aside "이 페이지의 레이아웃 문제를 찾아줘"                       
 | **헤더 안** 버튼·링크 | **36px** 고정, 내용 두 축 중앙 |
 | **헤더 밖** 조작 요소 | **44px** (터치 타깃) |
 | 모든 `input` / `textarea` / `select` | **16px 이상** — iOS 가 그 미만이면 페이지를 확대한다 |
-| `--radius-sm` / `--radius` / `--radius-lg` / `--radius-xl` | 8px / 12px / 18px / 24px |
+| `--radius-sm` / `--radius` / `--radius-lg` / `--radius-xl` | 6px / 10px / 14px / 18px |
 
 ### 버튼 규칙
 

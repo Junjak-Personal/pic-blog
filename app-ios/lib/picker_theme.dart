@@ -13,7 +13,7 @@ const kMid = Color(0xFFB1C2C7); // --mid
 const kAcc = Color(0xFF92ACB2); // --acc
 
 const kHair = Color(0x24B1C2C7); // --hair
-const kControlRadius = 12.0; // --radius
+const kControlRadius = 10.0; // --radius
 
 /// 피커를 우리 색으로 입힌다.
 ///

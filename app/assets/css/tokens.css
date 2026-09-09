@@ -135,10 +135,10 @@
      다른 x 에서 시작했다 (아이콘 자체는 두 화면 다 같은 자리다). */
   --topbar-gap: 14px;
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-pill: 999px;
 
   /*
