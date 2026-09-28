@@ -1,10 +1,11 @@
 # BuildKit 없이 빌드된다 (junserver 는 buildx 가 없고 DOCKER_BUILDKIT=0 고정 — 설계문서 §9.1).
 # 그래서 --mount=type=cache / heredoc / COPY --link / --platform 을 일절 쓰지 않는다.
 #
-# Node 22 LTS 로 고정: 로컬은 24 지만 better-sqlite3(네이티브 애드온)의 prebuild 가 가장 넓게
-# 깔린 라인이 LTS 다. 빌드/런타임 스테이지가 **같은 태그**라 glibc·N-API ABI 가 자동으로 맞는다.
+# Node 24 LTS 로 고정: 로컬 개발도 24 라 런타임이 같다. better-sqlite3(네이티브 애드온)는
+# prebuild 가 없으면 아래 툴체인으로 컴파일한다. 빌드/런타임 스테이지가 **같은 태그**라
+# glibc·N-API ABI 가 자동으로 맞는다. CI(deploy.yml)의 node-version 도 같이 바꾼다.
 
-FROM node:22-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 
 # better-sqlite3 의 install 스크립트는 prebuild 내려받기에 실패하면 node-gyp 컴파일로 떨어진다.
@@ -14,11 +15,13 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 
-RUN npm i -g pnpm@11
-
 # 의존성 레이어를 소스와 분리한다. 소스만 바뀐 배포는 이 레이어를 캐시로 건너뛴다.
 # nuxt.config.ts / tsconfig.json 은 postinstall 의 `nuxt prepare` 가 읽는다.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nuxt.config.ts tsconfig.json ./
+
+# pnpm 버전은 package.json 의 packageManager 하나가 정한다 (로컬 corepack · CI 와 같은 값).
+# 여기에 숫자를 따로 적으면 셋이 다시 어긋난다.
+RUN npm i -g "$(node -p "require('./package.json').packageManager")"
 RUN pnpm install --frozen-lockfile
 
 COPY . .
@@ -30,7 +33,7 @@ RUN cd .output/server \
  && node -e "const D=require('better-sqlite3'); new D(':memory:').prepare('select 1').get()"
 
 
-FROM node:22-slim AS runtime
+FROM node:24-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production

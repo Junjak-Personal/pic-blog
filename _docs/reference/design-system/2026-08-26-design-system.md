@@ -5,7 +5,7 @@ topic: design-system
 kind: spec
 scope: frontend
 created: 2026-08-26
-updated: 2026-09-09
+updated: 2026-09-28
 owner: jhyoon
 related:
   - _docs/reference/product-spec/2026-08-25-product-spec.md
@@ -54,7 +54,7 @@ related:
 
 포인트 앵커는 생성 후 움직이지 않는다(설계문서 §4.2). 병합·분할 UI 는 없고 업로드 반경으로만 갈린다.
 
-회귀 검사: `node --experimental-strip-types shared/utils/__checks.ts`
+회귀 검사: `pnpm test` (`shared/utils/algorithms.test.ts`)
 
 ## 3. 산포 — `shared/utils/scatter.ts`
 

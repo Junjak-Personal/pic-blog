@@ -4,7 +4,8 @@ import Database from 'better-sqlite3'
 
 let handle: Database.Database | null = null
 
-const SCHEMA = `
+/** E2E 시드(tests/e2e/seed.ts)도 이 값으로 DB 를 만든다 — 스키마를 두 벌 두지 않으려고 export 한다. */
+export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS post (
   id             INTEGER PRIMARY KEY,
   slug           TEXT NOT NULL UNIQUE,

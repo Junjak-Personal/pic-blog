@@ -2,12 +2,15 @@
   "name": "pic-blog",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.28.0",
   "scripts": {
     "dev": "nuxt dev --dotenv .env.local",
     "build": "nuxt build",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.3",
@@ -18,14 +21,16 @@
     "nuxt-auth-utils": "^0.5.30",
     "reka-ui": "^2.10.3",
     "swiper": "^14.1.0",
-    "vue": "latest",
-    "vue-router": "latest"
+    "vue": "^3.5.41",
+    "vue-router": "^5.2.0"
   },
   "devDependencies": {
     "@adonisjs/hash": "9.1.1",
+    "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/geojson": "^7946.0.16",
     "typescript": "^5.9.2",
+    "vitest": "^5.0.2",
     "vue-tsc": "^3.1.1"
   }
 }

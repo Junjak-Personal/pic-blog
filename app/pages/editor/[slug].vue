@@ -673,7 +673,7 @@ function outExpenses(d: PointDraft): PointExpense[] {
   )
 }
 
-/** 서버 값과 같은가. 두 쪽이 키를 같은 순서로 만들어서 문자열 비교로 충분하다 (__checks.ts 가 지킨다). */
+/** 서버 값과 같은가. 두 쪽이 키를 같은 순서로 만들어서 문자열 비교로 충분하다 (algorithms.test.ts 가 지킨다). */
 function sameLinks(d: PointDraft, base: Point) {
   return JSON.stringify(outLinks(d)) === JSON.stringify(base.links)
 }

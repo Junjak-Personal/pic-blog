@@ -23,17 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # 버전은 package.json 의 packageManager 를 읽는다 — 여기에 따로 적지 않는다
+      # (로컬 corepack · Dockerfile 과 한 값을 쓰려는 것이다).
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 11
 
-      # Dockerfile 이 node:22-slim 이다. CI 도 22 로 맞춰야 여기서 통과한 게
+      # Dockerfile 이 node:24-slim 이다. CI 도 24 로 맞춰야 여기서 통과한 게
       # 이미지 빌드에서도 통과한다.
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -44,8 +44,8 @@ jobs:
 
       # 클러스터링·산포·좌표·EXIF 포맷의 회귀 검사. 목업 data.js 와 대조해 만든 것이라
       # 여기가 깨지면 포인트가 조용히 다르게 묶인다.
-      - name: Algorithm checks
-        run: node --experimental-strip-types shared/utils/__checks.ts
+      - name: Unit tests
+        run: pnpm test
 
       # 빌드는 이미지 안에서 다시 하지만, 실패를 운영 머신까지 끌고 가지 않으려고 먼저 본다.
       - name: Build

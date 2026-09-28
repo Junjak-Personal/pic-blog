@@ -50,7 +50,8 @@ pnpm dev            # .env.local 을 읽는다 · http://localhost:4600
 |---|---|
 | `pnpm typecheck` | vue-tsc |
 | `pnpm build` | 프로덕션 빌드 |
-| `node --experimental-strip-types shared/utils/__checks.ts` | 클러스터링·산포·좌표·EXIF 포맷 회귀 검사 |
+| `pnpm test` | Vitest — 클러스터링·산포·좌표·EXIF 포맷 회귀 검사 (`shared/utils/algorithms.test.ts`) |
+| `pnpm test:e2e` | Playwright — 빌드 후 시드 DB 로 4610 에 띄워 검사. 로컬 `data/` 는 쓰지 않는다 |
 | `aside repl "$(cat scripts/smoke.js)"` | 배포 후 스모크 (운영을 실제로 열어 확인) |
 
 ## 환경변수
