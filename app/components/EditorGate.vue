@@ -21,9 +21,14 @@ async function submit() {
     await refreshSession()
     password.value = ''
   } catch (e) {
-    error.value = e instanceof Error && 'statusMessage' in e && typeof e.statusMessage === 'string'
-      ? e.statusMessage
-      : '비밀번호가 맞지 않습니다'
+    /*
+     * 🔴 사유는 응답 «본문»에서 읽는다 ([slug].vue 의 reason() 과 같은 방식).
+     *    FetchError.statusMessage 는 HTTP 상태줄 값인데, h3 가 거기서 한글을 털어내
+     *    「비밀번호가 맞지 않습니다」가 공백 두 칸만 남는다 — 그걸 쓰면 빈 오류칸이 뜨고
+     *    틀린 비밀번호가 아무 말 없이 지나간다 (E2E editor.spec.ts 가 잡았다).
+     */
+    const detail = e as Error & { data?: { statusMessage?: string } }
+    error.value = detail.data?.statusMessage || '비밀번호가 맞지 않습니다'
     password.value = ''
   } finally {
     busy.value = false
