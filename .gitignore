@@ -14,7 +14,7 @@ data/
 !.env.example
 
 # 작업 부산물 — 아트보드 원본·E2E 스크린샷 (11MB). 가져갈 값은
-# _docs/reference/design-reference.md 로 뽑아두었다.
+# _docs/reference/design-system/2026-08-26-design-system.md 로 뽑아두었다.
 # 배치 규칙인 README.md 만 추적한다. 디렉토리 형태(`_workspace/`)로 쓰면 아래 예외가 먹지 않는다.
 _workspace/*
 !_workspace/README.md

@@ -1,8 +1,8 @@
 # Project Profile
 
 > Generated: 2026-09-28
-> Last updated: 2026-10-01
-> Profile-Generated-At: e5315f2
+> Last updated: 2026-10-07
+> Profile-Generated-At: 4dbd485
 
 ## Quick Summary
 - **Stack**: Nuxt 4.5 + Vue 3.5 + TypeScript(strict) + reka-ui(headless) · SQLite(better-sqlite3) · mapbox-gl · iOS 껍데기 Flutter

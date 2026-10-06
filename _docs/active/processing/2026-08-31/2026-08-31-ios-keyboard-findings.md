@@ -5,7 +5,7 @@ topic: ios-keyboard
 kind: findings
 scope: frontend
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-10-01
 owner: jhyoon
 related:
   - _docs/complete/native-shell/2026-08-28-native-shell.md
@@ -126,6 +126,11 @@ the visual viewport") `100dvh` 는 키보드가 떠도 화면 전체 높이 그�
 |---|---|---|
 | 1 | 폰에서 **360장 실사용** 확인 | 미확인. 업로드 경로를 크게 손본 회차라 함께 봐야 한다 |
 | 2 | **포커스 이동 시 한두 프레임 튐** | 원인 규명 중단. 위 「남은 물음」이 이어서 할 자리다 |
+
+> **2026-10-01 점검 (/docs-sweep, snooze)** — 둘 다 여전히 열려 있다. 둘 다 실기기에서만 닫을 수
+> 있고 그 사이 관련 작업이 없었다. 아래 「코드에 남겨둔 것」 표와 `experiment/ios-keyboard-probe`
+> 브랜치(로컬 · origin)는 이 날짜 기준 그대로임을 확인했다. 조사 로그 `kbprobe-*.log` 는
+> `_workspace/ios-keyboard/` 로 옮겼다.
 
 2 는 정확히는 이렇다: WebKit 이 시각 뷰포트를 −396 밀고 우리가 `scrollTo(0,0)` 으로
 되돌린다. **되돌리기는 반드시 있어야 한다** — 빼면 밀린 채로 남아 화면이 통째로 빈다.
