@@ -4,7 +4,15 @@ export const SEED = {
   private: { id: 2, slug: 'e2e-private', title: 'E2E 비공개 기록', photoId: 2 },
   /** 로그인 spec 이 제목을 고치는 기록 — 다른 spec 이 보는 기록을 건드리지 않으려고 따로 둔다 */
   editable: { id: 3, slug: 'e2e-editable', title: 'E2E 편집용 기록', photoId: 3 },
+  /**
+   * 일차 경계 spec 전용 — 같은 자리에서 8/22 23:50 · 8/23 00:20 · 8/23 10:00.
+   * 기본(자정 · 90분)으로는 포인트 3개, 1일차 끝을 02:00 으로 미루면 앞의 둘이 붙어 2개다.
+   */
+  days: { id: 4, slug: 'e2e-days', title: 'E2E 일차 경계 기록', photoId: 4 },
 } as const
+
+/** SEED.days 의 사진 촬영 시각 — 포인트도 이 순서로 하나씩이다 (기본 규칙으로 묶은 결과) */
+export const DAYS_SHOTS = ['2026-08-22T23:50:00', '2026-08-23T00:20:00', '2026-08-23T10:00:00'] as const
 
 export type SeedPost = (typeof SEED)[keyof typeof SEED]
 

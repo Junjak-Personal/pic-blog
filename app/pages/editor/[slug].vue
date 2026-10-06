@@ -33,6 +33,7 @@ import { vEnter } from '~/utils/enter'
 import PhotoTile from '~/components/PhotoTile.vue'
 import { pointAnchor, type AnchorPick } from '#shared/utils/point-anchor'
 import { sameSpot } from '#shared/utils/geo'
+import type { DaySetting } from '#shared/utils/trip-day'
 import {
   cleanExpenses, cleanLinks, DEFAULT_CURRENCY, formatMoney, googleMapsUrl, isCurrency,
   MAX_EXPENSES, MAX_ITEM, MAX_LINKS, MAX_URL, totalsOf,
@@ -828,15 +829,18 @@ async function revert() {
 }
 
 /**
- * 반경 변경 — 다른 편집과 달리 즉시 서버로 나간다. 2·3단계가 편집할 포인트 자체가
+ * 반경 · 일차 기준 변경 — 다른 편집과 달리 즉시 서버로 나간다. 2·3단계가 편집할 포인트 자체가
  * 갈리기 때문에 초안에 담아둘 수가 없다. 확인은 PostSettings 의 다이얼로그가 이미 받았다.
  */
-async function recluster(radius: number) {
+async function recluster(req: { radius: number; daySettings: DaySetting[] }) {
   if (reclustering.value || changes.value) return
   reclustering.value = true
   errorMessage.value = null
   try {
-    await $fetch(`/api/posts/${slug.value}/recluster`, { method: 'POST', body: { radius } })
+    await $fetch(`/api/posts/${slug.value}/recluster`, {
+      method: 'POST',
+      body: { radius: req.radius, daySettings: req.daySettings },
+    })
     await refresh()
     // 포인트가 통째로 갈렸으므로 초안과 선택을 새 데이터로 다시 세운다
     hydrate()

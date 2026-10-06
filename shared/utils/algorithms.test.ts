@@ -16,6 +16,7 @@ import {
   cleanExpenses, cleanLinks, formatMoney, googleMapsUrl, isSafeUrl, linkLabel,
   parseExpenses, parseLinks, totalsOf, type PointExpense,
 } from './extras.ts'
+import { dayRules, parseDaySettings, tripDates, validateDaySettings } from './trip-day.ts'
 
 /** 로컬 벽시계로 못 박는다 — dayOf 가 로컬 날짜를 보므로 UTC 리터럴로 쓰면 TZ 에 따라 결과가 갈린다 */
 const at = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi).getTime()
@@ -169,6 +170,110 @@ describe('cluster', () => {
       50,
     )
     assert.equal(undated.joins.length, 1, '날짜를 모르는 포인트는 막을 근거가 없다')
+  })
+})
+
+describe('trip-day', () => {
+  /** 1일차(8/22)가 다음 날 02:00 까지, 2일차(8/23)는 공백 240분 */
+  const rules = dayRules([
+    { date: '2026-08-22', endTime: '02:00' },
+    { date: '2026-08-23', gapMinutes: 240 },
+  ])
+
+  it('일차 경계: 지정이 없으면 자정, 지정하면 다음 날 그 시각까지 전날 일차', () => {
+    const plain = dayRules()
+    assert.equal(plain.dayOfIso('2026-08-23T01:00:00'), '2026-08-23', '지정 없음 = 달력 날짜 그대로')
+    assert.equal(rules.dayOfIso('2026-08-22T23:40:00'), '2026-08-22')
+    assert.equal(rules.dayOfIso('2026-08-23T01:00:00'), '2026-08-22', '02:00 전의 새벽은 전날 일차다')
+    assert.equal(rules.dayOfIso('2026-08-23T02:00:00'), '2026-08-23', '경계 시각부터는 다음 일차다')
+    assert.equal(rules.dayOfIso('2026-08-24T01:00:00'), '2026-08-24', '2일차는 끝을 안 미뤘으니 자정에 넘어간다')
+    assert.equal(rules.dayOf(at(2026, 8, 23, 1, 30)), '2026-08-22', 'epoch 도 벽시계로 되돌려 같은 판정')
+    assert.equal(rules.dayOfIso('2026-08-23'), '2026-08-23', '시각이 없는 값은 그 날짜 그대로')
+  })
+
+  it('묶기: 새벽 경계를 미루면 23:50 · 00:20 같은 자리가 한 포인트로 붙는다', () => {
+    const late: ClusterInput[] = [
+      { key: 'a', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 22, 23, 50) },
+      { key: 'b', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 0, 20) },
+    ]
+    assert.equal(clusterAt(late, 50).length, 2, '기본은 자정에서 끊긴다')
+    assert.equal(clusterAt(late, 50, rules).length, 1, '1일차가 02:00 까지면 같은 일차다')
+  })
+
+  it('묶기: 공백 기준은 일차마다 다르다', () => {
+    const hotel = (d: number, h: number, m: number) => ({ key: `${d}-${h}`, lat: 37.7638, lng: 128.8998, t: at(2026, 8, d, h, m) })
+    // 2시간 30분 공백 — 기본 90분이면 끊기고, 240분인 2일차에서는 붙는다
+    assert.equal(clusterAt([hotel(23, 10, 0), hotel(23, 12, 30)], 50).length, 2)
+    assert.equal(clusterAt([hotel(23, 10, 0), hotel(23, 12, 30)], 50, rules).length, 1)
+    // 같은 공백이 1일차(기본 90분)에서는 여전히 끊긴다
+    assert.equal(clusterAt([hotel(22, 10, 0), hotel(22, 12, 30)], 50, rules).length, 2)
+  })
+
+  it('사진 추가: 같은 자리 · 같은 일차여도 공백이 크면 새 포인트 (숙소 06시 · 23시)', () => {
+    const hotel = { id: 1, title: '숙소', lat: 37.7638, lng: 128.8998, order_index: 0, first_shot_at: '2026-08-23T06:00:00', last_shot_at: '2026-08-23T06:10:00' }
+    const night = assignTo([{ key: 'n', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 23, 0) }], [hotel], 50)
+    assert.equal(night.joins.length, 0, '17시간 뒤 사진이 아침 포인트에 붙으면 안 된다')
+    assert.equal(night.news.length, 1)
+
+    const soon = assignTo([{ key: 's', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 7, 30) }], [hotel], 50)
+    assert.equal(soon.joins.length, 1, '마지막 사진(06:10)에서 80분 — 공백 안이다')
+
+    // 합류한 사진이 범위를 늘린다 — 80분씩 이어지는 사슬은 끝까지 붙는다
+    const chained = assignTo(
+      [
+        { key: 'c1', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 7, 30) },
+        { key: 'c2', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 8, 50) },
+      ],
+      [hotel],
+      50,
+    )
+    assert.equal(chained.joinedShots, 2)
+  })
+
+  it('사진 추가: 새벽 경계를 미루면 다음 날 01시 사진이 전날 포인트에 합류한다', () => {
+    const bar = { id: 7, title: '포장마차', lat: 37.7638, lng: 128.8998, order_index: 3, first_shot_at: '2026-08-22T23:40:00', last_shot_at: '2026-08-22T23:55:00' }
+    const shot = [{ key: 'x', lat: 37.7638, lng: 128.8998, t: at(2026, 8, 23, 1, 0) }]
+    assert.equal(assignTo(shot, [bar], 50).joins.length, 0, '기본은 자정에서 일차가 갈린다')
+    assert.equal(assignTo(shot, [bar], 50, dayRules([{ date: '2026-08-22', endTime: '02:00', gapMinutes: 120 }])).joins.length, 1)
+  })
+
+  it('상세 일차 탭: 경계를 따라 묶는다', () => {
+    const pts = [
+      { id: 1, title: null, first_shot_at: '2026-08-22T20:00:00' },
+      { id: 2, title: null, first_shot_at: '2026-08-23T01:00:00' },
+      { id: 3, title: null, first_shot_at: '2026-08-23T09:00:00' },
+    ]
+    assert.deepEqual(
+      groupByDay(pts).map((g) => [g.date, g.points.length]),
+      [['2026-08-22', 1], ['2026-08-23', 2]],
+      '기본은 새벽 01시가 다음 날 일차에 들어간다',
+    )
+    assert.deepEqual(
+      groupByDay(pts, rules).map((g) => [g.date, g.points.length]),
+      [['2026-08-22', 2], ['2026-08-23', 1]],
+      '1일차가 02:00 까지면 새벽 01시는 1일차다',
+    )
+  })
+
+  it('입력 검증: 기본값은 지우고, 범위 밖은 거절한다', () => {
+    const ok = validateDaySettings([
+      { date: '2026-08-23', endTime: '00:00', gapMinutes: 90 },
+      { date: '2026-08-24', endTime: '03:30' },
+      { date: '2026-08-22', gapMinutes: 180 },
+    ])
+    assert.deepEqual(ok, { ok: true, value: [{ date: '2026-08-22', gapMinutes: 180 }, { date: '2026-08-24', endTime: '03:30' }] }, '기본값만 든 줄은 빠지고 날짜순')
+    assert.equal(validateDaySettings([{ date: '2026-08-22', endTime: '12:00' }]).ok, false, '정오부터는 다음 일차의 일정이다')
+    assert.equal(validateDaySettings([{ date: '2026-08-22', endTime: '2:00' }]).ok, false)
+    assert.equal(validateDaySettings([{ date: '2026-08-22', gapMinutes: 5 }]).ok, false)
+    assert.equal(validateDaySettings([{ date: '2026-08-22' }, { date: '2026-08-22' }]).ok, false, '같은 날 두 줄은 어느 쪽이 맞는지 모른다')
+    assert.equal(validateDaySettings('x').ok, false)
+    assert.deepEqual(parseDaySettings('망가진 값'), [], 'DB 값이 망가져도 화면은 자정 경계로 산다')
+  })
+
+  it('기간의 날짜 목록', () => {
+    assert.deepEqual(tripDates('2026-08-30', '2026-09-02'), ['2026-08-30', '2026-08-31', '2026-09-01', '2026-09-02'], '달이 바뀌어도 이어진다')
+    assert.deepEqual(tripDates('2026-09-02', '2026-08-30'), [])
+    assert.equal(tripDates('2026-01-01', '2026-12-31').length, 60, '상한에서 자른다')
   })
 })
 

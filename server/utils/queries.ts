@@ -2,6 +2,7 @@ import type { PhotoRow, PointRow, PostDetail, PostRow, PostSummary } from '#shar
 import { distanceKm } from '#shared/utils/geo'
 import { parseTags } from '#shared/utils/format'
 import { parseExpenses, parseLinks } from '#shared/utils/extras'
+import { parseDaySettings } from '#shared/utils/trip-day'
 
 const PHOTO_URL = '/photos/'
 
@@ -152,6 +153,7 @@ function summarize(post: PostRow): PostSummary {
   return {
     ...post,
     is_public: post.is_public === 1,
+    day_settings: parseDaySettings(post.day_settings),
     point_count: points.length,
     photo_count: photoCount,
     distance_km: routeKm(points),

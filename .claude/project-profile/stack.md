@@ -48,7 +48,7 @@
   - Vacuity-checked: **yes** (2026-09-28) — `vue-tsc --listFilesOnly` 로 app 93 · server 32 · shared 11 개 소스 파일이 포함됨을 확인
   - Pre-existing error baseline: **0** (7f3d189 기준, exit 0)
 - Lint (authoritative): **없음** — ESLint/Prettier/Biome 설정이 없다
-- Test (authoritative): `pnpm test` — Vitest, `shared/utils/algorithms.test.ts` 13개 (옛 `__checks.ts` 의 assert 90개를 그대로 옮김, 2026-09-28 통과)
-- E2E (authoritative): `pnpm test:e2e` — 8개 통과 (비로그인 5 · 로그인 3). 시드를 뒤집으면 비로그인 5개가 모두 실패하는 것으로 vacuity 확인, 로그인 spec 은 실제 버그(틀린 비밀번호 무안내)를 잡아 red → green 확인 (2026-09-28)
+- Test (authoritative): `pnpm test` — Vitest, `shared/utils/algorithms.test.ts` 21개 (옛 `__checks.ts` 의 assert 90개 + 일차·공백 규칙 8개, 2026-10-07 통과)
+- E2E (authoritative): `pnpm test:e2e` — 9개 통과 (비로그인 5 · 로그인 3 · 일차 기준 1, 2026-10-07). 일차 기준 spec 은 서버 규칙을 빼면 실패하는 것으로 vacuity 확인. 시드를 뒤집으면 비로그인 5개가 모두 실패하는 것으로 vacuity 확인, 로그인 spec 은 실제 버그(틀린 비밀번호 무안내)를 잡아 red → green 확인 (2026-09-28)
 - `vitest.config.ts` · `playwright.config.ts` · `tests/e2e/*` 는 `pnpm typecheck` 범위 밖이다 (Nuxt tsconfig 가 포함하지 않음)
 - CI 게이트 순서(`.github/workflows/deploy.yml` verify): install → typecheck → `pnpm test` → build. E2E 는 CI 에 없다

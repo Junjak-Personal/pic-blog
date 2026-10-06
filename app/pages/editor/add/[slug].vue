@@ -23,6 +23,8 @@ const points = computed(() => post.value?.points ?? [])
 const flow = useAddPhotosFlow(slug, points, {
   // 「전부 취소」가 서버의 기간 재계산까지 되돌리려면 붙이기 전 값이 필요하다
   period: computed(() => (post.value ? { started_at: post.value.started_at, ended_at: post.value.ended_at } : null)),
+  // 기본정보에서 정한 일차 경계 · 공백으로 배정한다 — 안 넘기면 자정 · 90분으로 돌아간다
+  daySettings: computed(() => post.value?.day_settings ?? []),
 })
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 

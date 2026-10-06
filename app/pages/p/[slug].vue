@@ -14,6 +14,7 @@ import type { PostDetail } from '#shared/types/db'
 import { badgesOf, groupByDay } from '#shared/utils/days'
 import { formatKm, formatOf, formatRange } from '#shared/utils/format'
 import { formatMoney, totalsOf } from '#shared/utils/extras'
+import { dayRules } from '#shared/utils/trip-day'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -52,7 +53,8 @@ const points = computed(() => post.value?.points ?? [])
  * 탭이 곧 필터다: 고른 날짜의 포인트만 지도·레일·앞뒤 이동에 남는다.
  * 번호는 날짜마다 01 로 되돌아가고 색이 며칠차인지를 말한다 — 배지는 한 곳(badges)에서만 만든다.
  */
-const dayGroups = computed(() => groupByDay(points.value))
+// 일차는 달력 날짜가 아니라 기록이 정한 경계를 따른다 (새벽 01시 일정은 전날 일차일 수 있다)
+const dayGroups = computed(() => groupByDay(points.value, dayRules(post.value?.day_settings)))
 const badges = computed(() => badgesOf(dayGroups.value))
 
 /**

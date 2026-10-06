@@ -1,8 +1,8 @@
 # Project Profile
 
 > Generated: 2026-09-28
-> Last updated: 2026-09-28
-> Profile-Generated-At: 7f3d189
+> Last updated: 2026-10-01
+> Profile-Generated-At: e5315f2
 
 ## Quick Summary
 - **Stack**: Nuxt 4.5 + Vue 3.5 + TypeScript(strict) + reka-ui(headless) · SQLite(better-sqlite3) · mapbox-gl · iOS 껍데기 Flutter
@@ -66,3 +66,5 @@ Lifecycle: active/{planning,processing}/ · complete/ · reference/ · deprecate
 - 2026-09-28: 최초 생성 (7f3d189)
 - 2026-09-28: 위험 대응 반영 — vue·vue-router caret 고정, `packageManager` pnpm@11.28.0 단일 출처, 운영 Node 22 → 24, Vitest(`__checks.ts` 이전) · Playwright(시드 DB) 도입, GPS 사진 픽스처, `_workspace/` 루트 정리
 - 2026-09-28: Playwright 로그인 spec(E2E 전용 비밀번호) 추가. 그 spec 이 잡은 `EditorGate` 무안내 버그 수정 — 한국어 사유를 HTTP 상태줄이 아니라 응답 본문에서 읽는다
+- 2026-10-01: `--update` (7f3d189 → e5315f2). 코드 변경은 이미 반영돼 있어 기준 커밋만 올림. harness 1.35.0 템플릿의 「Fixture files」 행을 testing.md 에 맞춤
+- 2026-10-07: 일차 기준(일차별 끝 시각 · 공백) 도입 반영 — `post.day_settings`, `shared/utils/trip-day.ts`, 재묶기 바디, 테스트 수

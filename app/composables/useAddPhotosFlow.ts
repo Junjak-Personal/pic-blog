@@ -6,6 +6,7 @@
 import type { AddPhotosInput, CreatePostResult, UploadPhotoInput } from '#shared/types/upload'
 import type { Point } from '#shared/types/db'
 import { assignTo, DEFAULT_RADIUS, RADII, type ClusterInput, type ExistingPoint } from '#shared/utils/cluster'
+import { dayRules, type DaySetting } from '#shared/utils/trip-day'
 import { outputExt, resizePhoto } from '~/utils/resize'
 import { MAX_PER_SELECTION, photoKey, scanFiles, type ScannedPhoto, type SkippedPhoto } from '~/utils/exif'
 import { pickPhotos, releaseSources, sourceSize, type PhotoSource } from '~/utils/native'
@@ -39,6 +40,8 @@ export interface AddPhotosOptions {
    * 화면이 기록을 새로 받으므로 그때 읽으면 이미 넓어진 값이다. 그래서 옵션으로 받는다.
    */
   period?: Ref<{ started_at: string | null; ended_at: string | null } | null>
+  /** 기록의 일차 기준(경계 · 공백). 없으면 자정 · 90분 — 배정이 기본정보에서 정한 일차를 따른다 */
+  daySettings?: Ref<DaySetting[]>
 }
 
 export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: AddPhotosOptions = {}) {
@@ -73,18 +76,24 @@ export function useAddPhotosFlow(slug: Ref<string>, points: Ref<Point[]>, opts: 
       lat: p.lat,
       lng: p.lng,
       order_index: p.order_index,
-      // 날짜가 다르면 같은 자리라도 합류시키지 않는다 (cluster.ts 의 dayOf)
+      // 일차가 다르거나 공백이 크면 같은 자리라도 합류시키지 않는다 (cluster.ts · trip-day.ts)
       first_shot_at: p.first_shot_at,
+      last_shot_at: p.photos.reduce<string | null>(
+        (last, ph) => (ph.shot_at && (!last || ph.shot_at > last) ? ph.shot_at : last),
+        null,
+      ),
     })),
   )
 
+  const rules = computed(() => dayRules(opts.daySettings?.value))
+
   /** 반경을 바꾸면 여기서 그 자리 재계산된다. 지도 뷰포트는 건드리지 않는다. */
-  const assignment = computed(() => assignTo(scanned.value, existing.value, radius.value))
+  const assignment = computed(() => assignTo(scanned.value, existing.value, radius.value, rules.value))
 
   /** 「반경별 결과」 비교표 (아트보드 1f 우측) */
   const radiusTable = computed(() =>
     RADII.map((r) => {
-      const a = assignTo(scanned.value, existing.value, r)
+      const a = assignTo(scanned.value, existing.value, r, rules.value)
       return { radius: r, joinedShots: a.joinedShots, joinCount: a.joins.length, newCount: a.news.length }
     }),
   )

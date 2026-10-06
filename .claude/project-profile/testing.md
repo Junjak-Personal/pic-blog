@@ -37,7 +37,7 @@
     cp -Rp data/. <scratch>/qa-data/
     NUXT_DATA_DIR=<scratch>/qa-data pnpm dev      # process.env 가 .env.local 보다 우선 (c12)
     ```
-  - 업로드용 사진: `tests/fixtures/photos/` — GPS EXIF 가 든 합성 JPEG 4장(두 지점) + GPS 없는 1장. 반경 50m 에서 포인트 2개 + 「위치 정보 없음」 1장 제외가 나온다 (2026-09-28 실제 업로드로 확인). 다시 만들기: `tests/fixtures/photos/make.sh` (macOS · exiftool)
+- Fixture files: `tests/fixtures/photos/` — 업로드용 GPS EXIF 합성 JPEG 4장(두 지점) + GPS 없는 1장. 반경 50m 에서 포인트 2개 + 「위치 정보 없음」 1장 제외가 나온다 (2026-09-28 실제 업로드로 확인). 다시 만들기: `tests/fixtures/photos/make.sh` (macOS · exiftool). E2E 시드도 `a1-dongpirang.jpg` 를 사진 파일로 쓴다
 - Target env: 로컬만. 개발 `http://localhost:4600` (Mapbox 토큰 URL 제한 · 볼트 프로필이 4600 에 묶임), Playwright `http://localhost:4610` (지도 타일은 뜨지 않는다). prd = `https://pic-blog.jun-devlog.win`, 사람만 실행
 - Shared-resource caution: `data/` 는 개발자의 실제 로컬 기록이고 `pnpm dev` 가 기본으로 쓴다. 🔴 QA 쓰기는 반드시 격리 디렉토리에서 한다. 4600 이 이미 떠 있으면 누가 띄웠는지 먼저 확인한다
 - 🔴 **dev 모드 로그인 경쟁**: `pnpm dev` 에서는 `auth login` 이 하이드레이션 전에 제출해 네이티브 `POST /editor` 로 끝나고 로그인이 안 된다 (`/api/auth/login` 요청 없음, 게이트 그대로 — 2026-09-28 재현). 로그인이 필요한 에이전트 QA 는 **프로덕션 빌드**로 띄운다:

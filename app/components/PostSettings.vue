@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import ChoiceSelect from '~/components/ChoiceSelect.vue'
 import PeriodPicker from '~/components/PeriodPicker.vue'
 import RadiusSlider from '~/components/RadiusSlider.vue'
 /**
- * 편집 1단계 「기본 정보」 — 타이틀 · 요약 · 공개 · 기간 · 포인트 범위.
+ * 편집 1단계 「기본 정보」 — 타이틀 · 요약 · 공개 · 기간(+ 일차 기준) · 포인트 범위.
  *
  * 타이틀·요약·공개·기간은 다른 편집과 같이 초안에 쌓였다가 「저장」에서 나간다.
- * 반경만 성격이 다르다 — 즉시 서버에 반영되고 되돌릴 수 없다. 2단계가 편집할
- * 포인트 자체를 갈아치우기 때문에 초안에 담아둘 수가 없다.
- * 그래서 반경만 별도 확인 절차를 갖고, 사라질 포인트를 이름까지 나열해 보여준다.
+ * 반경과 일차 기준(일차별 끝 시각 · 공백)은 성격이 다르다 — 즉시 서버에 반영되고 되돌릴 수
+ * 없다. 2단계가 편집할 포인트 자체를 갈아치우기 때문에 초안에 담아둘 수가 없다.
+ * 그래서 둘은 같은 확인 절차를 거치고, 사라질 포인트를 이름까지 나열해 보여준다.
  */
 import {
   AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -16,6 +17,10 @@ import {
 import type { PostDetail } from '#shared/types/db'
 import { clusterAt, DEFAULT_RADIUS, RADII, type ClusterInput } from '#shared/utils/cluster'
 import { formatRange } from '#shared/utils/format'
+import {
+  dayRules, DEFAULT_GAP_MINUTES, END_TIME_OPTIONS, GAP_OPTIONS, shiftDate, tripDates, validateDaySettings,
+  type DaySetting,
+} from '#shared/utils/trip-day'
 
 const props = defineProps<{
   post: PostDetail
@@ -31,7 +36,13 @@ const isPublic = defineModel<boolean>('isPublic', { required: true })
 const startedAt = defineModel<string>('startedAt', { required: true })
 const endedAt = defineModel<string>('endedAt', { required: true })
 
-const emit = defineEmits<{ recluster: [radius: number] }>()
+/** 다시 묶기 요청 — 반경과 일차 기준을 «함께» 보낸다. 한쪽만 바꿔도 다른 쪽은 지금 값 그대로다. */
+interface Regroup {
+  radius: number
+  daySettings: DaySetting[]
+}
+
+const emit = defineEmits<{ recluster: [req: Regroup] }>()
 
 /** 미리보기는 서버를 부르지 않는다 — 사진마다 lat/lng/shot_at 이 이미 내려와 있고
     업로드 화면과 같은 clusterAt 을 쓰므로 결과가 서버 계산과 일치한다. */
@@ -43,9 +54,62 @@ const shots = computed<ClusterInput[]>(() =>
 )
 
 const currentRadius = computed(() => props.post.cluster_radius)
+/** 지금 저장된 일차 기준 — 반경 미리보기도 이 기준으로 센다 (서버 재묶기와 같은 계산) */
+const savedRules = computed(() => dayRules(props.post.day_settings))
 const table = computed(() =>
-  RADII.map((r) => ({ radius: r, count: clusterAt(shots.value, r).length })),
+  RADII.map((r) => ({ radius: r, count: clusterAt(shots.value, r, savedRules.value).length })),
 )
+
+/*
+ * 일차 기준 — 기간의 날마다 한 줄. 「끝」은 다음 날 몇 시까지 이 일차인지, 「공백」은 같은 자리라도
+ * 이만큼 비면 포인트를 나누는 기준이다. 한 일차의 끝이 곧 다음 일차의 시작이라 빈틈이 없다.
+ * 고친 값은 「적용」 전까지 화면에만 있다 — 적용은 반경과 같은 재묶기다.
+ */
+const GAP_CHOICES = GAP_OPTIONS.map((m) => ({ value: m, text: `${m}분` }))
+const END_CHOICES = END_TIME_OPTIONS.map((t) => ({ value: t, text: t }))
+
+const savedDays = computed(() => new Map(props.post.day_settings.map((s) => [s.date, s])))
+/** 사용자가 고친 일차만 담는다. 날짜 → 그 일차의 값 전체 */
+const dayEdits = ref<Record<string, Required<DaySetting>>>({})
+
+const days = computed(() => {
+  const list = tripDates(startedAt.value, endedAt.value)
+  return list.map((date, i) => {
+    const s = dayEdits.value[date] ?? savedDays.value.get(date)
+    const prev = i ? dayEdits.value[list[i - 1]!] ?? savedDays.value.get(list[i - 1]!) : undefined
+    return {
+      date,
+      n: i + 1,
+      /** 이 일차가 시작하는 시각 = 전날 일차의 끝. 첫 일차는 자정에 시작한다 */
+      startTime: prev?.endTime ?? '00:00',
+      endTime: s?.endTime ?? '00:00',
+      gapMinutes: s?.gapMinutes ?? DEFAULT_GAP_MINUTES,
+    }
+  })
+})
+
+/** 적용할 모양 — 서버와 «같은 함수»로 다듬어(기본값 지움 · 날짜순) 바뀐 것이 있는지 문자열로 본다 */
+const nextDaySettings = computed(() => {
+  const r = validateDaySettings(days.value.map(({ date, endTime, gapMinutes }) => ({ date, endTime, gapMinutes })))
+  return r.ok ? r.value : []
+})
+/** 화면에 보이는 일차 범위 안에서만 비교한다 — 기간 밖에 남은 옛 값 때문에 「바뀜」으로 뜨면 안 된다 */
+const savedInRange = computed(() => {
+  const shown = new Set(days.value.map((d) => d.date))
+  return props.post.day_settings.filter((s) => shown.has(s.date))
+})
+const daysChanged = computed(() => JSON.stringify(nextDaySettings.value) !== JSON.stringify(savedInRange.value))
+
+function setDay(date: string, patch: { endTime: string } | { gapMinutes: number }) {
+  const cur = days.value.find((d) => d.date === date)
+  if (!cur) return
+  dayEdits.value = { ...dayEdits.value, [date]: { date, endTime: cur.endTime, gapMinutes: cur.gapMinutes, ...patch } }
+}
+
+/** 'YYYY-MM-DD' → '8/22' */
+function md(date: string) {
+  return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`
+}
 
 /** 재클러스터링으로 내용을 잃게 될 포인트들 — 이름을 그대로 보여준다 */
 const atRisk = computed(() =>
@@ -83,28 +147,44 @@ function restoreExif() {
 }
 
 const dialogOpen = ref(false)
-const pending = ref<number | null>(null)
+const pending = ref<Regroup | null>(null)
 
 const pendingCount = computed(() =>
-  pending.value === null ? 0 : clusterAt(shots.value, pending.value).length,
+  pending.value === null ? 0 : clusterAt(shots.value, pending.value.radius, dayRules(pending.value.daySettings)).length,
+)
+const pendingRadiusChanged = computed(() => !!pending.value && pending.value.radius !== currentRadius.value)
+const pendingDaysChanged = computed(
+  () => !!pending.value && JSON.stringify(pending.value.daySettings) !== JSON.stringify(props.post.day_settings),
 )
 
 /** 슬라이더에 보이는 값 — 확인 전에는 현재 반경을 유지한다 */
-const shown = computed(() => pending.value ?? currentRadius.value ?? DEFAULT_RADIUS)
+const shown = computed(() => pending.value?.radius ?? currentRadius.value ?? DEFAULT_RADIUS)
 
+/** 반경만 바꾼다 — 일차 기준은 «저장된» 값 그대로 (화면에서 고치던 일차 값은 따로 적용한다) */
 function pick(r: number) {
   if (props.dirty || props.busy) return
   if (r === currentRadius.value) return
-  pending.value = r
+  pending.value = { radius: r, daySettings: props.post.day_settings }
   dialogOpen.value = true
 }
 
+/** 일차 기준만 바꾼다 — 반경은 지금 값 그대로. 반경이 기록되기 전에 만든 기록은 기본 반경으로 묶는다 */
+function applyDays() {
+  if (props.dirty || props.busy || !daysChanged.value) return
+  pending.value = { radius: currentRadius.value ?? DEFAULT_RADIUS, daySettings: nextDaySettings.value }
+  dialogOpen.value = true
+}
+
+function revertDays() {
+  dayEdits.value = {}
+}
+
 function confirmRecluster() {
-  const r = pending.value
+  const req = pending.value
   // 고른 값을 «먼저» 읽고 비운다 — 아래 cancelRecluster 의 🔴 와 같은 이유로 남겨두면 안 된다.
   pending.value = null
   dialogOpen.value = false
-  if (r !== null) emit('recluster', r)
+  if (req !== null) emit('recluster', req)
 }
 
 /**
@@ -173,6 +253,49 @@ function cancelRecluster() {
       <p class="mono hint">
         사진을 추가하면 이 기간은 새 사진까지 포함한 EXIF 촬영 시각으로 다시 계산됩니다.
       </p>
+
+      <!--
+        일차 기준 — 날마다 한 줄. 「끝」을 미루면 새벽 일정이 전날 일차에 남는다.
+        한 일차의 끝이 곧 다음 일차의 시작이라 다음 줄의 시작 시각이 따라 움직인다.
+      -->
+      <div v-if="days.length" class="days" data-testid="settings-days">
+        <div v-for="d in days" :key="d.date" class="day" :data-testid="`settings-day-${d.n}`">
+          <span class="mono day-n">{{ d.n }}일차</span>
+          <span class="mono day-range">{{ md(d.date) }} {{ d.startTime }} ~ {{ md(shiftDate(d.date, 1)) }} {{ d.endTime }}</span>
+          <!-- 고르개 묶음은 한 덩어리로 줄바꿈한다 — 글자와 고르개가 다른 줄로 갈라지면 무엇을 고르는지 안 읽힌다 -->
+          <span class="day-ctl">
+            <span class="mono day-ctl-label">끝</span>
+            <ChoiceSelect
+              :model-value="d.endTime"
+              :options="END_CHOICES"
+              :label="`${d.n}일차 끝 시각`"
+              :disabled="dirty || busy"
+              @update:model-value="(v) => setDay(d.date, { endTime: String(v) })"
+            />
+            <span class="mono day-ctl-label">공백</span>
+            <ChoiceSelect
+              :model-value="d.gapMinutes"
+              :options="GAP_CHOICES"
+              :label="`${d.n}일차 공백 기준`"
+              :disabled="dirty || busy"
+              @update:model-value="(v) => setDay(d.date, { gapMinutes: Number(v) })"
+            />
+          </span>
+        </div>
+      </div>
+      <p v-else class="mono hint">기간을 정하면 일차마다 끝 시각과 공백 기준을 고를 수 있습니다.</p>
+
+      <div v-if="daysChanged" class="day-actions">
+        <button type="button" class="btn foot ghost mono" :disabled="busy" @click="revertDays">되돌리기</button>
+        <button type="button" class="btn foot primary mono" :disabled="dirty || busy" @click="applyDays">일차 기준 적용</button>
+      </div>
+      <p v-if="dirty && days.length" class="mono warn">
+        저장하지 않은 변경이 있습니다. 먼저 저장한 뒤에 일차 기준을 바꿀 수 있습니다.
+      </p>
+      <p v-else-if="days.length" class="mono hint">
+        끝 — 다음 날 이 시각 전까지 찍은 사진은 이 일차입니다. 공백 — 같은 자리라도 사진 사이가 이만큼 비면 포인트를 나눕니다.
+        적용하면 포인트 범위처럼 사진이 다시 묶입니다.
+      </p>
     </section>
 
     <section class="block">
@@ -210,13 +333,19 @@ function cancelRecluster() {
       <AlertDialogPortal>
         <AlertDialogOverlay class="dialog-overlay" />
         <AlertDialogContent class="dialog-alert dialog-surface" @escape-key-down="cancelRecluster">
-          <AlertDialogTitle class="dialog-title">포인트 범위 변경</AlertDialogTitle>
+          <AlertDialogTitle class="dialog-title">{{ pendingDaysChanged && !pendingRadiusChanged ? '일차 기준 변경' : '포인트 범위 변경' }}</AlertDialogTitle>
 
           <div class="dlg-diff mono">
-            <span>{{ currentRadius ?? '?' }}m</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
-            <b>{{ pending }}m</b>
-            <span class="dlg-sep">·</span>
+            <template v-if="pendingRadiusChanged">
+              <span>{{ currentRadius ?? '?' }}m</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+              <b>{{ pending?.radius }}m</b>
+              <span class="dlg-sep">·</span>
+            </template>
+            <template v-if="pendingDaysChanged">
+              <b>일차 기준 바뀜</b>
+              <span class="dlg-sep">·</span>
+            </template>
             <span>포인트 {{ post.points.length }}개</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
             <b>{{ pendingCount }}개</b>
@@ -243,7 +372,7 @@ function cancelRecluster() {
           <div class="dialog-actions">
             <AlertDialogCancel class="btn foot ghost mono" @click="cancelRecluster">취소</AlertDialogCancel>
             <AlertDialogAction class="btn foot danger mono" @click="confirmRecluster">
-              {{ atRisk.length ? '바꾸고 지우기' : '범위 바꾸기' }}
+              {{ atRisk.length ? '바꾸고 지우기' : '다시 묶기' }}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
@@ -269,6 +398,24 @@ function cancelRecluster() {
   cursor: pointer;
 }
 .revert:hover { background: rgb(var(--acc-rgb) / 0.1); }
+
+/* 일차 기준 — 날마다 한 줄. 좁으면 범위 글자 아래로 고르개가 내려간다 */
+.days {
+  display: flex;
+  flex-direction: column;
+  background: rgb(var(--s1-rgb) / 0.7);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+}
+.day { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px; }
+.day + .day { border-top: 1px solid var(--hair-soft); }
+.day-n { min-width: 4ch; font-size: var(--fs-sm); color: var(--ink); }
+/* 날짜·시각은 데이터 — tabular-nums 로 줄마다 자릿수가 맞는다 (--font-mono) */
+.day-range { flex: 1 1 auto; font-size: var(--fs-xs); color: var(--deep); font-variant-numeric: tabular-nums; }
+.day-ctl { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.day-ctl-label { font-size: var(--fs-xs); color: var(--faint); }
+/* 오른쪽 정렬 · 가장 오른쪽이 주 동작 */
+.day-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .warn { font-size: var(--fs-2xs); color: var(--danger); }
 
 .bhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

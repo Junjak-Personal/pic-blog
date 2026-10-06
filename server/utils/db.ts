@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS post (
   -- 이 기록을 묶을 때 쓴 클러스터 반경(m). 편집 화면에서 「현재 50m」 를 보여주고
   -- 재클러스터링 기준으로 쓴다. 업로드 이전 기록은 NULL 이다.
   cluster_radius INTEGER,
+  -- 일차별 경계(다음 날 끝나는 시각)와 공백 기준. JSON 배열 — shared/utils/trip-day.ts 가 SSOT.
+  -- 지정한 일차만 담는다. 빈 배열 = 모든 일차가 자정 경계 · 90분 공백.
+  day_settings   TEXT NOT NULL DEFAULT '[]',
   created_at     TEXT NOT NULL,
   updated_at     TEXT NOT NULL
 );
@@ -99,6 +102,7 @@ export function useDb() {
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
   addColumnIfMissing(db, 'post', 'cluster_radius', 'INTEGER')
+  addColumnIfMissing(db, 'post', 'day_settings', `TEXT NOT NULL DEFAULT '[]'`)
   addColumnIfMissing(db, 'point', 'cover_photo_id', 'INTEGER')
   addColumnIfMissing(db, 'point', 'links', `TEXT NOT NULL DEFAULT '[]'`)
   addColumnIfMissing(db, 'point', 'expenses', `TEXT NOT NULL DEFAULT '[]'`)

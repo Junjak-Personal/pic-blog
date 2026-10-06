@@ -17,10 +17,10 @@
 |---|---|---|
 | `GET /api/posts` | 선택 | 목록. 세션이 있으면 비공개도 포함 |
 | `GET /api/posts/[slug]` | 선택 | 상세. 비공개 + 무세션 → 403 + 통계만(`data.private`) |
-| `POST /api/posts` | 필수 | 업로드 매니페스트 → 기록·포인트 생성 (서버가 클러스터 재계산) |
+| `POST /api/posts` | 필수 | 업로드 매니페스트 → 기록·포인트 생성. 묶음은 클라이언트(`clusterAt`) 것을 받고, 포인트 순서·기간만 서버가 계산한다 (일차 기준은 기본값) |
 | `PATCH /api/posts/[slug]` | 필수 | 제목·요약·공개·기간·커버 |
 | `DELETE /api/posts/[slug]` | 필수 | 기록 삭제 |
-| `POST /api/posts/[slug]/photos` · `recluster` · `regroup` | 필수 | 사진 추가 · 반경 재클러스터 · 사진 소속 변경 |
+| `POST /api/posts/[slug]/photos` · `recluster` · `regroup` | 필수 | 사진 추가 · 재묶기(바디 `{ radius, daySettings? }` — 반경 · 일차 기준) · 사진 소속 변경 |
 | `PATCH /api/points/[id]` | 필수 | 포인트 이름·태그·본문·대표·링크·소비·앵커 |
 | `PUT /api/photos/[id]` · `DELETE /api/photos` | 필수 | 리사이즈된 바이트 업로드 · 사진 삭제 |
 | `POST /api/auth/login` · `logout` | — | 세션 |

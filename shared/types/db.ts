@@ -1,5 +1,6 @@
 /** SQLite row shapes — 설계 문서 §3 스키마와 1:1. */
 import type { PointExpense, PointLink } from '#shared/utils/extras'
+import type { DaySetting } from '#shared/utils/trip-day'
 
 export interface PostRow {
   id: number
@@ -12,6 +13,8 @@ export interface PostRow {
   is_public: number
   /** 이 기록을 묶을 때 쓴 클러스터 반경(m). 업로드 이전 기록은 null. */
   cluster_radius: number | null
+  /** JSON 배열 문자열 — 일차별 경계·공백 기준. 읽을 때 parseDaySettings() 로 좁힌다. */
+  day_settings: string
   created_at: string
   updated_at: string
 }
@@ -62,8 +65,10 @@ export interface Point extends Omit<PointRow, 'tags' | 'post_id' | 'links' | 'ex
   photos: Photo[]
 }
 
-export interface PostSummary extends Omit<PostRow, 'is_public'> {
+export interface PostSummary extends Omit<PostRow, 'is_public' | 'day_settings'> {
   is_public: boolean
+  /** 지정한 일차만 담는다 — 없는 일차는 자정 경계 · 90분 공백 (trip-day.ts) */
+  day_settings: DaySetting[]
   point_count: number
   photo_count: number
   distance_km: number

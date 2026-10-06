@@ -1,5 +1,6 @@
 /**
- * 기록의 포인트를 다른 반경으로 다시 묶는다 (편집 1단계 「기록 설정」).
+ * 기록의 포인트를 다른 반경 · 일차 기준으로 다시 묶는다 (편집 1단계 「기록 설정」).
+ * 바디: { radius, daySettings? } — daySettings 를 빼면 저장된 일차 기준을 그대로 쓴다.
  *
  * 원래 설계는 포인트 앵커가 생성 후 불변이고 병합·분할은 업로드 반경으로만 갈렸다.
  * 이 엔드포인트는 그 규칙을 의도적으로 뒤집는 유일한 경로다 — 대신 파괴적이라는 걸
@@ -17,6 +18,7 @@ import type { PhotoRow } from '#shared/types/db'
 import { clusterAt, type ClusterInput } from '#shared/utils/cluster'
 import { distanceM } from '#shared/utils/geo'
 import { localIso } from '#shared/utils/format'
+import { dayRules, parseDaySettings, validateDaySettings, type DaySetting } from '#shared/utils/trip-day'
 
 interface Shot extends ClusterInput {
   id: number
@@ -26,15 +28,28 @@ export default defineEventHandler(async (event) => {
   await requireEditor(event)
 
   const slug = getRouterParam(event, 'slug') ?? ''
-  const body = await readBody(event)
-  const nextRadius = radius((body as Record<string, unknown> | null)?.radius)
+  const body = (await readBody(event)) as Record<string, unknown> | null
+  const nextRadius = radius(body?.radius)
 
   const db = useDb()
   const found = db
-    .prepare<[string], { id: number; slug: string }>(`SELECT id, slug FROM post WHERE slug = ?`)
+    .prepare<[string], { id: number; slug: string; day_settings: string }>(
+      `SELECT id, slug, day_settings FROM post WHERE slug = ?`,
+    )
     .get(slug)
   if (!found) throw createError({ statusCode: 404, statusMessage: '기록을 찾을 수 없습니다' })
   const post = found
+
+  /*
+   * 일차 기준(경계 시각 · 공백) — 반경과 같은 자리에서 같은 재묶기로 바뀐다 (기본정보).
+   * 보내지 않으면 저장된 값을 그대로 쓴다 — 반경만 바꿀 때 일차 기준이 지워지면 안 된다.
+   */
+  let daySettings: DaySetting[] = parseDaySettings(post.day_settings)
+  if (body && 'daySettings' in body) {
+    const checked = validateDaySettings(body.daySettings)
+    if (!checked.ok) throw createError({ statusCode: 400, statusMessage: checked.error })
+    daySettings = checked.value
+  }
 
   // 촬영 시각이 없는 사진은 클러스터링에 못 넣는다 — 업로드 때 이미 걸러졌지만 한 번 더 본다.
   const photos = db
@@ -60,7 +75,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 업로드 때와 똑같은 알고리즘. 클라이언트가 보낸 묶음은 믿지 않고 여기서 다시 계산한다.
-  const clusters = clusterAt(shots, nextRadius)
+  const clusters = clusterAt(shots, nextRadius, dayRules(daySettings))
 
   const run = db.transaction(() => {
     const oldPointIds = db
@@ -112,9 +127,9 @@ export default defineEventHandler(async (event) => {
     const dropPoint = db.prepare<[number]>(`DELETE FROM point WHERE id = ?`)
     for (const id of oldPointIds) dropPoint.run(id)
 
-    db.prepare<[number, string, number]>(
-      `UPDATE post SET cluster_radius = ?, updated_at = ? WHERE id = ?`,
-    ).run(nextRadius, new Date().toISOString(), post.id)
+    db.prepare<[number, string, string, number]>(
+      `UPDATE post SET cluster_radius = ?, day_settings = ?, updated_at = ? WHERE id = ?`,
+    ).run(nextRadius, JSON.stringify(daySettings), new Date().toISOString(), post.id)
     // 포인트를 통째로 새로 만들었다 — 대표는 각 포인트의 첫 사진이다
     fillPointCovers(post.id)
   })

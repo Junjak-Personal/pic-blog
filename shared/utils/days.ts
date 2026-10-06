@@ -7,6 +7,8 @@
  *  날짜를 글자로도 적는다.)
  */
 
+import { DEFAULT_DAY_RULES, type DayRules } from './trip-day.ts'
+
 /** 이 모듈이 요구하는 최소 모양. Point 를 그대로 받되 테스트는 이 세 필드만 만든다. */
 export interface DayPoint {
   id: number
@@ -47,16 +49,17 @@ export interface PointBadge {
 }
 
 /**
- * 촬영 날짜로 묶는다. 순서는 입력 순서 그대로다 — 포인트는 이미 촬영 시각 순이고,
- * 여기서 다시 정렬하면 서버가 정한 순서와 어긋날 수 있다.
+ * 일차로 묶는다. 일차는 달력 날짜가 아니라 기록의 일차 경계를 따른다 (trip-day.ts) —
+ * 새벽 01:00 에 끝난 일정은 전날 일차다. 순서는 입력 순서 그대로다 — 포인트는 이미
+ * 촬영 시각 순이고, 여기서 다시 정렬하면 서버가 정한 순서와 어긋날 수 있다.
  */
-export function groupByDay<T extends DayPoint>(points: readonly T[]): DayGroup<T>[] {
+export function groupByDay<T extends DayPoint>(points: readonly T[], rules: DayRules = DEFAULT_DAY_RULES): DayGroup<T>[] {
   const out: DayGroup<T>[] = []
   const byDate = new Map<string, DayGroup<T>>()
   let dated = 0
 
   for (const p of points) {
-    const date = p.first_shot_at?.slice(0, 10) ?? ''
+    const date = p.first_shot_at ? rules.dayOfIso(p.first_shot_at) : ''
     let g = byDate.get(date)
     if (!g) {
       const n = date ? ++dated : 0
