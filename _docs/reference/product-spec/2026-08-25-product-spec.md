@@ -5,7 +5,7 @@ topic: product-spec
 kind: spec
 scope: fullstack
 created: 2026-08-25
-updated: 2026-10-07
+updated: 2026-10-08
 owner: jhyoon
 related:
   - _docs/reference/design-system/2026-08-26-design-system.md
@@ -94,7 +94,7 @@ CREATE TABLE point (
   title         TEXT,
   body          TEXT,
   tags          TEXT NOT NULL DEFAULT '[]',  -- JSON 배열
-  first_shot_at TEXT,           -- 소속 사진 중 가장 이른 shot_at. 동선 정렬 키
+  first_shot_at TEXT,           -- 소속 사진 중 가장 이른 shot_at. 포인트·일차 정렬 키
   order_index   INTEGER NOT NULL
 );
 
@@ -293,8 +293,11 @@ R=50에서 「반경 내 73m」가 뜬다. 표기는 「퍼짐 N m」여야 한�
 **Mapbox GL JS v3** (2026-08-26 Google Maps에서 전환).
 
 - 포인트 마커: 앵커 좌표. 클릭하면 해당 포인트 상세로 연결 (§11 레이아웃).
-- **동선**: `point.first_shot_at` 오름차순으로 앵커를 이은 GeoJSON `LineString` 레이어.
-  - `first_shot_at` 이 null인 포인트는 선에서 제외하고 지도에는 마커만 남긴다.
+- **동선**: 사진 전체를 `photo.shot_at` 오름차순(같은 시각은 `photo.id` 순)으로 정렬해 사진 고유 `lat/lng` 를 이은 GeoJSON `LineString` 레이어.
+  - 반경은 포인트·마커를 묶는 기준이다. 같은 포인트 안의 왕복·우회도 동선에 남긴다. 사진 표시 순서나 대표 위치를 바꿔도 동선은 바뀌지 않는다.
+  - `photo.shot_at` 이 null인 사진은 순서를 알 수 없어 선에서 제외한다. 포인트·사진 표시는 유지한다.
+  - 목록·상세의 `distance_km` 도 같은 사진 순서로 이웃 좌표 사이의 거리를 합산한다. 실제 도로 경로가 아니라 촬영 좌표 사이의 직선 거리다.
+  - 기존 DB 에 사진 고유 좌표·시각이 이미 저장돼 있어 스키마 변경과 데이터 이관 없이 기존 기록에도 적용된다.
   - **여러 날 여행이면 숙소↔다음 목적지 사이에 긴 선이 생긴다.** 일단 하나의 연속선으로 간다.
     `ponytail: 날짜별로 선을 끊거나 색을 나누는 건, 실제로 보기 싫어진 뒤에 한다`
 

@@ -13,7 +13,7 @@ import mapboxgl from 'mapbox-gl'
 import type { FeatureCollection } from 'geojson'
 import type { Point } from '#shared/types/db'
 import type { PointBadge } from '#shared/utils/days'
-import { boundsOf, toLngLat } from '#shared/utils/geo'
+import { boundsOf, orderedRoutePhotos, toLngLat } from '#shared/utils/geo'
 import { addRouteLayers, routeDash } from '~/utils/route-style'
 import { SCALE_MAX_PX } from '~/composables/useMapbox'
 import { pointThumb, skWhileLoading } from '~/utils/img'
@@ -44,7 +44,11 @@ const fallbackItems = computed(() =>
 )
 const ROUTE = 'trip-route'
 
-const bounds = computed(() => boundsOf(props.points))
+/** 포인트 안의 왕복·우회도 보존한다. 사진 표시 순서와 동선 촬영 순서는 별개다. */
+const routePhotos = computed(() => orderedRoutePhotos(
+  props.points.flatMap((p) => p.photos.map((photo) => ({ ...photo, pointId: p.id }))),
+))
+const bounds = computed(() => boundsOf([...props.points, ...routePhotos.value]))
 const { map, status, fit, retry } = useMapbox({
   container,
   bounds,
@@ -56,11 +60,8 @@ const { map, status, fit, retry } = useMapbox({
 
 let markers: mapboxgl.Marker[] = []
 
-/** first_shot_at 이 null 인 포인트는 선에서 빠지고 마커만 남는다 (설계문서 §6) */
-const routePoints = computed(() => props.points.filter((p) => p.first_shot_at))
-
 /*
- * 동선을 «구간»으로 쪼갠다 — 한 줄이 아니라 이웃한 두 포인트마다 한 조각.
+ * 동선을 「구간」으로 쪼갠다 — 이웃한 두 사진마다 한 조각.
  *
  * 전부 같은 난색 하나였을 때는 며칠에 걸친 기록에서 어디가 어느 날의 이동인지 읽히지
  * 않았다. 조각마다 날짜 색을 주면 마커와 레일의 날짜 탭이 쓰는 색과 같아져, 셋이 한
@@ -71,14 +72,14 @@ const routePoints = computed(() => props.points.filter((p) => p.first_shot_at))
  *    떠난 날의 마지막 이동으로 읽는 쪽이 지도에서 자연스럽다.
  */
 function routeData(): FeatureCollection {
-  const pts = routePoints.value
+  const photos = routePhotos.value
   return {
     type: 'FeatureCollection',
-    features: pts.slice(1).map((to, i) => {
-      const from = pts[i]!
+    features: photos.slice(1).map((to, i) => {
+      const from = photos[i]!
       return {
         type: 'Feature' as const,
-        properties: { color: routeDash(props.badges.get(from.id)?.color) },
+        properties: { color: routeDash(props.badges.get(from.pointId)?.color) },
         geometry: { type: 'LineString' as const, coordinates: [toLngLat(from), toLngLat(to)] },
       }
     }),

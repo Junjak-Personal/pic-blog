@@ -1,3 +1,5 @@
+import type { PhotoRow } from '../types/db.ts'
+
 /** 하버사인 거리 (km). data.js 의 km() 을 그대로 옮긴 것. 인자는 [lat, lng] 순서다. */
 export function distanceKm(a: readonly [number, number], b: readonly [number, number]) {
   const R = 6371
@@ -13,6 +15,26 @@ export function distanceKm(a: readonly [number, number], b: readonly [number, nu
 
 export function distanceM(a: readonly [number, number], b: readonly [number, number]) {
   return distanceKm(a, b) * 1000
+}
+
+/** 포인트·사진의 표시 순서와 별개로 촬영 순서대로 잇는다. 시각을 모르는 사진은 경로에서 뺀다. */
+export function orderedRoutePhotos<T extends Pick<PhotoRow, 'id' | 'lat' | 'lng' | 'shot_at'>>(
+  photos: readonly T[],
+): T[] {
+  return photos
+    .filter((photo) => photo.shot_at !== null && photo.shot_at !== '')
+    .sort((a, b) => (a.shot_at ?? '').localeCompare(b.shot_at ?? '') || a.id - b.id)
+}
+
+/** 전달받은 경로 순서대로 이웃 사진의 거리를 합산한다. 같은 포인트 안의 이동도 남긴다. */
+export function routeKm(photos: readonly Pick<PhotoRow, 'lat' | 'lng'>[]) {
+  let total = 0
+  for (let i = 1; i < photos.length; i++) {
+    const previous = photos[i - 1]!
+    const current = photos[i]!
+    total += distanceKm([previous.lat, previous.lng], [current.lat, current.lng])
+  }
+  return Math.round(total * 10) / 10
 }
 
 /**

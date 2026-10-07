@@ -1,5 +1,5 @@
 import type { PhotoRow, PointRow, PostDetail, PostRow, PostSummary } from '#shared/types/db'
-import { distanceKm } from '#shared/utils/geo'
+import { orderedRoutePhotos, routeKm } from '#shared/utils/geo'
 import { parseTags } from '#shared/utils/format'
 import { parseExpenses, parseLinks } from '#shared/utils/extras'
 import { parseDaySettings } from '#shared/utils/trip-day'
@@ -12,15 +12,6 @@ function photoUrls(row: PhotoRow) {
     display_path: PHOTO_URL + row.display_path,
     thumb_path: PHOTO_URL + row.thumb_path,
   }
-}
-
-/** 동선 길이 — first_shot_at 순으로 앵커를 이은 총 거리 (km). */
-function routeKm(points: ReadonlyArray<{ lat: number; lng: number }>) {
-  let total = 0
-  for (let i = 1; i < points.length; i++) {
-    total += distanceKm([points[i - 1]!.lat, points[i - 1]!.lng], [points[i]!.lat, points[i]!.lng])
-  }
-  return +total.toFixed(1)
 }
 
 /**
@@ -123,16 +114,18 @@ export function listPosts(includePrivate: boolean): PostSummary[] {
 function summarize(post: PostRow): PostSummary {
   const db = useDb()
   const points = db
-    .prepare<[number], { lat: number; lng: number }>(
+    .prepare<[number], Pick<PointRow, 'lat' | 'lng'>>(
       `SELECT lat, lng FROM point WHERE post_id = ? ORDER BY order_index`,
     )
     .all(post.id)
 
-  const photoCount = db
-    .prepare<[number], { n: number }>(
-      `SELECT COUNT(*) AS n FROM photo ph JOIN point pt ON pt.id = ph.point_id WHERE pt.post_id = ?`,
+  // 포인트 소속·표시 순서와 무관하게 사진의 원래 촬영 순서로 동선을 계산한다.
+  const photos = db
+    .prepare<[number], Pick<PhotoRow, 'id' | 'lat' | 'lng' | 'shot_at'>>(
+      `SELECT ph.id, ph.lat, ph.lng, ph.shot_at FROM photo ph
+       JOIN point pt ON pt.id = ph.point_id WHERE pt.post_id = ?`,
     )
-    .get(post.id)?.n ?? 0
+    .all(post.id)
 
   const cover = post.cover_photo_id
     ? db
@@ -155,8 +148,8 @@ function summarize(post: PostRow): PostSummary {
     is_public: post.is_public === 1,
     day_settings: parseDaySettings(post.day_settings),
     point_count: points.length,
-    photo_count: photoCount,
-    distance_km: routeKm(points),
+    photo_count: photos.length,
+    distance_km: routeKm(orderedRoutePhotos(photos)),
     cover_thumb: cover ? PHOTO_URL + cover.thumb_path : null,
     cover_display: cover ? PHOTO_URL + cover.display_path : null,
     center,

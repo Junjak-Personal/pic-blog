@@ -26,7 +26,7 @@ export interface DayPoint {
  */
 export const DAY_COLORS = ['#92ACB2', '#7FA7D9', '#C48FBF', '#8FC98A', '#E08C7A', '#E2A857'] as const
 
-/** 촬영 시각이 없는 포인트 (설계문서 §6 — 동선에서 빠지고 마커만 남는 그 포인트들) */
+/** 촬영 시각이 없는 포인트 — 날짜 미상 마커·레일에 쓰는 색. 동선은 사진 시각을 따른다. */
 export const NO_DAY_COLOR = '#6B7C83'
 
 export interface DayGroup<T extends DayPoint> {

@@ -2,7 +2,7 @@
 import MapFrame from '~/components/MapFrame.vue'
 /**
  * 1g 클러스터 미리보기 지도.
- * 점 = 사진 1장, 번호 마커 = 잠정 포인트, 실선 = 거리로 끊긴 경계, 점선 = 시간 공백으로 끊김.
+ * 점 = 사진 1장, 번호 마커 = 잠정 포인트, 동선 = 촬영 순서로 사진 좌표를 이은 선.
  *
  * 🔴 좌표 순서: DB/EXIF 는 lat/lng, Mapbox 는 [lng, lat] 다.
  *    아래에서 지도로 나가는 좌표는 전부 toLngLat() 를 통과한다.
@@ -49,15 +49,17 @@ function clearMarkers() {
   markers = []
 }
 
-/** 클러스터 중심을 이은 선. 시간·날짜로 끊긴 구간만 따로 뺀다 — 실선으로 이으면 지도가 옆 패널과 다른 말을 한다. */
+/** 반경은 마커를 묶는 데만 쓴다. 선은 같은 포인트 안의 사진까지 모두 지난다. */
 function routeFeatures() {
+  const shots = [...props.shots].sort((a, b) => a.t - b.t)
+  const gapStarts = new Set(props.clusters.filter((c) => c.gap || c.dayBreak).map((c) => c.shots[0]!.key))
   const solid: [number, number][][] = []
   const gap: [number, number][][] = []
-  for (let i = 1; i < props.clusters.length; i++) {
-    const a = props.clusters[i - 1]!
-    const b = props.clusters[i]!
+  for (let i = 1; i < shots.length; i++) {
+    const a = shots[i - 1]!
+    const b = shots[i]!
     const seg: [number, number][] = [toLngLat(a), toLngLat(b)]
-    ;(b.gap || b.dayBreak ? gap : solid).push(seg)
+    ;(gapStarts.has(b.key) ? gap : solid).push(seg)
   }
   return { solid, gap }
 }
@@ -190,7 +192,7 @@ onBeforeUnmount(clearMarkers)
       </div>
       <div class="chip">
         <span class="line-sample" />
-        <span class="mono">거리로 끊긴 경계</span>
+        <span class="mono">사진 좌표를 이은 동선</span>
       </div>
       <div class="chip accent">
         <span class="gap-sample" />

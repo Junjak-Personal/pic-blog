@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
 import { clusterAt, assignTo, GAP_MINUTES, type ClusterInput } from './cluster.ts'
 import { scatter } from './scatter.ts'
-import { distanceM, sameSpot, toLngLat } from './geo.ts'
+import { distanceM, orderedRoutePhotos, routeKm, sameSpot, toLngLat } from './geo.ts'
 import { formatExposure, formatGap } from './format.ts'
 import { photoKey } from './photo.ts'
 import { pointAnchor, representativePhoto } from './point-anchor.ts'
@@ -41,6 +41,56 @@ describe('geo', () => {
     assert.ok(sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.76385, lng: 128.899886 }))
     // 위도 0.00001° ≈ 1.1m — 움직인 것
     assert.ok(!sameSpot({ lat: 37.763847, lng: 128.899886 }, { lat: 37.763857, lng: 128.899886 }))
+  })
+
+  it('같은 포인트에 묶인 사진도 이동과 복귀를 모두 경로에 남긴다', () => {
+    const photos = [
+      { id: 1, lat: 37, lng: 128, shot_at: '2026-08-23T09:00:00' },
+      { id: 2, lat: 37.002, lng: 128, shot_at: '2026-08-23T09:10:00' },
+      { id: 3, lat: 37, lng: 128, shot_at: '2026-08-23T09:20:00' },
+    ]
+    const clusters = clusterAt(photos.map((photo, i) => ({
+      key: String(photo.id), lat: photo.lat, lng: photo.lng, t: at(2026, 8, 23, 9, i * 10),
+    })), 500)
+    assert.equal(clusters.length, 1, '세 사진은 같은 포인트에 묶인다')
+    assert.deepEqual(orderedRoutePhotos(photos).map(toLngLat), [[128, 37], [128, 37.002], [128, 37]])
+    assert.equal(routeKm(orderedRoutePhotos(photos)), 0.4, '대표 포인트 하나의 거리 0 대신 왕복 이동을 합산한다')
+  })
+
+  it('포인트와 사진 표시 순서가 섞여도 모든 사진을 촬영 시각순으로 잇는다', () => {
+    const points = [
+      { photos: [
+        { id: 3, point_id: 1, order_index: 0, lat: 37.002, lng: 128, shot_at: '2026-08-23T11:00:00' },
+        { id: 1, point_id: 1, order_index: 1, lat: 37, lng: 128, shot_at: '2026-08-23T09:00:00' },
+      ] },
+      { photos: [
+        { id: 2, point_id: 2, order_index: 0, lat: 37.001, lng: 128, shot_at: '2026-08-23T10:00:00' },
+      ] },
+    ]
+    const photos = points.flatMap((point) => point.photos)
+    const ordered = orderedRoutePhotos(photos)
+    assert.deepEqual(ordered.map((photo) => photo.id), [1, 2, 3])
+    assert.deepEqual(ordered.map((photo) => photo.point_id), [1, 2, 1], '포인트를 오간 순서도 유지한다')
+    assert.deepEqual(photos.map((photo) => photo.id), [3, 1, 2], '사진 표시 순서는 바꾸지 않는다')
+    assert.equal(routeKm(ordered), 0.2)
+  })
+
+  it('촬영 시각이 같으면 사진 ID 순서로 안정적으로 잇는다', () => {
+    const photos = [5, 2, 9].map((id) => ({ id, lat: 37, lng: 128, shot_at: '2026-08-23T09:00:00' }))
+    assert.deepEqual(orderedRoutePhotos(photos).map((photo) => photo.id), [2, 5, 9])
+    assert.deepEqual(orderedRoutePhotos([...photos].reverse()), orderedRoutePhotos(photos))
+  })
+
+  it('촬영 시각이 없으면 경로에서 빼고, 사진이 없거나 한 장이면 거리는 0이다', () => {
+    const photos = [
+      { id: 1, lat: 37, lng: 128, shot_at: null },
+      { id: 2, lat: 37.001, lng: 128, shot_at: '' },
+      { id: 3, lat: 37.002, lng: 128, shot_at: '2026-08-23T09:00:00' },
+    ]
+    assert.deepEqual(orderedRoutePhotos(photos).map((photo) => photo.id), [3])
+    assert.deepEqual(orderedRoutePhotos([]), [])
+    assert.equal(routeKm([]), 0)
+    assert.equal(routeKm(orderedRoutePhotos(photos)), 0)
   })
 })
 
