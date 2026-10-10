@@ -2,8 +2,8 @@
 /**
  * 아트보드 1b 포인트 상세 시트.
  * 데스크탑: 좌 스캐터 · 우 태그+본문 (1fr 352px). 하단에 EXIF 촬영값.
- * 모바일:   스캐터«만». 시각·좌표·사진수·기기·EXIF·태그·본문은 전부 ⓘ 판(.infopane)에
- *           모여 있고 .side 는 감춘다 — 세로가 부족해 스크롤로 흩어놓으면 못 읽는다.
+ * 모바일: 제목 아래 본문 미리보기로 정보 판(.infopane)을 연다.
+ *         시각·좌표·사진수·기기·EXIF·태그·본문은 정보 판에 모으고 .side 는 감춘다.
  */
 import PointExtras from '~/components/PointExtras.vue'
 import type { Point } from '#shared/types/db'
@@ -30,7 +30,8 @@ const emit = defineEmits<{ close: []; openPhoto: [index: number]; step: [dir: -1
  * 손잡이(.grip)와 헤더에서만 시작한다. 본문에서 잡으면 사진 산포·태그 스크롤과
  * 싸우고, 스크롤을 내리려다 시트가 닫히는 일이 생긴다.
  */
-/** 모바일 상세는 전부 ⓘ 판에 모은다 — 시각·좌표·사진수·기기·EXIF·태그·본문 */
+/** 미리보기와 연결된 모바일 정보 판 */
+const infoId = useId()
 const infoOpen = ref(false)
 
 const DISMISS_PX = 110
@@ -74,6 +75,7 @@ const paragraphs = computed(() =>
     .map((s) => s.trim())
     .filter(Boolean),
 )
+const description = computed(() => paragraphs.value.join(' '))
 
 /** 촬영값은 첫 사진 기준 — 같은 포인트는 대개 같은 기기·설정이다 */
 const lead = computed(() => props.point.photos[0] ?? null)
@@ -121,22 +123,29 @@ const deviceLine = computed(() => {
         <span class="mono">{{ formatCoord(props.point.lat, props.point.lng) }}</span>
       </span>
       <div class="hact">
-      <button
-        v-if="props.mobile"
-        type="button"
-        class="info"
-        :class="{ on: infoOpen }"
-        :aria-expanded="infoOpen"
-        aria-label="사진 정보"
-        @click="infoOpen = !infoOpen"
-      >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01" /><path d="M11 12h1v4h1" /></svg>
-      </button>
-      <button type="button" class="close" aria-label="상세 닫기" @click="emit('close')">
+      <button type="button" class="close" aria-label="상세 닫기" data-testid="point-detail-close-button" @click="emit('close')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
       </button>
       </div>
     </header>
+
+    <button
+      v-if="props.mobile"
+      type="button"
+      class="description"
+      :class="{ on: infoOpen }"
+      :aria-expanded="infoOpen"
+      :aria-controls="infoId"
+      :aria-label="infoOpen ? '사진으로 돌아가기' : '포인트 상세 정보 보기'"
+      data-testid="point-detail-description-toggle"
+      @click="infoOpen = !infoOpen"
+    >
+      <span class="description-text">{{ description || '작성된 글이 없습니다.' }}</span>
+      <span class="description-action">
+        {{ infoOpen ? '사진으로 돌아가기' : description ? '자세히 보기' : '포인트 정보 보기' }}
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path :d="infoOpen ? 'M15 6l-6 6l6 6' : 'M9 6l6 6l-6 6'" /></svg>
+      </span>
+    </button>
 
     <div class="body">
       <!--
@@ -145,7 +154,7 @@ const deviceLine = computed(() => {
         흐름에서 빼서(position: absolute) 열고 닫아도 레이아웃이 움직이지 않는다.
       -->
       <Transition name="fade">
-      <div v-if="props.mobile && infoOpen" class="infopane scroll-y" role="region" aria-label="포인트 정보">
+      <div v-if="props.mobile && infoOpen" :id="infoId" class="infopane scroll-y" role="region" aria-label="포인트 정보">
         <dl class="ipair">
           <dt class="mono">시각</dt>
           <dd class="mono">{{ formatDate(props.point.first_shot_at) }} {{ formatTime(props.point.first_shot_at) }}</dd>
@@ -293,7 +302,7 @@ const deviceLine = computed(() => {
 .body { flex: 1; display: grid; grid-template-columns: 1fr 352px; min-height: 0; }
 .scatter-slot { position: relative; min-width: 0; overflow: hidden; }
 
-/* 앞뒤 포인트 이동 — ⓘ 판(z 30)보다 아래에 둔다. 판이 떠 있을 땐 판이 주인공이다 */
+/* 앞뒤 포인트 이동 — 정보 판(z 30)보다 아래에 둔다. 판이 떠 있을 땐 판이 주인공이다 */
 .pnav {
   position: absolute;
   top: 50%;
@@ -314,19 +323,45 @@ const deviceLine = computed(() => {
 .pnav.prev { left: 12px; }
 .pnav.next { right: 12px; }
 
-/* ⓘ 토글 — 데스크탑에는 없다 (v-if) */
-.info {
-  width: 36px;
-  height: 36px;
+/* 기존 작은 입력 높이 토큰의 두 배: 모바일에서는 80px */
+.description {
+  height: calc(var(--field-h-sm) * 2);
+  min-width: 0;
   flex: none;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--radius-sm);
+  padding: var(--radius) var(--topbar-x-sm);
   border: 0;
-  background: none;
-  color: var(--deep);
+  border-bottom: 1px solid var(--border-control);
+  background: var(--surface-raised);
+  color: var(--mid);
+  text-align: left;
   cursor: pointer;
 }
-.info.on { color: var(--ink); }
+.description:hover, .description.on { background: var(--surface-hover); }
+.description:focus-visible { outline: 1px solid var(--focus-border); outline-offset: -1px; box-shadow: inset var(--focus-ring); }
+.description-text {
+  flex: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+}
+.description-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--radius-sm);
+  color: var(--acc);
+  font-size: var(--fs-xs);
+  line-height: 1;
+}
+.description-action svg { width: 1em; height: 1em; flex: none; }
 
 /* 흐름 밖에서 본문을 덮는다 — 열고 닫아도 헤더·스캐터가 움직이지 않는다 */
 .infopane {
@@ -391,7 +426,7 @@ const deviceLine = computed(() => {
     display: grid;
     place-items: center;
     flex: none;
-    height: 16px;
+    height: calc(var(--radius) + var(--radius-sm));
     /* 손잡이·헤더에서 세로 제스처를 우리가 가져간다 */
     touch-action: none;
     cursor: grab;
@@ -402,14 +437,15 @@ const deviceLine = computed(() => {
     border-radius: 999px;
     background: rgb(var(--mid-rgb) / 0.3);
   }
-  /* 헤더는 한 줄 48px 고정 — [번호] [이름] ... [ⓘ] [✕]. 시각·좌표는 ⓘ 판으로 갔다.
+  /* 헤더는 한 줄 48px 고정 — [번호] [이름] ... [✕]. 시각·좌표는 정보 판으로 갔다.
      안쪽 여백으로 높이가 정해지면 47·49 로 흔들린다 — box-sizing 이 border-box(전역)라
      아래 border-bottom 1px 까지 포함한 값이다.
-     grabber 바↔제목 / 제목↔divider 가 둘 다 ~12px 이도록 위 6 · 아래 11. */
-  .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 6px 12px 11px 18px; touch-action: none; }
+     손잡이가 차지한 높이만큼 헤더 아래를 비워 시트 상단↔번호 / 번호↔divider 를 맞춘다. */
+  .head { flex-wrap: nowrap; height: 48px; gap: 12px; padding: 0 12px calc(var(--radius) + var(--radius-sm)) 18px; touch-action: none; }
   .wide-only { display: none; }
-  .name { font-size: var(--fs-display); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* 본문은 스캐터만. 태그·본문·EXIF 는 전부 ⓘ 판에 모였다 — 흩어놓지 않는다. */
+  .badge { width: var(--marker-size); height: var(--marker-size); font-size: var(--fs-xs); }
+  .name { font-size: var(--fs-2xl); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 미리보기 아래는 스캐터. 상세 정보 판을 열어도 미리보기 자리는 유지한다. */
   .body { position: relative; grid-template-columns: 1fr; grid-template-rows: 1fr; }
   .side { display: none; }
   /* 헤더 밖 조작 요소는 44px — 한 손으로 앞뒤 포인트를 넘기는 주 조작이다 */
