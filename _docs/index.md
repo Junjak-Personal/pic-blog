@@ -20,7 +20,7 @@ owner: jhyoon
 
 | 상태 | 토픽 | 문서 | 무엇 |
 |---|---|---|---|
-| complete | `product-spec` | [2026-11-03-photo-enrichment-plan.md](complete/product-spec/2026-11-03-photo-enrichment-plan.md) | 대표 사진·짧은 설명·장소명 후보, 109테스트·실제54장 API 검증 |
+| complete | `product-spec` | [2026-11-03-photo-enrichment-plan.md](complete/product-spec/2026-11-03-photo-enrichment-plan.md) | 대표 사진·짧은 설명·장소명 후보, 115테스트·실제54장 API 검증 |
 | complete | `product-spec` | [2026-11-03-photo-ai-1000-plan.md](complete/product-spec/2026-11-03-photo-ai-1000-plan.md) | 선택1,000장 비동기 처리·90테스트·실제41장 UI 검증, 운영7기록2,512장 정리 완료 |
 | complete | `product-spec` | [2026-11-02-mcp-photo-ai-plan.md](complete/product-spec/2026-11-02-mcp-photo-ai-plan.md) | MCP·사진 AI 구현·운영 배포. 실제 Claude API 및 Claude 웹/Code·ChatGPT 읽기 연결 검증 완료 |
 | complete | `product-spec` | [2026-10-08-photo-route-plan.md](complete/product-spec/2026-10-08-photo-route-plan.md) | 포인트 묶음과 분리한 사진 좌표 동선·거리 계산. 타입·단위·빌드·저장 E2E·지도 좌표 확인 완료. 후속 QA 2건 |

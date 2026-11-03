@@ -84,21 +84,21 @@ describe('image-grounded enrichment provider',()=>{
     const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async(_url,options)=>{sent=String(options?.body);return result()})
     await provider({...snapshot,photos},{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal,groups)
     expect(sent.match(/"type":"image"/g)).toHaveLength(15)
-    const payload = JSON.parse(sent) as { output_config: { format: typeof enrichmentOutputFormat } }
+    const payload = JSON.parse(sent) as { output_config: { format: ReturnType<typeof enrichmentOutputFormat> } }
     expect(payload.output_config.format.type).toBe('json_schema')
     const schema=payload.output_config.format.schema
     expect(schema.additionalProperties).toBe(false)
-    expect(schema.required).toContain('groups')
-    const group=schema.properties.groups.items
-    expect(group.additionalProperties).toBe(false)
-    expect(group.required).toContain('enrichment')
-    expect(group.properties.pointId.type).toBe('integer')
-    const details=group.properties.enrichment
+    expect(schema.required).toEqual(['points'])
+    expect(schema.properties.points.required).toEqual(['1'])
+    expect(schema.properties.points.additionalProperties).toBe(false)
+    const details=schema.properties.points.properties['1']!
     expect(details.additionalProperties).toBe(false)
-    expect(details.required).toEqual(['coverPhotoId','body','place'])
+    expect(details.required).toEqual(['coverPhotoId','body','reason','place'])
+    expect(details.properties.coverPhotoId.enum).toEqual(photos.slice(0,15).map(p=>p.id))
     expect(details.properties.place.anyOf.map(variant=>variant.properties.status.enum[0])).toEqual(['unidentified','candidate'])
     expect(details.properties.place.anyOf.every(variant=>variant.additionalProperties===false)).toBe(true)
     expect(details.properties.place.anyOf[1].required).toEqual(['status','name','evidence','photoIds'])
+    expect(details.properties.place.anyOf[1].properties.photoIds.items.enum).toEqual(photos.map(p=>p.id))
     expect(JSON.stringify(schema)).not.toContain('maxLength')
     expect(JSON.stringify(schema)).not.toContain('minimum')
     expect(sent).toContain('allowedCoverPhotoIds')
@@ -119,5 +119,41 @@ describe('malformed provider JSON is never repaired',()=>{
     const fetcher=async()=>new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:malformed}],usage:{input_tokens:321,output_tokens:123}}))
     const output=await claudeProvider({apiKey:'FAKE',model:'test'},root(),fetcher)(snapshot,request,new AbortController().signal)
     expect(output).toEqual({result:null,inputTokens:321,outputTokens:123})
+  })
+})
+
+
+describe('required point-key enrichment output',()=>{
+  const detail = (coverPhotoId:number) => ({ coverPhotoId, body:'나무가 있는 길을 둘러봤다.', reason:'이어지는 길 사진', place:{status:'unidentified'} })
+  it('requires every input point and normalizes only server-owned point IDs and photo membership',async()=>{
+    const dir=root();mkdirSync(join(dir,'trip'));writeFileSync(join(dir,'trip/1_thumb.jpg'),jpeg);writeFileSync(join(dir,'locked.jpg'),jpeg)
+    let sent=''
+    const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async(_url,options)=>{
+      sent=String(options?.body)
+      return new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify({points:{'2':detail(2),'1':detail(1)}})}],usage:{input_tokens:20,output_tokens:10}}))
+    })
+    const output=await provider(snapshot,{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal)
+    const payload=JSON.parse(sent) as {output_config:{format:ReturnType<typeof enrichmentOutputFormat>}}
+    const spec=payload.output_config.format.schema.properties.points
+    expect(spec.required).toEqual(['1','2'])
+    expect(spec.properties['1']!.properties.coverPhotoId.enum).toEqual([1])
+    expect(spec.properties['2']!.properties.coverPhotoId.enum).toEqual([2])
+    expect(spec.properties['2']!.properties.place.anyOf[1].properties.photoIds.items.enum).toEqual([2])
+    expect(output.result).toEqual({groups:[
+      {pointId:1,photoIds:[1],title:'',reason:detail(1).reason,enrichment:{coverPhotoId:1,body:detail(1).body,place:{status:'unidentified'}}},
+      {pointId:2,photoIds:[2],title:'',reason:detail(2).reason,enrichment:{coverPhotoId:2,body:detail(2).body,place:{status:'unidentified'}}},
+    ]})
+  })
+  it.each([
+    {points:{'1':detail(1)}},
+    {points:{'1':detail(1),'2':detail(2),'3':detail(1)}},
+    {points:{'1':detail(2),'2':detail(1)}},
+    {points:{'1':{...detail(1),photoIds:[2]},'2':detail(2)}},
+    {points:{'1':null,'2':detail(2)}},
+  ])('rejects omitted, extra or ownership-changing model output without filling it: %#',async(raw)=>{
+    const dir=root();mkdirSync(join(dir,'trip'));writeFileSync(join(dir,'trip/1_thumb.jpg'),jpeg);writeFileSync(join(dir,'locked.jpg'),jpeg)
+    const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async()=>new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(raw)}],usage:{input_tokens:20,output_tokens:10}})))
+    const output=await provider(snapshot,{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal)
+    expect(output).toEqual({result:null,inputTokens:20,outputTokens:10})
   })
 })
