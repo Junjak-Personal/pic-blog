@@ -117,10 +117,14 @@ export function photoBatches(snapshot: PhotoSnapshot, request: PhotoAiRequest, t
   while (offset < photos.length) {
     let end = offset + 1
     let bytes = sizes.get(photos[offset]!.id)!
+    const batchPointIds = new Set([photos[offset]!.point_id])
     if (bytes > 8_000_000) fail(422, '사진 전송량이 8MB를 넘습니다')
     while (end < photos.length && end-offset < limit && day(photos[end]!) === day(photos[offset]!)) {
       const nextBytes = sizes.get(photos[end]!.id)!
+      // Enrichment schemas with many required point objects exceed the provider grammar limit.
+      if (request.mode === 'enrich' && !batchPointIds.has(photos[end]!.point_id) && batchPointIds.size >= 6) break
       if (bytes+nextBytes > 8_000_000) break
+      batchPointIds.add(photos[end]!.point_id)
       bytes += nextBytes
       end++
     }

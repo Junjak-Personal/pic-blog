@@ -107,7 +107,7 @@ export class PhotoAiService {
       const reductions = request.mode === 'enrich' ? snapshot.points.filter(point => batches.filter(batch => batch.points.some(p => p.id === point.id)).length > 1) : []
       const totalBatches = batches.length + reductions.length
       const sourceHash = snapshotHash(snapshot)
-      const fingerprint = createHash('sha256').update(JSON.stringify({ ...(request.mode === 'enrich' ? { mode: 'enrich' } : {}), sourceHash, context: request.context, sendImages: request.sendImages, protected: request.protectedPointIds, model: this.model })).digest('hex')
+      const fingerprint = createHash('sha256').update(JSON.stringify({ ...(request.mode === 'enrich' ? { mode: 'enrich', enrichmentVersion: 2 } : {}), sourceHash, context: request.context, sendImages: request.sendImages, protected: request.protectedPointIds, model: this.model })).digest('hex')
       const byId = this.db.prepare<[string], RequestRow>('SELECT * FROM photo_ai_request WHERE id = ?').get(request.requestId)
       if (byId && byId.fingerprint !== fingerprint) fail(409, '요청 ID가 다른 내용에 사용되었습니다. 새 요청을 시작해 주세요')
       const existing = byId ?? this.db.prepare<[string], RequestRow>('SELECT * FROM photo_ai_request WHERE fingerprint = ?').get(fingerprint)

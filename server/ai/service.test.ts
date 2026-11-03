@@ -1,10 +1,10 @@
 import type { PhotoAiGroup } from '../../shared/types/photo-ai'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import Database from 'better-sqlite3'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SCHEMA } from '../utils/db'
 import { loadSnapshot, PhotoAiService } from './service'
-import { parseRequest, protectedIds, validateGroups, validateEnrichmentGroups, photoBatches } from './plan'
+import { parseRequest, protectedIds, validateGroups, validateEnrichmentGroups, snapshotHash, photoBatches } from './plan'
 import type { AiProvider, AiProviderResult } from './provider'
 
 const databases: Database.Database[] = []
@@ -557,5 +557,80 @@ describe('enrichment JSON failures',()=>{
     expect(result.usage).toEqual({inputTokens:321,outputTokens:123,attempts:1})
     expect(()=>service.apply('trip',result.id)).toThrow()
     expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+})
+
+
+function fillSinglePhotoPoints(db: Database.Database, selected: number) {
+  const point=db.prepare('INSERT INTO point (id,post_id,lat,lng,first_shot_at,order_index) VALUES (?,1,37,127,?,?)')
+  const photo=db.prepare('INSERT INTO photo (id,point_id,display_path,thumb_path,w,h,lat,lng,shot_at,order_index) VALUES (?,?,?,?,400,400,37,127,?,0)')
+  for(let index=0;index<selected-2;index++){
+    const id=100+index,time='2026-01-01T03:00:00'
+    point.run(id,time,index+3)
+    photo.run(id,id,`trip/${id}.jpg`,`trip/${id}_thumb.jpg`,time)
+  }
+}
+
+describe('bounded enrichment grammar batches',()=>{
+  it('splits forty single-photo points into seven batches with at most six points each',()=>{
+    const {db}=setup()
+    fillSinglePhotoPoints(db,40)
+    const snapshot=loadSnapshot(db,'trip'),req={...enrichRequest(),protectedPointIds:[3]}
+    const batches=photoBatches(snapshot,req,()=>100)
+    expect(batches).toHaveLength(7)
+    expect(batches.map(batch=>batch.points.length)).toEqual([6,6,6,6,6,6,4])
+    expect(batches.flatMap(batch=>batch.photos).map(photo=>photo.id)).toEqual(snapshot.photos.filter(photo=>photo.point_id!==3).map(photo=>photo.id))
+    expect(photoBatches(snapshot,{...req,mode:'organize'},()=>100)).toHaveLength(1)
+  })
+  it('still accepts one thousand selected photos and preserves the whole partition',async()=>{
+    const {db,service}=setup()
+    fillSinglePhotoPoints(db,1000)
+    const seen:number[]=[]
+    const bounded:AiProvider=Object.assign(async(...args:Parameters<AiProvider>)=>{
+      const [snapshot]=args
+      expect(snapshot.points.length).toBeLessThanOrEqual(6)
+      expect(snapshot.photos.length).toBeLessThanOrEqual(40)
+      seen.push(...snapshot.photos.map(photo=>photo.id))
+      return enrichProvider(...args)
+    },{thumbnailBytes:()=>100})
+    const before=loadSnapshot(db,'trip')
+    const ready=await service.propose('trip',enrichRequest(),bounded)
+    expect(ready.status).toBe('ready')
+    expect(ready.progress).toMatchObject({totalPhotos:1000,processedPhotos:1000,totalBatches:167,completedBatches:167})
+    expect(seen).toHaveLength(1000)
+    expect(new Set(seen).size).toBe(1000)
+    expect(ready.groups).toHaveLength(1001)
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+})
+
+const legacyFingerprint=(snapshot:ReturnType<typeof loadSnapshot>,req:ReturnType<typeof enrichRequest>|ReturnType<typeof request>,enrich:boolean)=>createHash('sha256')
+  .update(JSON.stringify({...(enrich?{mode:'enrich'}:{}),sourceHash:snapshotHash(snapshot),context:req.context,sendImages:req.sendImages,protected:[3],model:'test-model'})).digest('hex')
+
+describe('enrichment batch-version compatibility',()=>{
+  it('rejects old request IDs before reusing incompatible checkpoint indexes',async()=>{
+    const {db,service}=setup(),before=loadSnapshot(db,'trip'),req=enrichRequest()
+    const failed=await service.propose('trip',req,async()=>({result:null,inputTokens:1,outputTokens:1}))
+    db.prepare('UPDATE photo_ai_request SET fingerprint=?,completed_batches=2 WHERE id=?').run(legacyFingerprint(before,req,true),failed.id)
+    const mock=vi.fn(enrichProvider)
+    await expect(service.propose('trip',req,mock)).rejects.toThrow('새 요청')
+    expect(mock).not.toHaveBeenCalled()
+    expect(service.get('trip',failed.id).progress?.completedBatches).toBe(2)
+    expect(service.get('trip',failed.id).usage.attempts).toBe(1)
+    expect((await service.propose('trip',{...req,requestId:randomUUID()},enrichProvider)).status).toBe('ready')
+  })
+  it('allows reading, applying and undoing an already-ready legacy enrichment proposal',async()=>{
+    const {db,service}=setup(),before=loadSnapshot(db,'trip'),req=enrichRequest()
+    const ready=await service.propose('trip',req,enrichProvider)
+    db.prepare('UPDATE photo_ai_request SET fingerprint=? WHERE id=?').run(legacyFingerprint(before,req,true),ready.id)
+    expect(service.get('trip',ready.id).status).toBe('ready')
+    expect(service.apply('trip',ready.id).status).toBe('applied')
+    expect(service.undo('trip',ready.id).status).toBe('undone')
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+  it('leaves the organize fingerprint byte-for-byte compatible',async()=>{
+    const {db,service}=setup(),before=loadSnapshot(db,'trip'),req=request()
+    const ready=await service.propose('trip',req,provider)
+    expect(db.prepare<[string],{fingerprint:string}>('SELECT fingerprint FROM photo_ai_request WHERE id=?').get(ready.id)?.fingerprint).toBe(legacyFingerprint(before,req,false))
   })
 })

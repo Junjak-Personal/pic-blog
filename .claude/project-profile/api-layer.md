@@ -58,5 +58,6 @@
 - 기존 AI 요청의 선택적 `mode: enrich`. 생략/organize는 기존 동작이다. 보강은 썸네일 전송 필수이며 선택1,000장까지 기존 포인트를 유지한다.
 - `PhotoAiGroup.enrichment`는 대표 사진·300자/1~3문장 본문·장소 후보/근거 사진을 담는다. 원래 제목/사진 행/소속/순서/앵커는 유지하고 빈 본문과 대표만 적용한다. 후보는 외부 지도 검증 결과가 아니며 제목에 자동 적용하지 않는다. 유효한 사용자 지정 여행 커버도 보존한다.
 - 다중 배치 포인트를 종합하고 `enrichment_groups_json`에 체크포인트 저장. 선택1,000장 전체 분석 후 최대15개 대표 후보 비교. `?proposal=<UUID>`로 API 생성 제안을 편집 화면에서 확인한다.
-- 단위115테스트 및 실제 사진54장 HTTP API 생성/적용/조회/복원 통과. 자세한 운영 근거는 `_docs/complete/product-spec/2026-11-03-photo-enrichment-plan.md`.
+- 단위125테스트 및 실제 사진54장 HTTP API 생성/적용/조회/복원 통과. 자세한 운영 근거는 `_docs/complete/product-spec/2026-11-03-photo-enrichment-plan.md`.
 - enrich는 입력 포인트 ID를 필수 키로 하는 Anthropic output_config JSON Schema를 사용한다. 대표·근거 사진은 소유 ID enum으로 제한하고, 사진 소속/목록/제목은 모델이 아닌 서버가 원본에서 복원한다. 서버 소유권/길이 검증도 유지한다.
+- 공급자 문법 크기 제한에 맞춰 enrich만 요청당6포인트/40사진/8MB. 장소 wire는 flat필수필드이며 공개응답은 기존union 유지. enrich fingerprint버전2로 이전 미완료 배치계획 재사용 차단; 이전ready적용/복원호환. 실제40포인트8묶음 API검증 통과.

@@ -95,10 +95,10 @@ describe('image-grounded enrichment provider',()=>{
     expect(details.additionalProperties).toBe(false)
     expect(details.required).toEqual(['coverPhotoId','body','reason','place'])
     expect(details.properties.coverPhotoId.enum).toEqual(photos.slice(0,15).map(p=>p.id))
-    expect(details.properties.place.anyOf.map(variant=>variant.properties.status.enum[0])).toEqual(['unidentified','candidate'])
-    expect(details.properties.place.anyOf.every(variant=>variant.additionalProperties===false)).toBe(true)
-    expect(details.properties.place.anyOf[1].required).toEqual(['status','name','evidence','photoIds'])
-    expect(details.properties.place.anyOf[1].properties.photoIds.items.enum).toEqual(photos.map(p=>p.id))
+    expect(details.properties.place.properties.status.enum).toEqual(['unidentified','candidate'])
+    expect(details.properties.place.additionalProperties).toBe(false)
+    expect(details.properties.place.required).toEqual(['status','name','evidence','photoIds'])
+    expect(details.properties.place.properties.photoIds.items.enum).toEqual(photos.map(p=>p.id))
     expect(JSON.stringify(schema)).not.toContain('maxLength')
     expect(JSON.stringify(schema)).not.toContain('minimum')
     expect(sent).toContain('allowedCoverPhotoIds')
@@ -124,7 +124,7 @@ describe('malformed provider JSON is never repaired',()=>{
 
 
 describe('required point-key enrichment output',()=>{
-  const detail = (coverPhotoId:number) => ({ coverPhotoId, body:'나무가 있는 길을 둘러봤다.', reason:'이어지는 길 사진', place:{status:'unidentified'} })
+  const detail = (coverPhotoId:number) => ({ coverPhotoId, body:'나무가 있는 길을 둘러봤다.', reason:'이어지는 길 사진', place:{status:'unidentified',name:'',evidence:'',photoIds:[]} })
   it('requires every input point and normalizes only server-owned point IDs and photo membership',async()=>{
     const dir=root();mkdirSync(join(dir,'trip'));writeFileSync(join(dir,'trip/1_thumb.jpg'),jpeg);writeFileSync(join(dir,'locked.jpg'),jpeg)
     let sent=''
@@ -138,7 +138,7 @@ describe('required point-key enrichment output',()=>{
     expect(spec.required).toEqual(['1','2'])
     expect(spec.properties['1']!.properties.coverPhotoId.enum).toEqual([1])
     expect(spec.properties['2']!.properties.coverPhotoId.enum).toEqual([2])
-    expect(spec.properties['2']!.properties.place.anyOf[1].properties.photoIds.items.enum).toEqual([2])
+    expect(spec.properties['2']!.properties.place.properties.photoIds.items.enum).toEqual([2])
     expect(output.result).toEqual({groups:[
       {pointId:1,photoIds:[1],title:'',reason:detail(1).reason,enrichment:{coverPhotoId:1,body:detail(1).body,place:{status:'unidentified'}}},
       {pointId:2,photoIds:[2],title:'',reason:detail(2).reason,enrichment:{coverPhotoId:2,body:detail(2).body,place:{status:'unidentified'}}},
@@ -150,10 +150,41 @@ describe('required point-key enrichment output',()=>{
     {points:{'1':detail(2),'2':detail(1)}},
     {points:{'1':{...detail(1),photoIds:[2]},'2':detail(2)}},
     {points:{'1':null,'2':detail(2)}},
+    {points:{'1':{...detail(1),place:{status:'unidentified'}},'2':detail(2)}},
+    {points:{'1':{...detail(1),place:{status:'unidentified',name:'추정 장소',evidence:'',photoIds:[]}},'2':detail(2)}},
+    {points:{'1':{...detail(1),place:{status:'candidate',name:'정원',evidence:'공개 간판',photoIds:[2]}},'2':detail(2)}},
   ])('rejects omitted, extra or ownership-changing model output without filling it: %#',async(raw)=>{
     const dir=root();mkdirSync(join(dir,'trip'));writeFileSync(join(dir,'trip/1_thumb.jpg'),jpeg);writeFileSync(join(dir,'locked.jpg'),jpeg)
     const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async()=>new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(raw)}],usage:{input_tokens:20,output_tokens:10}})))
     const output=await provider(snapshot,{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal)
     expect(output).toEqual({result:null,inputTokens:20,outputTokens:10})
+  })
+})
+
+
+describe('flat place wire format',()=>{
+  it('keeps forty required single-photo points free of union branches',()=>{
+    const photos=Array.from({length:40},(_,index)=>({...snapshot.photos[0]!,id:index+1,point_id:index+1}))
+    const format=enrichmentOutputFormat(photos,photos.map(photo=>photo.id))
+    const points=format.schema.properties.points
+    expect(points.required).toEqual(photos.map(photo=>String(photo.point_id)))
+    expect(Object.keys(points.properties)).toHaveLength(40)
+    expect(JSON.stringify(format)).not.toMatch(/anyOf|oneOf|allOf/)
+    for(const photo of photos){
+      const properties=points.properties[String(photo.point_id)]!.properties
+      expect(properties.coverPhotoId.enum).toEqual([photo.id])
+      expect(properties.place.required).toEqual(['status','name','evidence','photoIds'])
+      expect(properties.place.additionalProperties).toBe(false)
+      expect(properties.place.properties.photoIds.items.enum).toEqual([photo.id])
+      expect(properties.place.properties.photoIds).not.toHaveProperty('minItems')
+    }
+  })
+  it('normalizes an owned flat candidate to the existing public candidate variant',async()=>{
+    const dir=root();mkdirSync(join(dir,'trip'));writeFileSync(join(dir,'trip/1_thumb.jpg'),jpeg)
+    const place={status:'candidate',name:'정원',evidence:'공개 간판에 정원이 적혀 있다.',photoIds:[1]}
+    const wire={points:{'1':{coverPhotoId:1,body:'정원 길을 둘러봤다.',reason:'정원과 길 사진',place}}}
+    const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async()=>new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(wire)}],usage:{input_tokens:20,output_tokens:10}})))
+    const output=await provider(snapshot,{...request,mode:'enrich',sendImages:true},new AbortController().signal)
+    expect(output.result).toEqual({groups:[{pointId:1,photoIds:[1],title:'',reason:'정원과 길 사진',enrichment:{coverPhotoId:1,body:'정원 길을 둘러봤다.',place}}]})
   })
 })
