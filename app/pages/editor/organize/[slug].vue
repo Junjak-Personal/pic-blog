@@ -10,8 +10,9 @@ const endpoint = `/api/posts/${encodeURIComponent(slug)}/ai`
 const storageKey = `pic-blog:ai:${slug}`
 const { loggedIn } = useUserSession()
 const { data: post, status, error: loadError, refresh } = await useFetch<PostDetail>(`/api/posts/${encodeURIComponent(slug)}`, { watch: [loggedIn] })
+const mode = ref<NonNullable<PhotoAiRequest['mode']>>('enrich')
 const context = ref('')
-const sendImages = ref(false)
+const sendImages = ref(true)
 const consent = ref(false)
 const unlocked = ref<number[]>([])
 const proposal = ref<PhotoAiProposal | null>(null)
@@ -23,8 +24,9 @@ const photos = computed(() => post.value?.points.flatMap((point) => point.photos
 const selectedPhotoCount = computed(() => post.value?.points.reduce((count, point) => count + (unlocked.value.includes(point.id) && !protectedContent(point) ? point.photos.length : 0), 0) ?? 0)
 const busy = computed(() => operation.value !== 'idle')
 const pending = computed(() => proposal.value?.status === 'pending')
-const canGenerate = computed(() => !!post.value && selectedPhotoCount.value > 0 && selectedPhotoCount.value <= 1000 && consent.value && !busy.value && !pending.value)
+const canGenerate = computed(() => !!post.value && selectedPhotoCount.value > 0 && selectedPhotoCount.value <= 1000 && consent.value && (mode.value !== 'enrich' || sendImages.value) && !busy.value && !pending.value)
 const canRetry = computed(() => proposal.value?.status === 'failed' && proposal.value.usage.attempts < 2 && lastRequest.value?.requestId === requestId.value && !busy.value)
+const resultMode = computed(() => proposal.value?.mode ?? 'organize')
 const photoById = computed(() => new Map(photos.value.map((photo) => [photo.id, photo])))
 let previousOptions = ''
 let pollTimer: ReturnType<typeof setTimeout> | undefined
@@ -33,14 +35,19 @@ let epoch = 0
 let disposed = false
 
 onMounted(() => {
+  const linkedId = route.query.proposal
+  if (typeof linkedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(linkedId)) requestId.value = linkedId
   try {
-    requestId.value = sessionStorage.getItem(storageKey)
+    requestId.value ??= sessionStorage.getItem(storageKey)
     const saved: unknown = JSON.parse(sessionStorage.getItem(`${storageKey}:request`) ?? 'null')
     if (saved && typeof saved === 'object' && 'requestId' in saved && saved.requestId === requestId.value && typeof saved.requestId === 'string'
       && 'context' in saved && typeof saved.context === 'string' && 'sendImages' in saved && typeof saved.sendImages === 'boolean'
+      && (!('mode' in saved) || saved.mode === 'organize' || saved.mode === 'enrich')
       && 'protectedPointIds' in saved && Array.isArray(saved.protectedPointIds)
       && saved.protectedPointIds.every((id: unknown): id is number => typeof id === 'number' && Number.isSafeInteger(id) && id > 0)) {
-      lastRequest.value = { requestId: saved.requestId, context: saved.context, sendImages: saved.sendImages, protectedPointIds: saved.protectedPointIds }
+      const savedMode = 'mode' in saved && saved.mode === 'enrich' ? 'enrich' : 'organize'
+      mode.value = savedMode
+      lastRequest.value = { requestId: saved.requestId, context: saved.context, sendImages: saved.sendImages, protectedPointIds: saved.protectedPointIds, mode: savedMode }
       context.value = saved.context
       sendImages.value = saved.sendImages
       const protectedPointIds = lastRequest.value.protectedPointIds
@@ -56,8 +63,15 @@ onBeforeUnmount(() => {
   stopPolling()
 })
 
+function changeMode(next: NonNullable<PhotoAiRequest['mode']>) {
+  if (busy.value || pending.value || next === mode.value) return
+  mode.value = next
+  if (next === 'enrich') sendImages.value = true
+  unlocked.value = []
+  consent.value = false
+}
 function protectedContent(point: Point) {
-  return !!(point.title?.trim() || point.body?.trim() || point.tags.length || point.links.length || point.expenses.length
+  return !!((mode.value === 'organize' && point.title?.trim()) || point.body?.trim() || point.tags.length || point.links.length || point.expenses.length
     || point.photos.some(photo => !Number.isFinite(photo.lat) || !Number.isFinite(photo.lng) || Math.abs(photo.lat) > 90 || Math.abs(photo.lng) > 180 || (photo.lat === 0 && photo.lng === 0)))
 }
 function errorText(error: unknown) {
@@ -93,10 +107,17 @@ function remember(id: string, request?: PhotoAiRequest) {
 async function check(automatic = false) {
   const id = requestId.value
   if (!id || disposed || (automatic && busy.value)) return
+  const restoreOptions = !proposal.value && !lastRequest.value
   const request = startOperation('checking')
   try {
     const result = await $fetch<PhotoAiProposal>(`${endpoint}/${id}`, { signal: request.signal, retry: 0 })
-    if (isCurrent(request.epoch)) proposal.value = result
+    if (isCurrent(request.epoch)) {
+      proposal.value = result
+      if (restoreOptions) {
+        mode.value = result.mode ?? 'organize'
+        sendImages.value = result.sendImages
+      }
+    }
   } catch (error) {
     if (isCurrent(request.epoch)) message.value = errorText(error)
   } finally { finishOperation(request.epoch) }
@@ -108,10 +129,10 @@ async function generate(retry = false) {
   else {
     if (!post.value) return
     const protectedPointIds = post.value.points.filter((point) => protectedContent(point) || !unlocked.value.includes(point.id)).map((point) => point.id)
-    const options = JSON.stringify({ snapshot: post.value, context: context.value, sendImages: sendImages.value, protectedPointIds })
+    const options = JSON.stringify({ snapshot: post.value, mode: mode.value, context: context.value, sendImages: sendImages.value, protectedPointIds })
     const id = options === previousOptions && requestId.value ? requestId.value : crypto.randomUUID()
     previousOptions = options
-    body = { requestId: id, context: context.value, sendImages: sendImages.value, protectedPointIds }
+    body = { requestId: id, mode: mode.value, context: context.value, sendImages: sendImages.value, protectedPointIds }
   }
   remember(body.requestId, body)
   proposal.value = null
@@ -131,7 +152,7 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
   if (kind !== 'cancel') {
     if (busy.value) return
     const token = epoch
-    if (!await askConfirm({ title: kind === 'apply' ? '검토한 구성을 적용할까요?' : 'AI 적용 전으로 되돌릴까요?', body: '다른 편집이 저장된 뒤에는 충돌을 막기 위해 적용 또는 되돌리기가 거절됩니다.', confirmLabel: kind === 'apply' ? '적용' : '되돌리기' })) return
+    if (!await askConfirm({ title: kind === 'apply' ? (resultMode.value === 'enrich' ? '대표 사진과 짧은 설명을 적용할까요?' : '검토한 구성을 적용할까요?') : 'AI 적용 전으로 되돌릴까요?', body: '다른 편집이 저장된 뒤에는 충돌을 막기 위해 적용 또는 되돌리기가 거절됩니다.', confirmLabel: kind === 'apply' ? '적용' : '되돌리기' })) return
     if (!isCurrent(token)) return
   }
   const request = startOperation(kind)
@@ -150,14 +171,20 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
   <div class="ai-page">
     <header class="ai-header">
       <NuxtLink :to="`/editor/${slug}`" class="btn" data-testid="photo-ai-back">편집으로</NuxtLink>
-      <h1>AI로 포인트 정리</h1>
+      <h1>AI로 사진 기록 정리</h1>
     </header>
     <main class="ai-content">
       <p v-if="status === 'pending'" role="status">기록을 불러오는 중…</p>
       <div v-else-if="loadError || !post" role="alert"><p>기록을 불러오지 못했습니다.</p><button class="btn" data-testid="photo-ai-load-retry" @click="refresh()">다시 불러오기</button></div>
       <template v-else>
         <h2>{{ post.title }}</h2>
-        <p>장소·촬영 시각·추가 맥락으로 사진을 묶고 포인트 제목을 제안합니다. 먼저 결과를 검토하고 「적용」을 눌러야 저장됩니다.</p>
+        <div class="mode-options" role="group" aria-label="AI 작업 선택">
+          <button class="btn" :class="{ primary: mode === 'organize' }" :aria-pressed="mode === 'organize'" :disabled="busy || pending" data-testid="photo-ai-mode-organize" @click="changeMode('organize')">사진 묶기</button>
+          <button class="btn" :class="{ primary: mode === 'enrich' }" :aria-pressed="mode === 'enrich'" :disabled="busy || pending" data-testid="photo-ai-mode-enrich" @click="changeMode('enrich')">사진 기록 보강</button>
+        </div>
+        <p v-if="mode === 'enrich'">현재 포인트 구성을 유지하면서 대표 사진과 사진에 근거한 짧은 설명을 제안합니다. 사진에서 읽힌 장소명은 근거와 함께 후보로 보여 주며, 기존 제목을 자동으로 바꾸지 않습니다.</p>
+        <p v-else>장소·촬영 시각·추가 맥락으로 사진을 묶고 포인트 제목을 제안합니다.</p>
+        <p>먼저 결과를 검토하고 「적용」을 눌러야 저장됩니다.</p>
         <p v-if="!photos.length">분석할 사진이 없습니다. 편집 화면에서 사진을 먼저 추가해 주세요.</p>
         <p data-testid="photo-ai-selected-count">선택한 사진 {{ selectedPhotoCount.toLocaleString() }}장 / 최대 1,000장 · 전체 {{ photos.length.toLocaleString() }}장</p>
         <p v-if="selectedPhotoCount > 1000" role="alert">선택한 사진은 한 번에 최대 1,000장까지 분석할 수 있습니다. 일부 포인트를 선택 해제해 주세요.</p>
@@ -165,13 +192,14 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
           <legend>분석 범위</legend>
           <label for="ai-context">추가 맥락 (선택)</label>
           <textarea id="ai-context" v-model="context" maxlength="1000" rows="3" data-testid="photo-ai-context" placeholder="예: 오전에는 시장, 오후에는 해변에서 보낸 여행" />
-          <label class="check"><input v-model="sendImages" type="checkbox" data-testid="photo-ai-images"> 사진 썸네일도 함께 보내기</label>
+          <label class="check"><input v-model="sendImages" :disabled="mode === 'enrich'" type="checkbox" data-testid="photo-ai-images"> 사진 썸네일도 함께 보내기{{ mode === 'enrich' ? ' (사진 기록 보강에 필수)' : '' }}</label>
           <p>하루 최대 20개 작업, 같은 제안은 최대 2회 시도합니다. 사진이 많으면 나누어 분석하며 몇 분이 걸릴 수 있습니다. 취소 전에 전송된 요청은 비용이 발생할 수 있습니다.</p>
-          <p>Claude(Anthropic)에 선택한 그룹의 사진 ID·분 단위 촬영 시각·소수점 4자리 위치 및 입력한 맥락을 보냅니다. 보호된 그룹의 사진과 기록은 보내지 않습니다. 사진 전송을 선택하면 썸네일도 전송합니다. 원본 사진은 보내지 않습니다. 인물의 신원이나 민감한 내용은 분석 대상으로 삼지 않습니다.</p>
+          <p>Claude(Anthropic)에 선택한 그룹의 사진 ID·분 단위 촬영 시각·소수점 4자리 위치 및 입력한 맥락을 보냅니다. 보호된 그룹의 사진과 기록은 보내지 않습니다. 사진 전송을 선택하면 썸네일도 전송합니다. 사진 기록 보강에서는 나누어 생성한 설명·대표 사진 후보·장소명 근거도 최종 제안을 만들기 위해 다시 보냅니다. 원본 사진은 보내지 않습니다. 인물의 신원이나 민감한 내용은 분석 대상으로 삼지 않습니다.</p>
           <p>민감한 사진이나 위치가 포함되었는지 먼저 확인해 주세요. 위치가 불확실한 사진의 좌표는 추측해 바꾸지 않습니다.</p>
           <label class="check"><input v-model="consent" type="checkbox" data-testid="photo-ai-consent"> 전송 범위를 확인했고 Claude 분석에 동의합니다.</label>
-          <h3>재배치할 포인트 선택</h3>
-          <p>기존 그룹은 기본적으로 보호합니다. 아래에서 선택한 그룹만 다시 묶습니다. 제목·본문·태그·링크·금액이 있거나 위치가 불확실한 사진이 있는 포인트는 항상 보호합니다.</p>
+          <h3>{{ mode === 'enrich' ? '보강할 포인트 선택' : '재배치할 포인트 선택' }}</h3>
+          <p v-if="mode === 'enrich'">선택한 포인트의 빈 본문과 대표 사진만 보강합니다. 사진 소속·순서·좌표·촬영 시각과 기존 제목은 유지합니다. 본문·태그·링크·금액이 있거나 위치가 불확실한 사진이 있는 포인트는 보호합니다.</p>
+          <p v-else>기존 그룹은 기본적으로 보호합니다. 아래에서 선택한 그룹만 다시 묶습니다. 제목·본문·태그·링크·금액이 있거나 위치가 불확실한 사진이 있는 포인트는 항상 보호합니다.</p>
           <label v-for="(point, index) in post.points" :key="point.id" class="check">
             <input v-model="unlocked" :value="point.id" :disabled="protectedContent(point)" type="checkbox" :data-testid="`photo-ai-unlock-${point.id}`">
             {{ point.title || `포인트 ${index + 1}` }} · {{ point.photos.length }}장 {{ protectedContent(point) ? '· 보호됨' : '' }}
@@ -187,6 +215,7 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
         </div>
         <section v-if="proposal" class="result" aria-live="polite">
           <h2>{{ proposal.status === 'applied' ? '적용 완료' : proposal.status === 'undone' ? '되돌리기 완료' : '분석 결과' }}</h2>
+          <p>{{ resultMode === 'enrich' ? '사진 기록 보강 결과 · 기존 제목과 포인트 구성 유지' : '사진 묶기 결과' }}</p>
           <div v-if="proposal.status === 'pending'" role="status" data-testid="photo-ai-progress">
             <p v-if="proposal.progress">선택한 사진 {{ proposal.progress.totalPhotos.toLocaleString() }}장 중 {{ proposal.progress.processedPhotos.toLocaleString() }}장 분석 완료 · {{ proposal.progress.completedBatches }} / {{ proposal.progress.totalBatches }}묶음</p>
             <p v-else>사진을 분석할 준비를 하고 있습니다.</p>
@@ -198,11 +227,24 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
             <h3>{{ group.title || `포인트 ${index + 1}` }}</h3>
             <p>{{ group.reason }}</p>
             <p>{{ group.pointId === null ? '새 그룹' : `기존 포인트 ${group.pointId}` }} · {{ group.photoIds.length }}장 {{ group.pointId !== null && proposal.protectedPointIds.includes(group.pointId) ? '· 보호됨' : '' }}</p>
+            <div v-if="group.enrichment" class="enrichment" :data-testid="`photo-ai-enrichment-${index}`">
+              <h4>대표 사진 제안</h4>
+              <div class="thumbnails"><img :src="photoById.get(group.enrichment.coverPhotoId)?.thumb_path" :alt="`대표 사진 후보 ${group.enrichment.coverPhotoId}`" loading="lazy"></div>
+              <h4>짧은 설명</h4>
+              <p class="body-preview">{{ group.enrichment.body }}</p>
+              <template v-if="group.enrichment.place.status === 'candidate'">
+                <h4>장소명 후보: {{ group.enrichment.place.name }}</h4>
+                <p>{{ group.enrichment.place.evidence }}</p>
+                <p>사진에서 읽힌 후보이며 지도 등 외부 정보로 확인한 장소명이 아닙니다. 적용해도 기존 제목은 유지됩니다.</p>
+                <div class="thumbnails"><img v-for="id in group.enrichment.place.photoIds" :key="id" :src="photoById.get(id)?.thumb_path" :alt="`장소명 근거 사진 ${id}`" loading="lazy"></div>
+              </template>
+              <p v-else>사진에서 장소명을 확인할 근거가 부족해 후보를 제안하지 않았습니다.</p>
+            </div>
             <div class="thumbnails"><img v-for="id in group.photoIds" :key="id" :src="photoById.get(id)?.thumb_path" :alt="`사진 ${id}`" loading="lazy"></div>
           </article>
           <div class="actions">
             <button v-if="proposal.status === 'applied'" class="btn" :disabled="busy" data-testid="photo-ai-undo" @click="action('undo')">적용 전으로 되돌리기</button>
-            <button v-if="proposal.status === 'ready'" class="btn primary" :disabled="busy" data-testid="photo-ai-apply" @click="action('apply')">검토한 구성 적용</button>
+            <button v-if="proposal.status === 'ready'" class="btn primary" :disabled="busy" data-testid="photo-ai-apply" @click="action('apply')">{{ resultMode === 'enrich' ? '대표 사진과 설명 적용' : '검토한 구성 적용' }}</button>
           </div>
         </section>
       </template>
@@ -222,6 +264,9 @@ fieldset, .result, .group { display: grid; gap: var(--topbar-gap); padding: var(
 textarea { width: 100%; background: var(--field); color: var(--ink); border: thin solid var(--border-control); border-radius: var(--radius-sm); padding: var(--topbar-x-sm); }
 .check { display: flex; gap: var(--topbar-gap); align-items: center; font-size: var(--fs-md); }
 .check input { flex: none; }
+.mode-options { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--topbar-gap); }
+.enrichment { display: grid; gap: var(--topbar-gap); }
+.body-preview { white-space: pre-wrap; }
 .actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--topbar-gap); }
 .btn { border: thin solid var(--border-control); background: var(--s2); }
 .btn.primary { background: var(--primary-fill); }

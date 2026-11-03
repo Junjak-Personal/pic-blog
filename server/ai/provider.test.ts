@@ -1,3 +1,4 @@
+import type { PhotoAiGroup } from '../../shared/types/photo-ai'
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -68,5 +69,27 @@ describe('bounded Claude provider',()=>{
     for(const path of ['../outside.jpg',join(dir,'outside.jpg'),'trip/link.jpg','trip','trip/huge.jpg'])expect(()=>readThumbnail(dir,path)).toThrow()
     symlinkSync(join(dir,'trip'),join(dir,'linkdir'))
     expect(()=>readThumbnail(dir,'linkdir/huge.jpg')).toThrow()
+  })
+})
+
+
+describe('image-grounded enrichment provider',()=>{
+  it('consolidates summaries with at most fifteen cover images and never transmits original titles',async()=>{
+    const dir=root();mkdirSync(join(dir,'trip'))
+    const photos=Array.from({length:20},(_,i)=>({...snapshot.photos[0]!,id:i+1,thumb_path:`trip/${i+1}.jpg`}))
+    for(const photo of photos)writeFileSync(join(dir,photo.thumb_path),jpeg)
+    const groups:PhotoAiGroup[]=photos.map(photo=>({pointId:1,photoIds:[photo.id],title:'SECRET ORIGINAL TITLE',reason:'사진 분석 근거',enrichment:{coverPhotoId:photo.id,body:'정원과 길이 보인다.',place:{status:'unidentified'}}}))
+    let sent=''
+    const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async(_url,options)=>{sent=String(options?.body);return result()})
+    await provider({...snapshot,photos},{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal,groups)
+    expect(sent.match(/"type":"image"/g)).toHaveLength(15)
+    expect(sent).toContain('allowedCoverPhotoIds')
+    expect(sent).toContain('1-2 concise sentences')
+    expect(sent).toContain('at most 220 characters')
+    expect(sent).toContain('no exhaustive catalogs')
+    expect(sent).toContain('GPS alone')
+    expect(sent).toContain('batchSummaries')
+    expect(sent).not.toContain('SECRET')
+    expect(sent).not.toContain('FAKE')
   })
 })

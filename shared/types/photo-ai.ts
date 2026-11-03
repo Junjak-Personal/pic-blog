@@ -1,12 +1,22 @@
+export type PhotoAiMode = 'organize' | 'enrich'
+
+export interface PhotoAiEnrichment {
+  coverPhotoId: number
+  body: string
+  place: { status: 'unidentified' } | { status: 'candidate'; name: string; evidence: string; photoIds: number[] }
+}
+
 /** AI plans never contain deletion or arbitrary coordinates. */
 export interface PhotoAiGroup {
   pointId: number | null
   photoIds: number[]
   title: string
   reason: string
+  enrichment?: PhotoAiEnrichment
 }
 
 export interface PhotoAiRequest {
+  mode?: PhotoAiMode
   requestId: string
   context: string
   sendImages: boolean
@@ -21,6 +31,7 @@ export interface PhotoAiUsage {
 }
 
 interface PhotoAiBase {
+  mode?: PhotoAiMode
   id: string
   createdAt: string
   protectedPointIds: number[]

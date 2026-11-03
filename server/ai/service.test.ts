@@ -1,9 +1,10 @@
+import type { PhotoAiGroup } from '../../shared/types/photo-ai'
 import { randomUUID } from 'node:crypto'
 import Database from 'better-sqlite3'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SCHEMA } from '../utils/db'
 import { loadSnapshot, PhotoAiService } from './service'
-import { parseRequest, protectedIds, validateGroups, photoBatches } from './plan'
+import { parseRequest, protectedIds, validateGroups, validateEnrichmentGroups, photoBatches } from './plan'
 import type { AiProvider, AiProviderResult } from './provider'
 
 const databases: Database.Database[] = []
@@ -365,5 +366,183 @@ describe('background database faults',() => {
       expect(prepare.mock.calls.length).toBe(calls)
       prepare.mockRestore()
     } finally {vi.useRealTimers()}
+  })
+})
+
+const enrichRequest = () => ({ ...request(), mode: 'enrich' as const, sendImages: true })
+const enrichProvider: AiProvider = async (snapshot,_request,_signal,sources) => ({
+  result: { groups: snapshot.points.map(point => {
+    const photos = snapshot.photos.filter(p => p.point_id === point.id)
+    return { pointId: point.id, photoIds: photos.map(p => p.id).reverse(), title: '기존 제목 대신 쓰면 안 되는 제목', reason: '사진으로 확인한 장면', enrichment: {
+      coverPhotoId: sources?.find(g => g.pointId === point.id)?.enrichment?.coverPhotoId ?? photos.at(-1)!.id,
+      body: '나무가 있는 길과 정원이 보인다. 주변을 둘러본 장면이 이어진다.',
+      place: { status: 'candidate', name: '사진 속 정원', evidence: '입구의 공개 간판', photoIds: [photos[0]!.id] },
+    } }
+  }) }, inputTokens: 10, outputTokens: 5,
+})
+
+describe('photo enrichment preserves visits',() => {
+  it('enriches titled points but preserves all memberships, orders, anchors, titles and protected rows, then restores the full snapshot',async () => {
+    const {db,service}=setup()
+    fillPhotos(db,4)
+    db.prepare('UPDATE point SET title=?, order_index=7 WHERE id=1').run('직접 붙인 제목')
+    const before=loadSnapshot(db,'trip')
+    const plan=await service.propose('trip',enrichRequest(),enrichProvider)
+    expect(plan.status).toBe('ready')
+    expect(plan.mode).toBe('enrich')
+    expect(plan.protectedPointIds).toEqual([3])
+    expect(plan.groups.find(g=>g.pointId===1)?.title).toBe('직접 붙인 제목')
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+    service.apply('trip',plan.id)
+    const after=loadSnapshot(db,'trip')
+    expect(after.photos).toEqual(before.photos)
+    expect(after.points.map(p=>({...p,body:null,cover_photo_id:null}))).toEqual(before.points.map(p=>({...p,body:null,cover_photo_id:null})))
+    expect(after.points.find(p=>p.id===3)).toEqual(before.points.find(p=>p.id===3))
+    expect(after.points.find(p=>p.id===1)?.cover_photo_id).toBe(5)
+    expect(after.points.find(p=>p.id===1)?.body).toContain('정원이 보인다')
+    expect(after.points.find(p=>p.id===1)?.body).not.toContain('사진 속 정원')
+    service.undo('trip',plan.id)
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+
+  it('requires thumbnails and a valid mode without charging an attempt',async () => {
+    const {db,service}=setup()
+    await expect(service.propose('trip',{...enrichRequest(),sendImages:false},enrichProvider)).rejects.toThrow('썸네일')
+    await expect(service.propose('trip',{...enrichRequest(),mode:'rename'},enrichProvider)).rejects.toThrow('작업 종류')
+    expect(db.prepare('SELECT count(*) n FROM photo_ai_attempt').get()).toEqual({n:0})
+  })
+
+  it('never sends explicitly protected points or points with manual content',async () => {
+    const {db,service}=setup()
+    db.prepare('UPDATE point SET title=? WHERE id=2').run('사진 제목')
+    const seen:number[]=[]
+    const plan=await service.propose('trip',{...enrichRequest(),protectedPointIds:[1]},async(s,r,signal)=>{seen.push(...s.points.map(p=>p.id));return enrichProvider(s,r,signal)})
+    expect(seen).toEqual([2])
+    expect(plan.protectedPointIds).toEqual([1,3])
+  })
+
+  it('consolidates every image of a large point into one visit and resumes a failed consolidation without resending original batches',async () => {
+    const {db,service}=setup()
+    fillPhotos(db,80)
+    const before=loadSnapshot(db,'trip'),req=enrichRequest()
+    let initialCalls=0
+    const first=await service.propose('trip',req,async(s,r,signal,sources)=>{
+      initialCalls++
+      if(sources)throw new Error('temporary consolidation failure')
+      return enrichProvider(s,r,signal)
+    })
+    expect(first.status).toBe('failed')
+    expect(first.progress?.processedPhotos).toBe(80)
+    expect(first.progress?.completedBatches).toBe(initialCalls-1)
+    let retryCalls=0
+    const ready=await service.propose('trip',req,async(s,r,signal,sources)=>{
+      retryCalls++
+      expect(sources?.length).toBeGreaterThan(1)
+      return enrichProvider(s,r,signal,sources)
+    })
+    expect(retryCalls).toBe(1)
+    expect(ready.status).toBe('ready')
+    expect(ready.groups).toHaveLength(3)
+    expect(ready.progress?.completedBatches).toBe(ready.progress?.totalBatches)
+    expect(ready.progress?.processedPhotos).toBe(80)
+    expect(ready.usage.inputTokens).toBe(initialCalls*10)
+    service.apply('trip',ready.id)
+    expect(loadSnapshot(db,'trip').photos).toEqual(before.photos)
+    expect(loadSnapshot(db,'trip').points).toHaveLength(3)
+    service.undo('trip',ready.id)
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+
+  it('rejects ownership violations and invalid evidence at the provider boundary and prevents apply',async () => {
+    const mutations = [
+      (groups: PhotoAiGroup[]) => { groups[0]!.photoIds=[2]; groups[1]!.photoIds=[1] },
+      (groups: PhotoAiGroup[]) => { groups[0]!.enrichment!.coverPhotoId=3 },
+      (groups: PhotoAiGroup[]) => { groups[0]!.enrichment!.place={status:'candidate',name:'장소',evidence:'',photoIds:[1]} },
+      (groups: PhotoAiGroup[]) => { groups[0]!.enrichment!.place={status:'candidate',name:'장소',evidence:'간판',photoIds:[3]} },
+    ]
+    for(const mutate of mutations){
+      const {db,service}=setup(),before=loadSnapshot(db,'trip')
+      const failed=await service.propose('trip',enrichRequest(),async(s,r,signal)=>{
+        const result=await enrichProvider(s,r,signal)
+        const data=result.result as {groups:PhotoAiGroup[]}
+        mutate(data.groups)
+        return {...result,result:data}
+      })
+      expect(failed.status).toBe('failed')
+      expect(()=>service.apply('trip',failed.id)).toThrow()
+      expect(loadSnapshot(db,'trip')).toEqual(before)
+    }
+  })
+
+  it('revalidates stored results and blocks concurrent changes before apply/undo',async () => {
+    const {db,service}=setup()
+    const plan=await service.propose('trip',enrichRequest(),enrichProvider)
+    const groups=plan.groups.map(g=>g.enrichment?{...g,enrichment:{...g.enrichment,coverPhotoId:99}}:g)
+    db.prepare('UPDATE photo_ai_request SET groups_json=? WHERE id=?').run(JSON.stringify(groups),plan.id)
+    expect(()=>service.apply('trip',plan.id)).toThrow('대표 사진')
+    db.prepare('UPDATE photo_ai_request SET groups_json=? WHERE id=?').run(JSON.stringify(plan.groups),plan.id)
+    service.apply('trip',plan.id)
+    db.prepare('UPDATE point SET body=? WHERE id=1').run('이후 직접 쓴 본문')
+    expect(()=>service.undo('trip',plan.id)).toThrow('기록이 변경')
+    expect(loadSnapshot(db,'trip').points.find(p=>p.id===1)?.body).toBe('이후 직접 쓴 본문')
+  })
+
+  it('keeps omitted/explicit organize modes deduplicated but separates enrichment fingerprints',async () => {
+    const {service}=setup()
+    const req=request()
+    const organized=await service.propose('trip',req,provider)
+    expect((await service.propose('trip',{...req,mode:'organize'},provider)).id).toBe(organized.id)
+    const enriched=await service.propose('trip',enrichRequest(),enrichProvider)
+    expect(enriched.id).not.toBe(organized.id)
+  })
+})
+
+
+describe('enrichment post-cover ownership',()=>{
+  it('preserves a valid user-selected post cover while changing the first point representative',async()=>{
+    const {db,service}=setup()
+    fillPhotos(db,4)
+    const before=loadSnapshot(db,'trip')
+    const plan=await service.propose('trip',enrichRequest(),enrichProvider)
+    service.apply('trip',plan.id)
+    const after=loadSnapshot(db,'trip')
+    expect(after.points.find(p=>p.id===1)?.cover_photo_id).toBe(5)
+    expect(after.post.cover_photo_id).toBe(before.post.cover_photo_id)
+    service.undo('trip',plan.id)
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+  it('fills a missing post cover from the first point representative and restores null on undo',async()=>{
+    const {db,service}=setup()
+    fillPhotos(db,4)
+    db.prepare('UPDATE post SET cover_photo_id=NULL WHERE id=1').run()
+    const before=loadSnapshot(db,'trip')
+    const plan=await service.propose('trip',enrichRequest(),enrichProvider)
+    service.apply('trip',plan.id)
+    expect(loadSnapshot(db,'trip').post.cover_photo_id).toBe(5)
+    service.undo('trip',plan.id)
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+})
+
+
+describe('concise enrichment descriptions',()=>{
+  const output = (body: string) => ({ groups: [{ pointId: 1, photoIds: [1], reason: '사진에서 확인한 내용', enrichment: { coverPhotoId: 1, body, place: { status: 'unidentified' } } }] })
+  it.each([
+    '정원과 돌길을 둘러본 장면이다.',
+    '정원과 돌길을 둘러본 장면이다. 계단 위에서는 주변 시가지가 보인다.',
+    '정원과 돌길을 둘러본 장면이다. 계단 위에서는 주변 시가지가 보인다. 내려오는 길에도 경내가 이어진다.',
+    '1.5km 표지 옆 돌길이 보인다. 「정원」 안내판을 지나 계단으로 이어진다.',
+  ])('accepts one to three concise Korean sentences: %s',(body)=>{
+    const {db}=setup()
+    const groups=validateEnrichmentGroups(output(body),loadSnapshot(db,'trip'),[2,3])
+    expect(groups.find(g=>g.pointId===1)?.enrichment?.body).toBe(body)
+  })
+  it.each([
+    ['첫 장면이다. 다음 장면이다. 또 다른 장면이다. 마지막 장면이다.', '1~3문장'],
+    ['가'.repeat(301), '1~300자'],
+    ['... !!!', '1~3문장'],
+  ])('rejects overlong or excessive descriptions: %s',(body,message)=>{
+    const {db}=setup()
+    expect(()=>validateEnrichmentGroups(output(body),loadSnapshot(db,'trip'),[2,3])).toThrow(message)
   })
 })

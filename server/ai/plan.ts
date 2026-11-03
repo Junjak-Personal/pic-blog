@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { PhotoRow, PointRow, PostRow } from '../../shared/types/db'
-import type { PhotoAiGroup, PhotoAiRequest } from '../../shared/types/photo-ai'
+import type { PhotoAiEnrichment, PhotoAiGroup, PhotoAiMode, PhotoAiRequest } from '../../shared/types/photo-ai'
 import { dayRules, parseDaySettings } from '../../shared/utils/trip-day'
 
 export interface PhotoSnapshot {
@@ -34,9 +34,11 @@ export function parseRequest(raw: unknown, snapshot: PhotoSnapshot): PhotoAiRequ
   }
   if (typeof value.context !== 'string' || value.context.length > 1000) fail(400, '맥락은 1,000자 이내여야 합니다')
   if (typeof value.sendImages !== 'boolean') fail(400, '사진 전송 여부를 선택해 주세요')
+  if (value.mode !== undefined && value.mode !== 'organize' && value.mode !== 'enrich') fail(400, 'AI 작업 종류가 올바르지 않습니다')
+  if (value.mode === 'enrich' && !value.sendImages) fail(400, '기록 보강에는 사진 썸네일 전송이 필요합니다')
   const protectedPointIds = value.protectedPointIds === undefined ? snapshot.points.map(p => p.id) : ids(value.protectedPointIds)
   if (protectedPointIds.some(id => !snapshot.points.some(p => p.id === id))) fail(400, '다른 기록의 포인트는 사용할 수 없습니다')
-  return { requestId: value.requestId, context: value.context.trim(), sendImages: value.sendImages, protectedPointIds: [...new Set(protectedPointIds)].sort((a,b) => a-b) }
+  return { ...(value.mode === 'enrich' ? { mode: 'enrich' as const } : {}), requestId: value.requestId, context: value.context.trim(), sendImages: value.sendImages, protectedPointIds: [...new Set(protectedPointIds)].sort((a,b) => a-b) }
 }
 
 export function snapshotHash(snapshot: PhotoSnapshot) {
@@ -52,10 +54,11 @@ export function trustedPosition(photo: Pick<PhotoRow, 'lat' | 'lng'>) {
 }
 
 /** Unknown positions stay in their existing groups; no invented GPS or place name. */
-export function protectedIds(snapshot: PhotoSnapshot, requested: number[]) {
+export function protectedIds(snapshot: PhotoSnapshot, requested: number[], mode: PhotoAiMode = 'organize') {
   const locked = new Set(requested)
   for (const p of snapshot.points) {
-    if (hasManualContent(p) || snapshot.photos.some(ph => ph.point_id === p.id && !trustedPosition(ph))) locked.add(p.id)
+    const manual = mode === 'enrich' ? Boolean(p.body?.trim() || p.tags !== '[]' || p.links !== '[]' || p.expenses !== '[]') : hasManualContent(p)
+    if (manual || snapshot.photos.some(ph => ph.point_id === p.id && !trustedPosition(ph))) locked.add(p.id)
   }
   return [...locked].sort((a,b) => a-b)
 }
@@ -145,4 +148,48 @@ export function validateBatchGroups(raw: unknown, snapshot: PhotoSnapshot) {
     return { ...group, pointId: null }
   })
   return validateGroups({ groups },snapshot,[])
+}
+
+
+/** Enrichment cannot change visits: even model output order is normalized to the original order. */
+export function validateEnrichmentGroups(raw: unknown, snapshot: PhotoSnapshot, lockedIds: number[]): PhotoAiGroup[] {
+  const value = object(raw)
+  if (!Array.isArray(value.groups) || value.groups.length > 1000) fail(422, 'AI 보강 결과가 올바르지 않습니다')
+  const seen = new Set<number>()
+  const groups: PhotoAiGroup[] = value.groups.map(entry => {
+    const group = object(entry)
+    const point = snapshot.points.find(p => p.id === group.pointId && !lockedIds.includes(p.id))
+    if (!point || seen.has(point.id)) fail(422, 'AI 보강은 기존 포인트를 한 번씩 유지해야 합니다')
+    seen.add(point.id)
+    const photos = snapshot.photos.filter(p => p.point_id === point.id).sort((a,b) => a.order_index-b.order_index || a.id-b.id)
+    const photoIds = ids(group.photoIds)
+    const owned = new Set(photos.map(p => p.id))
+    if (!photos.length || photoIds.length !== owned.size || new Set(photoIds).size !== owned.size || photoIds.some(id => !owned.has(id))) fail(422, 'AI 보강은 사진 소속을 바꿀 수 없습니다')
+    if (typeof group.reason !== 'string' || group.reason.length > 500) fail(422, 'AI 설명이 올바르지 않습니다')
+    const enrichment = object(group.enrichment)
+    if (typeof enrichment.coverPhotoId !== 'number' || !owned.has(enrichment.coverPhotoId)) fail(422, '대표 사진은 해당 포인트의 사진이어야 합니다')
+    if (typeof enrichment.body !== 'string' || !enrichment.body.trim() || enrichment.body.length > 300) fail(422, '짧은 설명은 1~300자여야 합니다')
+    const sentences = [...new Intl.Segmenter('ko', { granularity: 'sentence' }).segment(enrichment.body.trim())]
+      .filter(part => /[\p{L}\p{N}]/u.test(part.segment))
+    if (sentences.length < 1 || sentences.length > 3) fail(422, '짧은 설명은 1~3문장이어야 합니다')
+    const rawPlace = object(enrichment.place)
+    let place: PhotoAiEnrichment['place']
+    if (rawPlace.status === 'unidentified') place = { status: 'unidentified' }
+    else if (rawPlace.status === 'candidate') {
+      if (typeof rawPlace.name !== 'string' || !rawPlace.name.trim() || rawPlace.name.length > 200 || typeof rawPlace.evidence !== 'string' || !rawPlace.evidence.trim() || rawPlace.evidence.length > 500) fail(422, '장소 후보의 이름과 사진 근거가 필요합니다')
+      const evidenceIds = ids(rawPlace.photoIds)
+      if (!evidenceIds.length || new Set(evidenceIds).size !== evidenceIds.length || evidenceIds.some(id => !owned.has(id))) fail(422, '장소 후보의 근거 사진이 올바르지 않습니다')
+      place = { status: 'candidate', name: rawPlace.name.trim(), evidence: rawPlace.evidence.trim(), photoIds: evidenceIds }
+    } else fail(422, '장소 확인 상태가 올바르지 않습니다')
+    return { pointId: point.id, photoIds: photos.map(p => p.id), title: point.title ?? '', reason: group.reason.trim(), enrichment: { coverPhotoId: enrichment.coverPhotoId, body: enrichment.body.trim(), place } }
+  })
+  const editable = snapshot.points.filter(p => !lockedIds.includes(p.id) && snapshot.photos.some(ph => ph.point_id === p.id))
+  if (seen.size !== editable.length) fail(422, 'AI 보강에서 포인트가 누락되었습니다')
+  return [...fixedGroups(snapshot,lockedIds),...groups]
+}
+
+/** Compare at most 15 candidates (15 × 500KB < 8MB), preferring batches covering more photos. */
+export function enrichmentCoverCandidates(groups: PhotoAiGroup[]) {
+  return [...groups].sort((a,b) => b.photoIds.length-a.photoIds.length || a.photoIds[0]!-b.photoIds[0]!)
+    .flatMap(g => g.enrichment ? [g.enrichment.coverPhotoId] : []).filter((id,index,all) => all.indexOf(id) === index).slice(0,15)
 }
