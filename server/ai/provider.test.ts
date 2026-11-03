@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { claudeProvider, readThumbnail } from './provider'
+import { claudeProvider, enrichmentOutputFormat, readThumbnail } from './provider'
 import type { PhotoSnapshot } from './plan'
 
 const dirs: string[]=[]
@@ -34,6 +34,7 @@ describe('bounded Claude provider',()=>{
     expect(output.inputTokens).toBe(10)
     expect(sent).not.toContain('SECRET')
     expect(sent).not.toContain('FAKE-UNIT-TEST-KEY')
+    expect(sent).not.toContain('output_config')
     expect(sent).not.toContain('locked.jpg')
     expect(sent).not.toContain('37.1234567')
     expect(sent).toContain('37.1235')
@@ -83,6 +84,23 @@ describe('image-grounded enrichment provider',()=>{
     const provider=claudeProvider({apiKey:'FAKE',model:'test'},dir,async(_url,options)=>{sent=String(options?.body);return result()})
     await provider({...snapshot,photos},{...request,mode:'enrich',sendImages:true,protectedPointIds:[]},new AbortController().signal,groups)
     expect(sent.match(/"type":"image"/g)).toHaveLength(15)
+    const payload = JSON.parse(sent) as { output_config: { format: typeof enrichmentOutputFormat } }
+    expect(payload.output_config.format.type).toBe('json_schema')
+    const schema=payload.output_config.format.schema
+    expect(schema.additionalProperties).toBe(false)
+    expect(schema.required).toContain('groups')
+    const group=schema.properties.groups.items
+    expect(group.additionalProperties).toBe(false)
+    expect(group.required).toContain('enrichment')
+    expect(group.properties.pointId.type).toBe('integer')
+    const details=group.properties.enrichment
+    expect(details.additionalProperties).toBe(false)
+    expect(details.required).toEqual(['coverPhotoId','body','place'])
+    expect(details.properties.place.anyOf.map(variant=>variant.properties.status.enum[0])).toEqual(['unidentified','candidate'])
+    expect(details.properties.place.anyOf.every(variant=>variant.additionalProperties===false)).toBe(true)
+    expect(details.properties.place.anyOf[1].required).toEqual(['status','name','evidence','photoIds'])
+    expect(JSON.stringify(schema)).not.toContain('maxLength')
+    expect(JSON.stringify(schema)).not.toContain('minimum')
     expect(sent).toContain('allowedCoverPhotoIds')
     expect(sent).toContain('1-2 concise sentences')
     expect(sent).toContain('at most 220 characters')
@@ -91,5 +109,15 @@ describe('image-grounded enrichment provider',()=>{
     expect(sent).toContain('batchSummaries')
     expect(sent).not.toContain('SECRET')
     expect(sent).not.toContain('FAKE')
+  })
+})
+
+
+describe('malformed provider JSON is never repaired',()=>{
+  it('retains usage and rejects a prematurely closed root followed by another group',async()=>{
+    const malformed='{"groups":[{"pointId":1,"photoIds":[1],"title":"","reason":"장면","enrichment":{"coverPhotoId":1,"body":"길을 둘러봤다.","place":{"status":"unidentified"}}}]},{"pointId":2,"photoIds":[2]}'
+    const fetcher=async()=>new Response(JSON.stringify({stop_reason:'end_turn',content:[{type:'text',text:malformed}],usage:{input_tokens:321,output_tokens:123}}))
+    const output=await claudeProvider({apiKey:'FAKE',model:'test'},root(),fetcher)(snapshot,request,new AbortController().signal)
+    expect(output).toEqual({result:null,inputTokens:321,outputTokens:123})
   })
 })

@@ -45,7 +45,7 @@ stateDiagram-v2
 - 전 사진 배치 분석 후 같은 포인트의 배치 설명과 최대15개 대표 후보를 종합. 추가 이미지 최대7.68MB. 분석/종합 체크포인트 분리, 취소·재시도·해시 충돌 검사 유지.
 - 본문은 서버에서300자·1~3문장 검사, 모델에는220자·1~2문장 목표. 사진 속 공공 간판 이름만 근거 사진을 동반한 후보로 제시하며 제목 자동 변경 없음.
 - UI에서 대표 사진/본문/장소 후보 검토, 적용/되돌리기. API로 생성한 제안은 `?proposal=<UUID>` 링크로 열 수 있다.
-- 최종 통합: Vitest7파일107테스트 통과, pnpm typecheck 및 pnpm build 통과. 독립 보안/데이터정합성 검토에서 차단 결함 없음.
+- 최종 통합: Vitest7파일109테스트 통과, pnpm typecheck 및 pnpm build 통과. 독립 보안/데이터정합성 검토에서 차단 결함 없음.
 - 실제 운영 사진의 복사본54장, Claude API3묶음(분석2+종합1) 완료. 첫 시도 형식 검증 실패 후 재시도 정상 완료. 확인된 입력28,925/출력1,629토큰, 작업2시도. 최초 응답 원문은 확보하지 않아 형식 실패의 세부 원인은 미확인이다.
 - HTTP API 인증/Origin/이미지 비동의 거절, 중복 요청 같은 작업 반환, 미리보기 원본 무변경, 적용 후 상세조회와DB저장, undo 포인트/사진 원복 확인. 전체 사진 행·선택외 포인트·제목·좌표·시각·순서 보존. 인증된 편집 페이지 HTTP서버렌더링도200 확인.
 - 운영 적용 전 백업 `/home/junja/apps/pic-blog/data/bulk-ai/20261103-enrichment/before.db`, 이전 이미지 `pic-blog:before-enrichment-20261103`.
@@ -60,3 +60,10 @@ stateDiagram-v2
   - Source: 클라이언트 이벤트/반응형 화면 경계
   - Status: pending
   - Evidence: 사용자 요청에 따라 HTTP API 및 서버렌더링으로 검증. 실제 브라우저 조작은 미실행.
+
+## 구조화 출력 보강
+
+- 운영 일괄 제안에서 모델이 groups 배열과 루트 객체를 중간에 닫고 다음 포인트를 덧붙이는 JSON 구문 오류를 실제 재현했다. 운영 본문 적용 전에 중단했으며 기존 제안은 취소/보관했다.
+- enrich 요청에 Anthropic `output_config.format` JSON Schema를 적용했다. 그룹/보강/장소 상태의 필수 필드와 자료형, additionalProperties:false를 강제하며 기존 ID소유권·문장/길이 검증도 유지한다. 임의 JSON 복구는 하지 않는다.
+- [Anthropic structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) 계약 확인 및 실제 Sonnet5.5 HTTP200/정상5그룹 응답 확인. 주차·구매 등 사진만으로 불명확한 개인 행동을 단정하지 않도록 지시 보강.
+- 최종109테스트·타입·빌드 통과. 실제54사진 HTTP API3묶음·1시도 성공: 입력22,209/출력1,243토큰. 생성/중복/인증·Origin/적용·재조회/전체포인트·사진원복 통과.

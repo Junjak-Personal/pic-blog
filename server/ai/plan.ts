@@ -153,6 +153,7 @@ export function validateBatchGroups(raw: unknown, snapshot: PhotoSnapshot) {
 
 /** Enrichment cannot change visits: even model output order is normalized to the original order. */
 export function validateEnrichmentGroups(raw: unknown, snapshot: PhotoSnapshot, lockedIds: number[]): PhotoAiGroup[] {
+  if (raw === null) fail(422, 'AI 보강 응답의 JSON 형식이 올바르지 않습니다. 다시 시도해 주세요')
   const value = object(raw)
   if (!Array.isArray(value.groups) || value.groups.length > 1000) fail(422, 'AI 보강 결과가 올바르지 않습니다')
   const seen = new Set<number>()

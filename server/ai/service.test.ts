@@ -546,3 +546,16 @@ describe('concise enrichment descriptions',()=>{
     expect(()=>validateEnrichmentGroups(output(body),loadSnapshot(db,'trip'),[2,3])).toThrow(message)
   })
 })
+
+
+describe('enrichment JSON failures',()=>{
+  it('reports a safe format error, preserves usage and never applies malformed output',async()=>{
+    const {db,service}=setup(),before=loadSnapshot(db,'trip')
+    const result=await service.propose('trip',enrichRequest(),async()=>({result:null,inputTokens:321,outputTokens:123}))
+    expect(result.status).toBe('failed')
+    expect(result.message).toContain('JSON 형식이 올바르지 않습니다')
+    expect(result.usage).toEqual({inputTokens:321,outputTokens:123,attempts:1})
+    expect(()=>service.apply('trip',result.id)).toThrow()
+    expect(loadSnapshot(db,'trip')).toEqual(before)
+  })
+})

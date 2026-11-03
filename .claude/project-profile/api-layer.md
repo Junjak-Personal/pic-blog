@@ -52,3 +52,11 @@
 ## Error Handling
 - 서버: `createError({ statusCode, statusMessage })`, 메시지는 한국어이고 화면에 그대로 쓴다 (`field: 이유` 형식, 예 `title: 비어 있습니다`)
 - 클라이언트: `$fetch` 실패 시 `statusMessage` 를 꺼내 표시, 없으면 기본 문구
+
+## 사진 기록 보강 (2026-11-03)
+
+- 기존 AI 요청의 선택적 `mode: enrich`. 생략/organize는 기존 동작이다. 보강은 썸네일 전송 필수이며 선택1,000장까지 기존 포인트를 유지한다.
+- `PhotoAiGroup.enrichment`는 대표 사진·300자/1~3문장 본문·장소 후보/근거 사진을 담는다. 원래 제목/사진 행/소속/순서/앵커는 유지하고 빈 본문과 대표만 적용한다. 후보는 외부 지도 검증 결과가 아니며 제목에 자동 적용하지 않는다. 유효한 사용자 지정 여행 커버도 보존한다.
+- 다중 배치 포인트를 종합하고 `enrichment_groups_json`에 체크포인트 저장. 선택1,000장 전체 분석 후 최대15개 대표 후보 비교. `?proposal=<UUID>`로 API 생성 제안을 편집 화면에서 확인한다.
+- 단위109테스트 및 실제 사진54장 HTTP API 생성/적용/조회/복원 통과. 자세한 운영 근거는 `_docs/complete/product-spec/2026-11-03-photo-enrichment-plan.md`.
+- enrich는 Anthropic output_config JSON Schema로 출력 형식을 강제하며 서버 소유권/길이 검증을 함께 적용한다.
