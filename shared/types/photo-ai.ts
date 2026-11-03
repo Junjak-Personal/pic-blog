@@ -26,6 +26,7 @@ interface PhotoAiBase {
   protectedPointIds: number[]
   sendImages: boolean
   usage: PhotoAiUsage
+  progress?: { completedBatches: number; totalBatches: number; processedPhotos: number; totalPhotos: number }
 }
 
 export type PhotoAiProposal = PhotoAiBase & (

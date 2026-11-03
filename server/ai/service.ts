@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { PhotoRow, PointRow, PostRow } from '../../shared/types/db'
 import type { PhotoAiGroup, PhotoAiProposal, PhotoAiRequest } from '../../shared/types/photo-ai'
-import { fail, parseRequest, PhotoAiError, protectedIds, snapshotHash, validateGroups, type PhotoSnapshot } from './plan'
+import { fail, parseRequest, PhotoAiError, protectedIds, snapshotHash, validateGroups, photoBatches, validateBatchGroups, type PhotoSnapshot } from './plan'
 import type { AiProvider } from './provider'
 
 export const AI_SCHEMA = `
@@ -22,7 +22,12 @@ CREATE TABLE IF NOT EXISTS photo_ai_request (
   input_tokens INTEGER NOT NULL DEFAULT 0,
   output_tokens INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  completed_batches INTEGER NOT NULL DEFAULT 0,
+  total_batches INTEGER NOT NULL DEFAULT 0,
+  processed_photos INTEGER NOT NULL DEFAULT 0,
+  total_photos INTEGER NOT NULL DEFAULT 0,
+  batch_groups_json TEXT NOT NULL DEFAULT '[]'
 );
 CREATE TABLE IF NOT EXISTS photo_ai_attempt (
   request_id TEXT NOT NULL,
@@ -39,6 +44,7 @@ interface RequestRow {
   request_json: string; snapshot_json: string; source_hash: string; applied_hash: string | null
   groups_json: string | null; error: string | null; model: string; attempts: number
   input_tokens: number; output_tokens: number; created_at: string; updated_at: string
+  completed_batches: number; total_batches: number; processed_photos: number; total_photos: number; batch_groups_json: string
 }
 const active = new Map<string, AbortController>()
 const now = () => new Date().toISOString()
@@ -54,7 +60,8 @@ export function loadSnapshot(db: Database.Database, slug: string): PhotoSnapshot
 function publicProposal(row: RequestRow): PhotoAiProposal {
   const request = JSON.parse(row.request_json) as PhotoAiRequest
   const base = { id: row.id, createdAt: row.created_at, protectedPointIds: request.protectedPointIds, sendImages: request.sendImages,
-    usage: { inputTokens: row.input_tokens, outputTokens: row.output_tokens, attempts: row.attempts } }
+    usage: { inputTokens: row.input_tokens, outputTokens: row.output_tokens, attempts: row.attempts },
+    progress: { completedBatches: row.completed_batches, totalBatches: row.total_batches, processedPhotos: row.processed_photos, totalPhotos: row.total_photos } }
   if (row.status === 'pending') return { ...base, status: 'pending', groups: [], message: null }
   if (row.status === 'cancelled' || row.status === 'failed') return { ...base, status: row.status, groups: [], message: row.error ?? '요청이 취소되었습니다' }
   return { ...base, status: row.status, groups: JSON.parse(row.groups_json ?? '[]') as PhotoAiGroup[], message: null }
@@ -63,6 +70,11 @@ function publicProposal(row: RequestRow): PhotoAiProposal {
 export class PhotoAiService {
   constructor(private db: Database.Database, private model: string, private dailyLimit = 20) {
     db.exec(AI_SCHEMA)
+    const columns = new Set(db.prepare<[], { name: string }>('PRAGMA table_info(photo_ai_request)').all().map(c => c.name))
+    for (const column of ['completed_batches','total_batches','processed_photos','total_photos']) {
+      if (!columns.has(column)) db.exec(`ALTER TABLE photo_ai_request ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`)
+    }
+    if (!columns.has('batch_groups_json')) db.exec("ALTER TABLE photo_ai_request ADD COLUMN batch_groups_json TEXT NOT NULL DEFAULT '[]'")
   }
 
   private row(slug: string, id: string) {
@@ -80,21 +92,23 @@ export class PhotoAiService {
 
   get(slug: string, id: string) { return publicProposal(this.row(slug, id)) }
 
-  async propose(slug: string, raw: unknown, provider: AiProvider) {
-    const start = this.db.transaction(() => {
+  private prepare(slug: string, raw: unknown, provider: AiProvider) {
+    return this.db.transaction(() => {
       this.expireStale()
       const snapshot = loadSnapshot(this.db, slug)
-      if (!snapshot.photos.length || snapshot.photos.length > 40) fail(400, 'AI 정리는 사진 1~40장인 기록에서 사용할 수 있습니다')
       const request = parseRequest(raw, snapshot)
       request.protectedPointIds = protectedIds(snapshot, request.protectedPointIds)
-      if (snapshot.points.every(p => request.protectedPointIds.includes(p.id))) fail(400, '모든 그룹이 보호되어 있습니다. 빈 제목의 그룹을 선택해 주세요')
+      const selected = snapshot.photos.filter(ph => !request.protectedPointIds.includes(ph.point_id))
+      if (!selected.length) fail(400, '모든 그룹이 보호되어 있습니다. 빈 제목의 그룹을 선택해 주세요')
+      if (selected.length > 1000) fail(400, 'AI 정리는 선택한 사진 최대 1,000장까지 사용할 수 있습니다')
+      const batches = photoBatches(snapshot,request,provider.thumbnailBytes)
       const sourceHash = snapshotHash(snapshot)
       const fingerprint = createHash('sha256').update(JSON.stringify({ sourceHash, context: request.context, sendImages: request.sendImages, protected: request.protectedPointIds, model: this.model })).digest('hex')
       const byId = this.db.prepare<[string], RequestRow>('SELECT * FROM photo_ai_request WHERE id = ?').get(request.requestId)
       if (byId && byId.fingerprint !== fingerprint) fail(409, '요청 ID가 다른 내용에 사용되었습니다. 새 요청을 시작해 주세요')
       const existing = byId ?? this.db.prepare<[string], RequestRow>('SELECT * FROM photo_ai_request WHERE fingerprint = ?').get(fingerprint)
-      if (existing && (!['failed','cancelled'].includes(existing.status) || existing.attempts >= 2)) return { row: existing, run: false, snapshot, request }
-      const pending = this.db.prepare<[number], { id: string }>('SELECT id FROM photo_ai_request WHERE post_id = ? AND status = \'pending\'').get(snapshot.post.id)
+      if (existing && (!['failed','cancelled'].includes(existing.status) || existing.attempts >= 2)) return { row: existing, run: false, snapshot, request, batches }
+      const pending = this.db.prepare<[number], { id: string }>("SELECT id FROM photo_ai_request WHERE post_id = ? AND status = 'pending'").get(snapshot.post.id)
       if (pending) fail(409, '이 기록의 다른 AI 요청이 진행 중입니다')
       const used = this.db.prepare<[string], { n: number }>('SELECT COUNT(*) AS n FROM photo_ai_attempt WHERE started_at >= ?').get(new Date().toISOString().slice(0,10))?.n ?? 0
       const limit = Number.isFinite(this.dailyLimit) ? Math.max(1, Math.min(20, Math.floor(this.dailyLimit))) : 20
@@ -102,27 +116,73 @@ export class PhotoAiService {
       const time = now()
       const id = existing?.id ?? request.requestId
       const attempts = (existing?.attempts ?? 0) + 1
-      if (existing) this.db.prepare('UPDATE photo_ai_request SET status = \'pending\', attempts = ?, error = NULL, updated_at = ? WHERE id = ?').run(attempts,time,id)
-      else this.db.prepare(`INSERT INTO photo_ai_request (id,post_id,fingerprint,status,request_json,snapshot_json,source_hash,model,attempts,created_at,updated_at) VALUES (?,?,?,'pending',?,?,?,?,?,?,?)`)
-        .run(id,snapshot.post.id,fingerprint,JSON.stringify(request),JSON.stringify(snapshot),sourceHash,this.model,attempts,time,time)
+      if (existing) this.db.prepare("UPDATE photo_ai_request SET status = 'pending', attempts = ?, error = NULL, updated_at = ?, total_batches = ?, total_photos = ? WHERE id = ?").run(attempts,time,batches.length,selected.length,id)
+      else this.db.prepare(`INSERT INTO photo_ai_request (id,post_id,fingerprint,status,request_json,snapshot_json,source_hash,model,attempts,created_at,updated_at,total_batches,total_photos) VALUES (?,?,?,'pending',?,?,?,?,?,?,?,?,?)`)
+        .run(id,snapshot.post.id,fingerprint,JSON.stringify(request),JSON.stringify(snapshot),sourceHash,this.model,attempts,time,time,batches.length,selected.length)
       this.db.prepare('INSERT INTO photo_ai_attempt (request_id,attempt,started_at) VALUES (?,?,?)').run(id,attempts,time)
-      return { row: this.row(slug,id), run: true, snapshot, request }
+      return { row: this.row(slug,id), run: true, snapshot, request, batches }
     }).immediate()
-    if (!start.run) return publicProposal(start.row)
+  }
+
+  /** HTTP intake returns before model calls finish; the persistent row is the polling contract. */
+  start(slug: string, raw: unknown, provider: AiProvider) {
+    const start = this.prepare(slug,raw,provider)
+    if (start.run) void this.run(slug,start,provider).catch(() => {
+      // Database/process failures must not become unhandled rejections; stale recovery owns the row.
+    })
+    return publicProposal(start.row)
+  }
+
+  async propose(slug: string, raw: unknown, provider: AiProvider) {
+    const start = this.prepare(slug,raw,provider)
+    return start.run ? await this.run(slug,start,provider) : publicProposal(start.row)
+  }
+
+  private async run(slug: string, start: ReturnType<PhotoAiService['prepare']>, provider: AiProvider) {
     const controller = new AbortController()
     active.set(start.row.id,controller)
-    const timer = setTimeout(() => controller.abort(),45_000)
+    const ownsAttempt = () => {
+      const row = this.db.prepare<[string], Pick<RequestRow,'status'|'attempts'>>('SELECT status,attempts FROM photo_ai_request WHERE id = ?').get(start.row.id)
+      return row?.status === 'pending' && row.attempts === start.row.attempts
+    }
+    const heartbeat = setInterval(() => {
+      try {
+        if (!controller.signal.aborted) this.db.prepare("UPDATE photo_ai_request SET updated_at = ? WHERE id = ? AND status = 'pending' AND attempts = ?").run(now(),start.row.id,start.row.attempts)
+      } catch {
+        // Timer exceptions otherwise escape the worker and can terminate the whole server.
+        // Stop this job; the worker records failure when SQLite is available again.
+        clearInterval(heartbeat)
+        controller.abort()
+      }
+    },10_000)
+    heartbeat.unref()
     try {
-      const result = await provider(start.snapshot,start.request,controller.signal)
-      this.db.prepare('UPDATE photo_ai_request SET input_tokens = input_tokens + ?, output_tokens = output_tokens + ? WHERE id = ?').run(result.inputTokens,result.outputTokens,start.row.id)
-      if (controller.signal.aborted) fail(504, 'AI 요청 시간이 초과되었거나 취소되었습니다')
-      const groups = validateGroups(result.result,start.snapshot,start.request.protectedPointIds)
-      this.db.prepare('UPDATE photo_ai_request SET status = \'ready\', groups_json = ?, updated_at = ? WHERE id = ? AND status = \'pending\' AND attempts = ?')
-        .run(JSON.stringify(groups),now(),start.row.id,start.row.attempts)
+      const accumulated = JSON.parse(start.row.batch_groups_json) as PhotoAiGroup[]
+      let processedPhotos = start.row.processed_photos
+      for (let index = start.row.completed_batches; index < start.batches.length; index++) {
+        if (controller.signal.aborted || !ownsAttempt()) break
+        const batch = start.batches[index]!
+        const timer = setTimeout(() => controller.abort(),45_000)
+        const result = await provider(batch,{ ...start.request, protectedPointIds: [] },controller.signal).finally(() => clearTimeout(timer))
+        // Even late responses have real usage, but only the owning attempt can advance progress/results.
+        this.db.prepare('UPDATE photo_ai_request SET input_tokens = input_tokens + ?, output_tokens = output_tokens + ? WHERE id = ?').run(result.inputTokens,result.outputTokens,start.row.id)
+        if (controller.signal.aborted) fail(504, 'AI 요청 시간이 초과되었거나 취소되었습니다')
+        if (!ownsAttempt()) break
+        const groups = validateBatchGroups(result.result,batch)
+        accumulated.push(...groups)
+        processedPhotos += batch.photos.length
+        this.db.prepare("UPDATE photo_ai_request SET completed_batches = ?, processed_photos = ?, batch_groups_json = ?, updated_at = ? WHERE id = ? AND status = 'pending' AND attempts = ?")
+          .run(index+1,processedPhotos,JSON.stringify(accumulated),now(),start.row.id,start.row.attempts)
+      }
+      if (ownsAttempt() && !controller.signal.aborted) {
+        const groups = validateGroups({ groups: accumulated },start.snapshot,start.request.protectedPointIds)
+        this.db.prepare("UPDATE photo_ai_request SET status = 'ready', groups_json = ?, updated_at = ? WHERE id = ? AND status = 'pending' AND attempts = ?")
+          .run(JSON.stringify(groups),now(),start.row.id,start.row.attempts)
+      }
     } catch (error) {
       const message = error instanceof PhotoAiError ? error.message : 'AI 처리에 실패했습니다. 한 번 더 시도할 수 있습니다'
-      this.db.prepare('UPDATE photo_ai_request SET status = \'failed\', error = ?, updated_at = ? WHERE id = ? AND status = \'pending\' AND attempts = ?').run(message,now(),start.row.id,start.row.attempts)
-    } finally { clearTimeout(timer); if (active.get(start.row.id) === controller) active.delete(start.row.id) }
+      this.db.prepare("UPDATE photo_ai_request SET status = 'failed', error = ?, updated_at = ? WHERE id = ? AND status = 'pending' AND attempts = ?").run(message,now(),start.row.id,start.row.attempts)
+    } finally { clearInterval(heartbeat); if (active.get(start.row.id) === controller) active.delete(start.row.id) }
     return this.get(slug,start.row.id)
   }
 

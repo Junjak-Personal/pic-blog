@@ -35,7 +35,7 @@ export async function aiRequest(event: H3Event, action: 'get' | 'propose' | 'app
     const text = Buffer.concat(chunks).toString('utf8')
     let raw: unknown
     try { raw = JSON.parse(text) as unknown } catch { throw new PhotoAiError(400,'JSON 본문이 필요합니다') }
-    return await service.propose(slug,raw,claudeProvider(config.ai,photosDir()))
+    return service.start(slug,raw,claudeProvider(config.ai,photosDir()))
   } catch (error) {
     if (error instanceof PhotoAiError) throw createError({ statusCode: error.statusCode, statusMessage: error.message })
     throw error

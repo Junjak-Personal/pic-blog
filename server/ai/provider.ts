@@ -1,6 +1,7 @@
 import { constants, closeSync, fstatSync, lstatSync, openSync, readSync, realpathSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { PhotoAiRequest } from '../../shared/types/photo-ai'
+import type { PhotoRow } from '../../shared/types/db'
 import { fail, object, type PhotoSnapshot } from './plan'
 
 export interface AiProviderResult {
@@ -8,7 +9,9 @@ export interface AiProviderResult {
   inputTokens: number
   outputTokens: number
 }
-export type AiProvider = (snapshot: PhotoSnapshot, request: PhotoAiRequest, signal: AbortSignal) => Promise<AiProviderResult>
+export type AiProvider = ((snapshot: PhotoSnapshot, request: PhotoAiRequest, signal: AbortSignal) => Promise<AiProviderResult>) & {
+  thumbnailBytes?: (photo: Pick<PhotoRow, 'thumb_path'>) => number
+}
 type TextContent = { type: 'text'; text: string }
 type ImageContent = { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/webp'; data: string } }
 
@@ -56,7 +59,7 @@ async function limitedJson(response: Response): Promise<unknown> {
 }
 
 export function claudeProvider(config: { apiKey: string; model: string }, photosRoot: string, fetcher: typeof fetch = fetch): AiProvider {
-  return async (snapshot, request, signal) => {
+  const provider: AiProvider = async (snapshot, request, signal) => {
     if (!config.apiKey) fail(503, 'AI API 키가 아직 설정되지 않았습니다')
     const photos = snapshot.photos.filter(ph => !request.protectedPointIds.includes(ph.point_id))
     const content: Array<TextContent | ImageContent> = [{ type: 'text', text: JSON.stringify({
@@ -91,4 +94,6 @@ export function claudeProvider(config: { apiKey: string; model: string }, photos
     }
     return { result, inputTokens: usage.input_tokens, outputTokens: usage.output_tokens }
   }
+  provider.thumbnailBytes = photo => readThumbnail(photosRoot,photo.thumb_path).data.length
+  return provider
 }
