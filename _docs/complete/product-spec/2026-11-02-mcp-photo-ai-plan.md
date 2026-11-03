@@ -66,7 +66,7 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
 - 필요한 설정은 Picblog 실행 환경의 `NUXT_AI_API_KEY`, MCP용 `NUXT_SITE_URL=https://pic-blog.jun-devlog.win`. Actions YAML에는 이 이름의 secret/variable 참조만 준비했으며 원격 값은 만들지 않았다. 기본 모델은 [공식 모델 목록](https://platform.claude.com/docs/en/models/overview)에 맞춘 `claude-sonnet-5-5`다.
 - 실제 MCP grant 생성/설정, 사용자 클라이언트 등록·연결, 키의 새 앱 접근 설정은 별도 사용자 승인이 필요하다. 현재 상태는 **미실행·승인 대기**, 거절 또는 불확실한 원격 실행 없음.
 - push/PR/병합/배포/원격 리소스 생성 없음. `main` push가 운영 자동배포라는 기존 규칙 유지.
-- 새 의존성 금지에 따라 공식 SDK 대신 기존 Nitro/Node로 stateless JSON 전송을 구현했다. [MCP 전송 명세](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)를 기준으로 지원하며 실제 Claude/ChatGPT 호환성 확인은 남는다.
+- 새 의존성 금지에 따라 공식 SDK 대신 기존 Nitro/Node로 stateless JSON 전송을 구현했다. [MCP 전송 명세](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)를 기준으로 지원한다. 실제 클라이언트 검증은 아래 「운영 MCP 클라이언트 연결」에 기록했다.
 - 기록당 최대 40장, 같은 제안 최대 2회 시도, 하루 최대 20회(UTC), 45초 시간 제한. 네트워크 실패/취소 후 공급자가 사용량을 주지 않으면 토큰 수는 미확인이고 시도 횟수는 항상 차감한다.
 - 수동 기록이 있는 포인트는 항상 보호하며, 기본 보호를 해제한 빈 포인트만 재배치·제목 생성한다. AI 생성 후 제목도 다음 요청에서는 보호 대상이다.
 - 기존 웹 PATCH는 이전처럼 선택적 버전을 보내지 않는다. AI는 변경 뒤 apply/undo를 거절하지만, 다른 탭의 오래된 웹 초안 저장 자체를 막는 변경은 하지 않았다.
@@ -89,8 +89,8 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
   - Actions: Claude 웹/폰·Claude Code·ChatGPT에서 연결/읽기/글 수정/연결 해제 확인
   - Expected: 클라이언트별 OAuth 성공, 삭제·공개 전환 도구 없음, 해제 후 접근 거부
   - Source: 중단된 10월 17일 MCP 계획
-  - Status: pending
-  - Evidence: —
+  - Status: partial — Claude 웹·Claude Code·ChatGPT OAuth/읽기 통과. 실물 폰·운영 쓰기·연결 해제는 미검증.
+  - Evidence: 아래 「운영 MCP 클라이언트 연결」. 세 연결은 사용자가 계속 사용할 수 있도록 유지했다.
 - ID: 2026-11-02-mcp-photo-ai-plan-03
   - Priority: P2
   - Preconditions: 새 환경에서 고정 pnpm 버전 설치 가능
@@ -154,8 +154,44 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
 
 근거는 이 작업 공간의 gitignored `_workspace/`에 있다: `typecheck.log`, `build.log`, `verify/{regression.log,before.json,applied.json,real-claude-result.json,verified.json,metadata-result.json,undo-ui.txt,applied-mobile.png}`. `verify/serve.mjs`는 원본 env에서 키를 읽어 프로세스에만 전달하며 키 자체를 포함하지 않는다.
 
-### 남은 범위
+### 배포 전 남은 범위 (이력)
 
 - 실제 Claude 웹/폰·Claude Code·ChatGPT의 OAuth/MCP 연결 호환성은 여전히 미검증이다. 인계된 절차대로 배포 승인·서버 `NUXT_SITE_URL` 설정·사용자 클라이언트 연결이 필요하다.
 - 원격 비밀 설정, PR, push, merge, 배포, 운영 데이터 변경은 하지 않았다. 로컬 검증 통과를 운영 활성화로 해석하지 않는다.
 - 기존 OAuth 단일 프로세스·AI 스냅샷 보관 만료 없음 등의 한계는 그대로다.
+
+
+## 2026-11-03 운영 배포
+
+사용자의 「운영에 올리고 claude mcp 연결 검증하자」 지시 후 실행했다. 앞 절의 배포 미실행은 배포 전 이력이다.
+
+- 배포 SHA: `791621e52512eb75da603fdc05f7d3c5755aa3b3` (구현 `403aa8c` + 검증 기록).
+- GitHub Actions: [41624347229](https://github.com/Junjak-Personal/pic-blog/actions/runs/41624347229), verify와 deploy 성공.
+- Picblog 전용 키를 GitHub Actions secret `NUXT_AI_API_KEY`로 등록하고 variable `NUXT_SITE_URL=https://pic-blog.jun-devlog.win`을 설정했다. 기존 다른 비밀 값은 변경하지 않았다.
+- 배포 전 SQLite 온라인 백업: 호스트 `/home/junja/apps/pic-blog/data/backups/pre-mcp-20261103.db`, 파일 모드 0600. 이전 이미지 `pic-blog:before-mcp-20261103` 보관.
+- 새 컨테이너 생성: `2026-11-03T11:06:38.164253023Z`, 이미지 `sha256:41a09109b5b5df2492a9ff733c1440b9d90ede0ece9b93eebe3204b98609e03b`.
+- 공개 `/api/version` buildId `mw0l0rsh`, `/api/health` 200.
+- 배포 후 `post`, `point`, `photo` 전체 행이 배포 전 백업과 정확히 일치: 기록 9개 / 포인트 428개 / 사진 3,135개. SQLite quick_check `ok`.
+- 실행 중 컨테이너의 키로 Anthropic 모델 조회 200, `claude-sonnet-5-5` 접근 확인. 모델 조회만 했으며 운영 사진 AI 요청은 보내지 않았다.
+- OAuth 보호 자원 문서와 인증 서버 문서 200. issuer/resource가 운영 HTTPS 주소와 일치하고 PKCE S256·CIMD·refresh_token 광고를 확인했다.
+- 무인증 `/mcp`는 401이며 올바른 `WWW-Authenticate` resource_metadata를 반환했다.
+- 사용자 본인 로그인 후 Junjak 브라우저 프로필에서 아래 클라이언트 연결과 실제 읽기 검증을 완료했다.
+
+
+## 2026-11-03 운영 MCP 클라이언트 연결
+
+사용자가 Claude 웹·Claude Code·ChatGPT 연결을 요청하고 Picblog에 로그인한 뒤 진행했다. 연결 대상은 모두 `https://pic-blog.jun-devlog.win/mcp`이며 운영 구현은 배포 SHA `791621e52512eb75da603fdc05f7d3c5755aa3b3`다.
+
+| 클라이언트 | 연결 및 실행 근거 | 판정 |
+| --- | --- | --- |
+| Claude 웹 | Junjak 프로필에서 Picblog 커넥터 연결. OAuth 코드 교환 성공, 실제 대화 도구 실행 내역의 목록 조회·`read_post` 완료 확인. 목록 9개, 선택한 공개 기록 포인트 27개·사진 133개. | 됨 |
+| Claude Code | 원본 프로젝트 `/Users/jun/develop/playground/pic-blog`의 local scope에 `pic-blog` HTTP MCP 등록, 브라우저 OAuth 로그인 성공. CLI에서 `mcp__pic-blog__list_posts`·`mcp__pic-blog__read_post` 실행, 두 tool_result 모두 `isError: false`, 프로세스 exit 0. | 됨 |
+| ChatGPT | Junjak 프로필에서 개인용 Picblog 플러그인 생성·설치·OAuth 연결 성공. 실제 대화에서 목록 조회 후 공개 기록 상세 조회 성공. 반환 기록 9개, 선택 기록 포인트 73개·사진 1,029개. | 됨 |
+
+- Claude 웹 커넥터 ID: `265b0a01-54b0-4b9d-a9be-d148ff2f161b`.
+- ChatGPT 플러그인 ID: `plugin_asdk_app_6ae9c279339081918cf75d02654ecdf7`.
+- Claude Code는 다른 프로젝트에 영향을 주지 않는 local scope다. 사용자 전용 API 키를 프로세스에만 전달한 읽기 검증 비용은 CLI 보고 기준 `$0.0301535`다. 모델의 기록 수 요약에는 10개라는 집계 오류가 있었으므로 판정은 실제 tool_result 성공 여부와 DB 대조를 기준으로 했다. 운영 DB와 두 웹 클라이언트가 확인한 실제 기록 수는 9개다.
+- 검증은 목록·상세 읽기만 수행했다. 도구는 `list_posts`, `read_post`, `update_post`, `update_point` 네 개이며 삭제·업로드·공개 전환 도구는 없다.
+- 검증 후 SQLite 전체 행을 배포 전 온라인 백업과 다시 대조했다. 기록 9개 / 포인트 428개 / 사진 3,135개가 모두 정확히 일치했고 `quick_check`는 `ok`다.
+- 로컬 근거: `_workspace/verify/claude-code-result.json`, `_workspace/verify/mcp-clients-result.json`. 비밀 키·OAuth 토큰·승인 코드는 기록하지 않았다.
+- 실물 폰, 운영 글 수정, 연결 해제 후 거절은 이번 연결 검증에 포함하지 않았다. 세 연결은 유지한다. 쓰기·해제 관련 단위/로컬 검증과 실제 클라이언트 운영 검증은 구분한다.
