@@ -5,7 +5,7 @@ topic: product-spec
 kind: plan
 scope: fullstack
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-03
 owner: JunjaK
 ---
 # MCP 연결과 사진 AI 정리
@@ -81,8 +81,8 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
   - Actions: 비민감 합성 사진 2~4장으로 Claude 실제 요청 1회, 미리보기→적용→새로고침→되돌리기 확인
   - Expected: 실제 토큰 사용량과 결과가 저장되고 모든 사진이 정확히 1회 포함되며 수동 기록 유지
   - Source: 사진 AI 인수 조건
-  - Status: pending
-  - Evidence: —
+  - Status: passed (로컬 격리 환경)
+  - Evidence: 아래 「2026-11-03 Orca 재검증」. 실제 Claude 2회(썸네일/메타데이터), 적용·새로고침·되돌리기 및 SQLite 원복 대조.
 - ID: 2026-11-02-mcp-photo-ai-plan-02
   - Priority: P1
   - Preconditions: 별도 배포 승인과 NUXT_SITE_URL 설정, 사용자가 실제 연결을 직접 시작
@@ -97,8 +97,8 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
   - Actions: frozen-lockfile clean install 후 typecheck/test/build
   - Expected: 기존 의존성 복사 없이 동일 검증 통과
   - Source: 이번 실행 환경의 pnpm wrapper 제약
-  - Status: pending
-  - Evidence: —
+  - Status: passed
+  - Evidence: 아래 「2026-11-03 Orca 재검증」. 정확한 pnpm 11.28.0 clean install 및 typecheck/test/build 통과.
 
 
 ## Clean install 후속 조사
@@ -121,3 +121,41 @@ NiVoca Cloud에서 설정 식별자만 확인: `ANTHROPIC_API_KEY`, NiVoca BE �
 - package.json: `283c8e54f49a31213b6b710204af4fd7baf2102192ff6e76b85ea3da399d2662`
 - pnpm-lock.yaml: `23fd20d261f92ed0814e4703fbe21080e832160ce1e71ddb537a0521163e281a`
 - pnpm-workspace.yaml: `2759e1d7664222c94b9f098b56fd5ab6069f7be5d8a051ca5ab5ffd526baecb9`
+
+
+## 2026-11-03 Orca 재검증
+
+이 절이 현재 검증 상태다. 앞의 다운로드 차단·실제 Claude 0회는 이전 환경의 이력이다.
+
+- 기준 구현: `403aa8cebf6d9de438e88a306f72e34f5ebbd59d`, 원격 `feat/mcp-photo-ai`를 fetch하여 시작.
+- 작업 공간: `/Users/jun/orca/workspaces/pic-blog/mcp-photo-ai-verify`, 브랜치 `junhyeon-qesg/mcp-photo-ai-verify`. 원본 main의 미커밋 문서는 보존했다.
+- 사용자 제공 Picblog 전용 키 사용 승인을 받아 로컬 검증 서버에만 연결했다. 원본 `.env.local`의 변수명을 `NUXT_CLAUDE_API_KEY`에서 앱이 실제 사용하는 `NUXT_AI_API_KEY`로 정정했다. 키 값은 유지했으며 출력·보고서·Git에는 넣지 않았다. 운영 비밀 설정은 변경하지 않았다.
+
+### 설치와 회귀 검증 — 통과
+
+- Node 24.22.1. 공식 npm registry에서 일반 `pnpm@11.28.0`을 `_workspace/tools`에 격리 설치했다. 전역 도구·프로젝트 버전은 바꾸지 않았다.
+- 빈 `node_modules`에서 `node _workspace/tools/node_modules/pnpm/bin/pnpm.cjs install --frozen-lockfile`: exit 0. pnpm content-addressable store의 패키지를 재사용했으며 기존 `node_modules` 복사는 하지 않았다.
+- 같은 실행 파일로 `typecheck`, `test`, `build`: 모두 exit 0. Vitest **7파일 / 82개** 통과.
+- 기존 Playwright 회귀 **10개** 통과. 방금 빌드한 산출물과 별도 합성 SQLite를 사용했다. 임시 config에서 자동 재빌드만 생략했으며 원본 spec·config는 수정하지 않았다.
+- package.json / pnpm-lock.yaml / pnpm-workspace.yaml SHA-256은 위 인계값과 모두 일치한다.
+- 기존 상대 색상 CSS 파서·큰 청크 빌드 경고는 남아 있다.
+
+### 실제 Claude와 UI·SQLite 검증 — 통과
+
+- 실행 대상: 프로덕션 빌드의 `http://localhost:4611`, 데이터 `_workspace/verify/data`. 운영 DB·사진은 사용하지 않았다.
+- 기존 단색 JPEG 테스트 픽스처 3장 중 빈 그룹 2장을 선택하고 수동 제목·본문이 있는 1장은 보호했다. UI에서 전송 동의와 썸네일 전송을 선택했다.
+- 실제 `claude-sonnet-5-5` Messages 요청 **2회**: 썸네일 포함 입력 **1,280** / 출력 **299**, 메타데이터만 입력 **423** / 출력 **400**. 합계 입력 **1,703** / 출력 **699** 토큰. 사용자가 추가 API 사용을 허용한 뒤 두 번째 경로를 확인했다.
+- ego-browser로 썸네일 기본 OFF, 동의 전 생성 불가, 수동 기록 선택 불가를 확인했다.
+- 실제 응답은 가까운 두 사진을 「자정을 넘긴 같은 장소 산책」으로 묶었다. 미리보기 시 DB의 포인트·사진 행은 시작 스냅샷과 완전히 같았다.
+- 확인창에서 적용 → 새로고침: 3개 포인트가 2개로 줄었고 사진 3장, 사진별 좌표, 수동 제목·본문이 유지됐다. SQLite와 UI에서 `applied`를 확인했다.
+- 확인창에서 되돌리기 → 새로고침: `undone`, 포인트 3개·사진 3개. 포인트·사진의 전체 행이 시작 스냅샷과 정확히 일치했다. 호출 장부는 1회로 유지됐다.
+- 메타데이터 전용 실제 HTTP 요청도 ready → apply → undo를 통과했다. 같은 내용에 새 requestId를 보내도 기존 제안을 반환했고 공급자 호출은 늘지 않았다. 두 번째 되돌리기 후에도 전체 포인트·사진 행이 시작 스냅샷과 정확히 같고 총 호출 장부는 2회다.
+- 390×844 화면에서 문서 너비 390, 가로 넘침 없음. 결과 썸네일 3개 모두 정상 로드.
+
+근거는 이 작업 공간의 gitignored `_workspace/`에 있다: `typecheck.log`, `build.log`, `verify/{regression.log,before.json,applied.json,real-claude-result.json,verified.json,metadata-result.json,undo-ui.txt,applied-mobile.png}`. `verify/serve.mjs`는 원본 env에서 키를 읽어 프로세스에만 전달하며 키 자체를 포함하지 않는다.
+
+### 남은 범위
+
+- 실제 Claude 웹/폰·Claude Code·ChatGPT의 OAuth/MCP 연결 호환성은 여전히 미검증이다. 인계된 절차대로 배포 승인·서버 `NUXT_SITE_URL` 설정·사용자 클라이언트 연결이 필요하다.
+- 원격 비밀 설정, PR, push, merge, 배포, 운영 데이터 변경은 하지 않았다. 로컬 검증 통과를 운영 활성화로 해석하지 않는다.
+- 기존 OAuth 단일 프로세스·AI 스냅샷 보관 만료 없음 등의 한계는 그대로다.
