@@ -30,6 +30,7 @@ useHead({ title: '기록 관리 — pic·blog' })
       </div>
 
       <div class="top-actions">
+        <NuxtLink to="/editor/ai" class="btn mono" data-testid="editor-ai-connections">AI 연결</NuxtLink>
         <NuxtLink to="/editor/new" class="btn primary mono">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
           새 기록

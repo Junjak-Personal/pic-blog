@@ -20,6 +20,7 @@ owner: jhyoon
 
 | 상태 | 토픽 | 문서 | 무엇 |
 |---|---|---|---|
+| complete | `product-spec` | [2026-11-02-mcp-photo-ai-plan.md](complete/product-spec/2026-11-02-mcp-photo-ai-plan.md) | MCP·사진 AI 구현, 타입/82 단위/13 브라우저 검증 통과. 실제 API·커넥터 및 clean install QA 3건 대기 |
 | complete | `product-spec` | [2026-10-08-photo-route-plan.md](complete/product-spec/2026-10-08-photo-route-plan.md) | 포인트 묶음과 분리한 사진 좌표 동선·거리 계산. 타입·단위·빌드·저장 E2E·지도 좌표 확인 완료. 후속 QA 2건 |
 | processing | `ios-keyboard` | [2026-08-31-ios-keyboard-findings.md](active/processing/2026-08-31/2026-08-31-ios-keyboard-findings.md) | 아이폰 키보드와 고정 셸. **지운 다섯 가지 접근**과 아직 못 찾은 차이. 열린 항목 둘(360장 실사용 · 포커스 튐). 이 문제를 다시 만지기 전에 읽을 것 |
 | reference | `product-spec` | [2026-08-25-product-spec.md](reference/product-spec/2026-08-25-product-spec.md) | 설계 SSOT — 스키마 · 클러스터링 · 업로드 파이프라인. 코드 주석이 「설계문서 §N」으로 가리키는 그 문서 |

@@ -83,6 +83,9 @@ jobs:
           NUXT_ADMIN_PASSWORD_HASH: ${{ secrets.NUXT_ADMIN_PASSWORD_HASH }}
           NUXT_PUBLIC_MAPBOX_STYLE: ${{ vars.NUXT_PUBLIC_MAPBOX_STYLE }}
           NUXT_DATA_DIR: ${{ vars.NUXT_DATA_DIR }}
+          NUXT_SITE_URL: ${{ vars.NUXT_SITE_URL }}
+          NUXT_AI_API_KEY: ${{ secrets.NUXT_AI_API_KEY }}
+          NUXT_AI_MODEL: ${{ vars.NUXT_AI_MODEL }}
         run: |
           set -euo pipefail
 
@@ -107,6 +110,9 @@ jobs:
             -e NUXT_PUBLIC_MAPBOX_STYLE="$NUXT_PUBLIC_MAPBOX_STYLE" \
             -e NUXT_SESSION_PASSWORD="$NUXT_SESSION_PASSWORD" \
             -e NUXT_ADMIN_PASSWORD_HASH="$NUXT_ADMIN_PASSWORD_HASH" \
+            -e NUXT_SITE_URL="$NUXT_SITE_URL" \
+            -e NUXT_AI_API_KEY="$NUXT_AI_API_KEY" \
+            -e NUXT_AI_MODEL="${NUXT_AI_MODEL:-claude-sonnet-5-5}" \
             pic-blog:prd
 
       # 200 이 뜰 때까지 기다린다. 컨테이너가 떴다는 것과 앱이 산다는 건 다르다 —

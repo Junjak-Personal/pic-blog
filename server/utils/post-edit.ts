@@ -1,0 +1,125 @@
+import { createHash } from 'node:crypto'
+import type Database from 'better-sqlite3'
+import type { PostRow } from '#shared/types/db'
+
+/**
+ * 포스트 편집 저장 — 편집 1단계 「기본 정보」. slug 는 사진 파일 경로에 박혀 있어(photoStore)
+ * 여기서 읽지 않는다. 바디에 섞여 와도 무시된다.
+ *
+ * started_at/ended_at 은 원래 EXIF 측량값이라 읽기 전용이었는데, 손으로 고칠 수 있게 열었다.
+ * 🔴 사진을 추가하면 photos.post.ts 가 MIN/MAX(shot_at) 으로 이 둘을 다시 계산한다 —
+ *    즉 손으로 고친 기간은 다음 사진 추가 때 EXIF 값으로 되돌아간다. 의도된 동작이고,
+ *    편집 화면이 그 자리에서 그렇게 알린다. 안 알리면 조용한 실패다 (설계문서 §8).
+ */
+const MAX_TITLE = 200
+const MAX_SUMMARY = 1000
+/** shot_at 과 같은 「타임존 없는 벽시계」 문자열만 받는다 — Date 로 파싱하면 UTC 로 밀린다 */
+const LOCAL_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+
+function bad(msg: string): never {
+  throw createError({ statusCode: 400, statusMessage: msg })
+}
+
+export function editPost(db: Database.Database, slug: string, b: Record<string, unknown>, version?: string) {
+  return db.transaction(() => {
+    const post = db.prepare<[string], PostRow>(`SELECT * FROM post WHERE slug = ?`).get(slug)
+    if (!post) throw createError({ statusCode: 404, statusMessage: '기록을 찾을 수 없습니다' })
+    if (version !== undefined) assertPostVersion(db, post.id, version)
+
+    // 보내지 않은 필드는 현재 값을 그대로 다시 쓴다 — 동적 SET 절보다 바인딩 튜플이 정확하다
+    let title = post.title
+    if ('title' in b) {
+      const v = b.title
+      if (typeof v !== 'string') bad('title: 문자열이어야 합니다')
+      title = v.trim()
+      if (!title) bad('title: 비어 있습니다')
+      if (title.length > MAX_TITLE) bad(`title: ${MAX_TITLE}자를 넘습니다`)
+    }
+
+    let summary = post.summary
+    if ('summary' in b) {
+      const v = b.summary
+      if (v == null) {
+        summary = null
+      } else {
+        if (typeof v !== 'string') bad('summary: 문자열이어야 합니다')
+        const s = v.trim()
+        if (s.length > MAX_SUMMARY) bad(`summary: ${MAX_SUMMARY}자를 넘습니다`)
+        summary = s || null
+      }
+    }
+
+    let isPublic = post.is_public
+    if ('is_public' in b) {
+      const v = b.is_public
+      if (typeof v !== 'boolean') bad('is_public: true 또는 false 여야 합니다')
+      isPublic = v ? 1 : 0
+    }
+
+    // 기간 — 둘 다 null 이면 「기간 없음」이다. 형식은 shot_at 과 같아야 정렬·비교가 맞는다.
+    // 화살표 상수여야 한다 — function 선언은 호이스팅돼서 위의 `if (!post) throw` 로 좁혀진
+    // 타입을 못 받는다 (post 가 다시 undefined 가능으로 보인다)
+    const period = (field: 'started_at' | 'ended_at') => {
+      const cur = post[field]
+      if (!(field in b)) return cur
+      const v = b[field]
+      if (v == null) return null
+      if (typeof v !== 'string' || !LOCAL_ISO.test(v)) {
+        bad(`${field}: YYYY-MM-DDTHH:mm:ss 형식이어야 합니다`)
+      }
+      return v
+    }
+    const startedAt = period('started_at')
+    const endedAt = period('ended_at')
+    // 고정 폭 문자열이라 사전순 비교가 곧 시각 순이다
+    if (startedAt && endedAt && startedAt > endedAt) bad('기간: 시작이 종료보다 늦습니다')
+
+
+    /*
+     * 기록 커버 — 편집 2단계 「커버 지정」이 고른 사진이다. 포인트의 대표 썸네일과는
+     * 다른 값이다(그건 points/[id] PATCH 가 받는다). 여기서 받은 값이 SSOT 이고,
+     * syncPostCover() 는 이 사진이 지워졌을 때만 대신 채운다.
+     */
+    let coverPhotoId = post.cover_photo_id
+    if ('cover_photo_id' in b) {
+      const v = b.cover_photo_id
+      if (v == null) {
+        coverPhotoId = null
+      } else {
+        if (typeof v !== 'number' || !Number.isInteger(v)) bad('cover_photo_id: 정수여야 합니다')
+        // 다른 기록의 사진이 커버가 되면 목록(1a)에 엉뚱한 썸네일이 뜬다 — 소속을 확인한다
+        const owned = db
+          .prepare<[number, number], { n: number }>(
+            `SELECT COUNT(*) AS n FROM photo ph JOIN point pt ON pt.id = ph.point_id
+              WHERE ph.id = ? AND pt.post_id = ?`,
+          )
+          .get(v, post.id)
+        if (!owned?.n) bad('cover_photo_id: 이 기록의 사진이 아닙니다')
+        coverPhotoId = v
+      }
+    }
+
+    db.prepare<[string, string | null, number, number | null, string | null, string | null, string, number]>(
+      `UPDATE post
+          SET title = ?, summary = ?, is_public = ?, cover_photo_id = ?,
+              started_at = ?, ended_at = ?, updated_at = ?
+        WHERE id = ?`,
+    ).run(title, summary, isPublic, coverPhotoId, startedAt, endedAt, new Date().toISOString(), post.id)
+
+    return { ok: true }
+  })()
+}
+
+/** Content revision catches same-millisecond edits and every grouping/photo mutation. */
+export function postVersion(db: Database.Database, postId: number) {
+  const post = db.prepare('SELECT * FROM post WHERE id = ?').get(postId)
+  const points = db.prepare('SELECT * FROM point WHERE post_id = ? ORDER BY id').all(postId)
+  const photos = db.prepare('SELECT ph.* FROM photo ph JOIN point pt ON pt.id = ph.point_id WHERE pt.post_id = ? ORDER BY ph.id').all(postId)
+  return createHash('sha256').update(JSON.stringify({ post, points, photos })).digest('hex')
+}
+
+export function assertPostVersion(db: Database.Database, postId: number, expected: string) {
+  if (postVersion(db, postId) !== expected) {
+    throw createError({ statusCode: 409, statusMessage: '기록이 변경됐습니다. 다시 읽고 고치세요.' })
+  }
+}

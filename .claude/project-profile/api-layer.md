@@ -27,8 +27,17 @@
 | `GET /api/health` · `version` | — | 헬스체크 · 빌드 id |
 | `GET /photos/{slug}/{id}_{display\|thumb}.{ext}` | 비공개면 필수 | 파일 서빙 (`server/routes`) |
 
+## MCP / 사진 AI (2026-11-02)
+
+- `/mcp`: stateless JSON Streamable HTTP, OAuth bearer, `list_posts` / `read_post` / `update_post` / `update_point`.
+- `/oauth/authorize`, `/oauth/token`, `.well-known` 발견 문서. CIMD+PKCE, 단일 편집자 승인. `server/oauth/`는 한 Node 프로세스 기준이다.
+- `/api/oauth/requests/:id`, `/api/oauth/connections`: 편집 세션 필수. 변경은 정확한 Origin 검증. 승인·연결 관리 화면은 `/oauth/consent`, `/editor/ai`.
+- `/api/posts/:slug/ai/proposals`, `/api/posts/:slug/ai/:id`, `/:id/{apply,undo,cancel}`: 편집 세션 필수. 변경은 JSON+Origin 검증. 계약 `shared/types/photo-ai.ts`, 화면 `/editor/organize/:slug`.
+- AI 전용 테이블은 `server/ai/service.ts`의 `AI_SCHEMA`로 초기화한다. 기존 post/point/photo 열은 변경하지 않는다. 요청·스냅샷·사용량은 같은 SQLite에 저장하며 일일 시도 장부는 기록 삭제 후에도 유지한다.
+- MCP 수정·AI 적용/되돌리기는 전체 기록 내용 해시로 낙관적 충돌 검사를 한다. 기존 웹 PATCH는 선택적 버전을 보내지 않으므로 이전 웹 초안이 나중에 저장되는 동작은 그대로다.
+
 ## Request Patterns
-- 쓰기 핸들러는 첫 줄에 `await requireEditor(event)` (`server/utils/auth.ts`). **읽기 경로는 절대 부르지 않는다** — `getUserSession` 으로 보기만 한다
+- 쓰기 핸들러는 첫 줄에 `await requireEditor(event)` (`server/utils/auth.ts`). 공개 기록 읽기는 `getUserSession`으로 판정한다. OAuth 관리·AI 제안 같은 비공개 읽기는 `requireEditor`가 필수다
 - 바디는 `readBody` 후 `unknown` → 필드별 수동 검증. 보내지 않은 필드는 현재 값을 유지 (부분 갱신)
 - 좌표·촬영 시각·포인트 순서는 측량값이라 PATCH 로 받지 않는다. 앵커도 좌표가 아니라 `'centroid' | { photoId }` 만 받는다
 - DB: `useDb()` (better-sqlite3 동기 API), 여러 문장은 `db.transaction(...)`

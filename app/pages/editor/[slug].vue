@@ -1171,6 +1171,10 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
       <!-- 2단계 — 사진 전체를 포인트별 그룹으로 -->
       <div v-else-if="step === 'points'" class="boardpane">
+        <div class="ai-entry">
+          <span v-if="changes > 0" class="mono">AI 정리 전에 변경 내용을 저장해 주세요.</span>
+          <button type="button" class="btn" data-testid="editor-ai-open" :disabled="changes > 0 || saving || reclustering" @click="navigateTo(`/editor/organize/${slug}`)">AI로 포인트 정리</button>
+        </div>
         <!-- 상한을 넘겼거나 이미 있는 사진을 골랐을 때 — 조치가 따라붙는 줄이라 따로 띄운다 -->
         <p v-if="pointAddNotice" class="mono notice boxed">{{ pointAddNotice }}</p>
         <PointGroupBoard
@@ -1506,6 +1510,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 </template>
 
 <style scoped>
+.ai-entry { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: var(--topbar-gap); padding-bottom: var(--topbar-x-sm); }
 /* position — BusyOverlay(inset: 0)의 기준. overflow — 굴러가는 건 안쪽 한 칸뿐이다 */
 .page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 

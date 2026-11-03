@@ -65,6 +65,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     dataDir: './data',
     adminPasswordHash: '',
+    siteUrl: '',
+    mcp: { clientOrigins: 'https://claude.ai,https://chatgpt.com' },
+    ai: { apiKey: '', model: 'claude-sonnet-5-5', dailyRequestLimit: 20 },
     session: {
       name: 'pic-blog-session',
       password: '',

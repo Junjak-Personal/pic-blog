@@ -3,7 +3,7 @@
 ## Frameworks
 | Type | Framework | Config | Location |
 |------|-----------|--------|----------|
-| Unit | Vitest 5 | `vitest.config.ts` (include `shared/**/*.test.ts`) | `shared/utils/algorithms.test.ts` |
+| Unit | Vitest 5 | `vitest.config.ts` (include `shared/**/*.test.ts`, `server/**/*.test.ts`) | `shared/utils/algorithms.test.ts` |
 | 타입 | vue-tsc (`nuxt typecheck`) | `.nuxt/tsconfig.*.json` | — |
 | E2E | Playwright 1.63 (`@playwright/test`) | `playwright.config.ts` | `tests/e2e/` |
 | UI 점검 (사람/에이전트) | 브리프 | `_docs/reference/e2e-testing/2026-08-26-e2e-testing-brief.md` | — |
@@ -58,3 +58,7 @@
 - Emitter house-style: `reference/e2e-testing.md` (Playwright `.spec.ts`) — `tests/e2e/*.noauth.spec.ts` 가 기준 예시
 - Concurrency: serial-shared-browser (`workers: 1`, 서버 하나 · DB 하나)
 - Generated spec dir: `tests/e2e/`
+
+## MCP / 사진 AI 검증 (2026-11-02)
+
+서버 테스트는 `server/oauth`, `server/mcp`, `server/ai`, `server/utils/oauth.test.ts`에 있다. SQLite 메모리 DB·임시 경로·mock fetch만 사용한다. 실제 키나 사진을 보내지 않는다. 통합 실행 기록과 미검증 항목은 `_docs/complete/product-spec/2026-11-02-mcp-photo-ai-plan.md`에 남긴다.

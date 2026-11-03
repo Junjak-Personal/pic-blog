@@ -30,3 +30,12 @@
 - Type: SSR (Nitro node-server)
 - 이미지: `node:24-slim` 2단계, pnpm 은 `package.json` 의 `packageManager` 로 설치, BuildKit 전용 문법 금지 (junserver 에 buildx 없음). 빌드 단계에서 better-sqlite3 로드를 실제로 확인. 엔트리포인트가 볼륨 소유권을 맞춘 뒤 node 로 강등
 - iOS 껍데기: `cd app-ios && flutter build ios --release` — 웹만 바꿨다면 다시 빌드할 필요 없다
+
+## MCP / Claude 설정 (2026-11-02)
+
+- `NUXT_SITE_URL`: 운영 HTTPS 출처. 미설정이면 MCP 연결은 503. Actions variable `NUXT_SITE_URL`.
+- `NUXT_AI_API_KEY`: 서버 전용. Actions secret 같은 이름; 비어 있으면 생성만 503. 기존 서비스 키를 자동 탐색·복사하지 않는다.
+- `NUXT_AI_MODEL`: 기본 `claude-sonnet-5-5`; Actions variable로 선택 가능. `NUXT_AI_DAILY_REQUEST_LIMIT` 기본/최대 20(런타임 수동 설정 시 낮출 수 있음).
+- 직접 Docker 배포는 기존 `.env.prd` 경로로 같은 변수명을 설정한다. 이 변경에서 실제 값·원격 secret·OAuth grant를 만들지 않았다.
+- OAuth 연결 `<dataDir>/oauth/{key,grants.json}`는 0600, 현재 단일 Node 프로세스 전제. 기존 DB·사진 백업 외 별도 자격 데이터다.
+- AI 요청/되돌리기 스냅샷은 SQLite에 있으므로 DB 백업에 포함된다. 현재 보관 만료는 없다.
