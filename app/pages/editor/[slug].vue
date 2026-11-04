@@ -93,7 +93,7 @@ const route = useRoute()
 const router = useRouter()
 const slug = computed(() => String(route.params.slug))
 
-const { data: post, refresh } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
+const { data: post, refresh, status: loadStatus, error: loadError } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
 
 const draftTitle = ref('')
 const draftSummary = ref('')
@@ -1115,10 +1115,17 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
     -->
     <ErrorNote class="err-bar" :message="errorMessage" @close="errorMessage = null" />
 
-    <section v-if="!post" class="blank">
-      <h3>기록을 찾을 수 없습니다</h3>
-      <p class="mono">/editor/{{ slug }}</p>
-    </section>
+    <EmptyState v-if="loadStatus === 'pending' && !post" role="status" title="기록을 불러오는 중…">
+      <template #icon><span class="spin" aria-hidden="true" /></template>
+    </EmptyState>
+    <EmptyState v-else-if="loadError || !post" role="alert" :title="loadError?.statusCode === 404 ? '기록을 찾을 수 없습니다' : '기록을 불러올 수 없습니다'" :description="loadError?.statusCode === 404 ? '기록이 삭제되었거나 주소가 바뀌었을 수 있습니다.' : '잠시 후 다시 시도해 주세요.'">
+      <template #action>
+        <div class="recovery-actions">
+          <NuxtLink to="/editor" class="btn outline big" data-testid="editor-list-back">기록 목록으로</NuxtLink>
+          <button v-if="loadError?.statusCode !== 404" type="button" class="btn primary big" data-testid="editor-load-retry" @click="refresh()">다시 시도</button>
+        </div>
+      </template>
+    </EmptyState>
 
     <template v-else>
       <!-- 단계 — 1 기본 정보 → 2 포인트 편집 → 3 기록 편집 -->
@@ -1173,7 +1180,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
       <div v-else-if="step === 'points'" class="boardpane">
         <div class="ai-entry">
           <span v-if="changes > 0" class="mono">AI 정리 전에 변경 내용을 저장해 주세요.</span>
-          <button type="button" class="btn" data-testid="editor-ai-open" :disabled="changes > 0 || saving || reclustering" @click="navigateTo(`/editor/organize/${slug}`)">AI로 포인트 정리</button>
+          <button type="button" class="btn outline" data-testid="editor-ai-open" :disabled="changes > 0 || saving || reclustering" @click="navigateTo(`/editor/organize/${slug}`)">AI로 포인트 정리</button>
         </div>
         <!-- 상한을 넘겼거나 이미 있는 사진을 골랐을 때 — 조치가 따라붙는 줄이라 따로 띄운다 -->
         <p v-if="pointAddNotice" class="mono notice boxed">{{ pointAddNotice }}</p>
@@ -1201,30 +1208,33 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
             <span class="mono ph-lock">촬영 시각 순 고정</span>
           </div>
           <ol class="scroll-y point-list">
-            <li
-              v-for="(pt, i) in pointDrafts"
-              :key="pt.id"
-              class="prow"
-              :class="{ on: pt.id === activeId }"
-              :data-testid="`editor-point-row-${i}`"
-              @click="selectPoint(pt.id)"
-            >
-              <span class="mono pnum">{{ String(i + 1).padStart(2, '0') }}</span>
-              <img
-                v-if="rowThumb(pt.id)"
-                v-sk
-                class="pthumb sk"
-                :src="rowThumb(pt.id)!.thumb_path"
-                :alt="`${pt.title.trim() || `포인트 ${i + 1}`} 대표 사진`"
-                loading="lazy"
+            <li v-for="(pt, i) in pointDrafts" :key="pt.id">
+              <button
+                type="button"
+                class="prow"
+                :class="{ on: pt.id === activeId }"
+                :aria-pressed="pt.id === activeId"
+                :aria-label="`${i + 1}번 ${pt.title.trim() || '이름 없는 포인트'} 편집`"
+                :data-testid="`editor-point-row-${i}`"
+                @click="selectPoint(pt.id)"
               >
-              <span class="pmain">
-                <span class="pname">{{ pt.title.trim() || '이름 없는 포인트' }}</span>
-                <span class="mono psub">
-                  {{ formatDateTime(basePoint(pt.id)?.first_shot_at ?? null) || '새 포인트' }}
+                <span class="mono pnum">{{ String(i + 1).padStart(2, '0') }}</span>
+                <img
+                  v-if="rowThumb(pt.id)"
+                  v-sk
+                  class="pthumb sk"
+                  :src="rowThumb(pt.id)!.thumb_path"
+                  :alt="`${pt.title.trim() || `포인트 ${i + 1}`} 대표 사진`"
+                  loading="lazy"
+                >
+                <span class="pmain">
+                  <span class="pname">{{ pt.title.trim() || '이름 없는 포인트' }}</span>
+                  <span class="mono psub">
+                    {{ formatDateTime(basePoint(pt.id)?.first_shot_at ?? null) || '새 포인트' }}
+                  </span>
                 </span>
-              </span>
-              <span class="mono pcount">{{ pt.ids.length }}장</span>
+                <span class="mono pcount">{{ pt.ids.length }}장</span>
+              </button>
             </li>
           </ol>
         </aside>
@@ -1510,6 +1520,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 </template>
 
 <style scoped>
+.recovery-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 .ai-entry { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: var(--topbar-gap); padding-bottom: var(--topbar-x-sm); }
 /* position — BusyOverlay(inset: 0)의 기준. overflow — 굴러가는 건 안쪽 한 칸뿐이다 */
 .page { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
@@ -1651,6 +1662,8 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
    아래 편집 블록 위로 흘러넘친다 (모바일에서 겹쳐 보이던 증상의 루트 원인) */
 .point-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
 .prow {
+  width: 100%;
+  text-align: left;
   display: grid;
   grid-template-columns: 28px 46px 1fr auto;
   gap: 11px;
@@ -1660,6 +1673,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   cursor: pointer;
 }
 .prow:hover { background: rgb(var(--ink-rgb) / 0.06); }
+.prow:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .prow.on { background: var(--selected); }
 .pnum {
   display: grid;

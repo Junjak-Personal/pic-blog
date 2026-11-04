@@ -215,8 +215,8 @@ select:focus-visible {
 .btn.primary { background: var(--primary-fill); color: var(--ink); }
 /* 어두운 면이라 눌린 티가 옅다. 색을 하나 더 만들지 않고 밝기로만 올린다 */
 .btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
-.btn.ghost { border-color: var(--border-control); background: var(--surface-hover); color: var(--mid); }
-.btn.ghost:hover:not(:disabled) { border-color: var(--border-hover); background: var(--selected); color: var(--ink); }
+.btn.ghost, .btn.outline { border-color: var(--border-control); background: var(--surface-hover); color: var(--mid); }
+.btn.ghost:hover:not(:disabled), .btn.outline:hover:not(:disabled) { border-color: var(--border-hover); background: var(--selected); color: var(--ink); }
 /* 크게 — 빈 화면 한가운데의 「사진 선택」처럼 그 화면의 유일한 행동일 때 */
 .btn.big { min-height: 44px; padding: 12px 20px; font-size: var(--fs-sm); }
 /* 판 바닥에 서는 버튼 — 둘이 나란히 서므로 글자를 가운데로 두고 손가락 타깃을 갖는다.

@@ -12,7 +12,7 @@ import { formatRange } from '#shared/utils/format'
 
 definePageMeta({ layout: 'editor' })
 
-const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
+const { data: posts, status, refresh } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 useHead({ title: '기록 관리 — pic·blog' })
 </script>
 
@@ -30,7 +30,7 @@ useHead({ title: '기록 관리 — pic·blog' })
       </div>
 
       <div class="top-actions">
-        <NuxtLink to="/editor/ai" class="btn mono" data-testid="editor-ai-connections">AI 연결</NuxtLink>
+        <NuxtLink to="/editor/ai" class="btn outline mono" data-testid="editor-ai-connections">AI 연결</NuxtLink>
         <NuxtLink to="/editor/new" class="btn primary mono">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
           새 기록
@@ -54,6 +54,12 @@ useHead({ title: '기록 관리 — pic·blog' })
         </div>
       </li>
     </ul>
+
+    <EmptyState v-else-if="status === 'error'" role="alert" title="기록을 불러올 수 없습니다" description="잠시 후 다시 시도해 주세요.">
+      <template #action>
+        <button type="button" class="btn primary big" data-testid="editor-posts-retry" @click="refresh()">다시 시도</button>
+      </template>
+    </EmptyState>
 
     <!-- 아트보드 1c ① 기록 0 -->
     <EmptyState v-else-if="!posts.length" title="아직 기록이 없습니다" description="사진을 올려 여행의 장소와 순간을 한곳에 남겨보세요.">

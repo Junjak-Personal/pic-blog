@@ -17,7 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const slug = computed(() => String(route.params.slug))
 
-const { data: post, refresh } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
+const { data: post, refresh, status, error } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`)
 const points = computed(() => post.value?.points ?? [])
 
 const flow = useAddPhotosFlow(slug, points, {
@@ -122,9 +122,17 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 </script>
 
 <template>
-  <div v-if="!post" class="page">
-    <section class="empty stage-entry"><h3>기록을 찾을 수 없습니다</h3></section>
-  </div>
+  <EmptyState v-if="status === 'pending' && !post" role="status" title="기록을 불러오는 중…">
+    <template #icon><span class="spin" aria-hidden="true" /></template>
+  </EmptyState>
+  <EmptyState v-else-if="error || !post" role="alert" :title="error?.statusCode === 404 ? '기록을 찾을 수 없습니다' : '기록을 불러올 수 없습니다'" :description="error?.statusCode === 404 ? '기록이 삭제되었거나 주소가 바뀌었을 수 있습니다.' : '잠시 후 다시 시도해 주세요.'">
+    <template #action>
+      <div class="recovery-actions">
+        <NuxtLink :to="error?.statusCode === 404 ? '/editor' : `/editor/${slug}`" class="btn outline big" data-testid="add-photos-back">{{ error?.statusCode === 404 ? '기록 목록으로' : '편집으로 돌아가기' }}</NuxtLink>
+        <button v-if="error?.statusCode !== 404" type="button" class="btn primary big" data-testid="add-photos-load-retry" @click="refresh()">다시 시도</button>
+      </div>
+    </template>
+  </EmptyState>
 
   <div v-else class="page">
     <!--
@@ -186,7 +194,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
     <!-- 파일 선택 -->
     <section v-if="flow.stage.value === 'idle'" class="empty stage-entry">
       <h3>추가할 사진을 선택하세요</h3>
-      <p>기존 포인트 중심에서 반경 안이고 «같은 날»이면 그 포인트에 합류하고, 아니면 새 포인트가 만들어집니다.</p>
+      <p>선택한 사진은 같은 날 가까운 곳에서 찍은 기존 포인트에 추가됩니다. 해당하는 포인트가 없으면 새로 만듭니다.</p>
       <button type="button" class="btn primary mono big" @click="pick()">사진 선택</button>
       <!-- 고르고 나서 한참 조용한 구간이 있다 — 왜 그런지 미리 말해둔다 -->
       <p class="mono pick-hint">
@@ -390,6 +398,7 @@ useHead(() => ({ title: `사진 추가 · ${post.value?.title ?? ''}` }))
 </template>
 
 <style scoped>
+.recovery-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 /* 셸이 이미 뷰포트에 고정돼 있다 — 여기서는 남는 높이를 받아 채우기만 한다 */
 /* position: relative — 하단 CTA 가 이 칸의 바닥에 붙는다 (BottomCta 의 🔴) */
 .page { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }

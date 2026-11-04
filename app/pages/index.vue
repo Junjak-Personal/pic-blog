@@ -9,7 +9,7 @@ import SiteFooter from '~/components/SiteFooter.vue'
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'
 
-const { data: posts, status } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
+const { data: posts, status, refresh } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { loggedIn } = useUserSession()
 
 /**
@@ -72,6 +72,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
           class="markbtn brandbox"
           :class="{ armed: taps > 0 }"
           aria-label="pic·blog"
+          data-testid="home-brand-open"
           @click="tapBrand"
         >
           <BrandMark class="mark" />
@@ -85,7 +86,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         </span>
         <!-- 아이콘을 단다 — 「기록 관리」의 반대편 짝인 편집 화면의 「뷰어 이동」이
              눈 아이콘을 달고 있다. 오가는 두 문이 같은 모양이라야 짝으로 읽힌다. -->
-        <NuxtLink v-if="loggedIn" to="/editor" class="btn ghost editor-link">
+        <NuxtLink v-if="loggedIn" to="/editor" class="btn ghost editor-link" data-testid="home-editor-open">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
           기록 관리
         </NuxtLink>
@@ -117,11 +118,22 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
       </div>
     </template>
 
+    <EmptyState
+      v-else-if="status === 'error'"
+      role="alert"
+      title="기록을 불러올 수 없습니다"
+      description="연결 상태를 확인한 뒤 다시 시도해 주세요."
+    >
+      <template #action>
+        <button type="button" class="btn primary big" data-testid="home-posts-retry" @click="refresh()">다시 시도</button>
+      </template>
+    </EmptyState>
+
     <!-- 아트보드 1c ① 기록 0 -->
     <EmptyState v-else-if="!posts.length" title="아직 기록이 없습니다" description="사진을 올려 여행의 장소와 순간을 한곳에 남겨보세요.">
       <template #icon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg></template>
       <template #action>
-        <NuxtLink to="/editor/new" class="btn primary big">첫 기록 만들기</NuxtLink>
+        <NuxtLink to="/editor/new" class="btn primary big" data-testid="home-post-create">첫 기록 만들기</NuxtLink>
       </template>
     </EmptyState>
 
@@ -131,7 +143,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
       </div>
 
       <div class="grid">
-        <NuxtLink v-for="post in sorted" :key="post.slug" :to="`/p/${post.slug}`" class="card">
+        <NuxtLink v-for="(post, index) in sorted" :key="post.slug" :to="`/p/${post.slug}`" class="card" :data-testid="`home-post-open-${index}`">
           <div class="cover">
             <img v-if="post.cover_thumb" v-sk class="sk" :src="post.cover_thumb" alt="" loading="lazy" decoding="async">
             <span v-else class="mono cover-empty">커버 사진 없음</span>
@@ -147,11 +159,13 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
           <div class="foot">
             <span class="range">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>
-              <span class="mono">{{ formatRange(post.started_at, post.ended_at) }}</span>
+              <span class="mono">{{ post.started_at ? formatRange(post.started_at, post.ended_at) : '기간 없음' }}</span>
             </span>
-            <span class="mono stat">{{ post.point_count }} 포인트</span>
-            <!-- 좁은 화면에서는 접는다 — 한 줄에 다 넣으면 행이 접혀 높이가 들쭉날쭉해진다 -->
-            <span class="mono stat extra">· {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km</span>
+            <span class="stats">
+              <span class="mono stat">{{ post.point_count }} 포인트</span>
+              <!-- 좁은 화면에서는 부가 통계를 접고 포인트 수만 오른쪽에 둔다 -->
+              <span class="mono stat extra">· {{ post.photo_count }}장 · {{ formatKm(post.distance_km) }} km</span>
+            </span>
           </div>
         </NuxtLink>
       </div>
@@ -294,20 +308,31 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.summary { font-size: var(--fs-lg); line-height: 1.6; color: var(--mid); opacity: 0.82; text-wrap: pretty; }
+.summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--fs-lg);
+  line-height: 1.6;
+  color: var(--mid);
+  opacity: 0.82;
+  text-wrap: pretty;
+}
 
 .foot {
   margin-top: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 11px 18px;
   border-top: 1px solid rgb(var(--mid-rgb) / 0.1);
 }
-.range { display: flex; align-items: center; gap: 6px; color: var(--faint); }
-.range .mono, .stat { font-size: var(--fs-2xs); color: var(--deep); }
-.stat.extra { margin-left: 4px; }
+.range { display: flex; align-items: center; gap: 6px; color: var(--faint); white-space: nowrap; }
+.stats { display: flex; align-items: center; gap: 4px; margin-left: auto; white-space: nowrap; }
+.range .mono, .stat { font-size: var(--fs-sm); color: var(--deep); }
 
 
 /* 1c ① 기록 0 */
@@ -374,8 +399,8 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
     gap: 5px;
     min-width: 0;
   }
-  .range .mono, .stat { font-size: var(--fs-2xs); }
   .range svg { display: none; }
+  .range .mono, .stat { font-size: var(--fs-xs); }
   .stat.extra { display: none; }
 
   /* 자리표시는 실제 행과 같은 상자를 쓴다 — 도착했을 때 레이아웃이 튀지 않게 */

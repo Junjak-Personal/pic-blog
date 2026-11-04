@@ -21,7 +21,7 @@ const slug = computed(() => String(route.params.slug))
 /** 편집 진입은 로그인한 사람에게만 보인다 — 읽는 사람에게는 없는 문이다 */
 const { loggedIn } = useUserSession()
 
-const { data: post, error, status } = useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
+const { data: post, error, status, refresh } = useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
 
 const activeId = ref<number | null>(null)
 const detailOpen = ref(false)
@@ -290,6 +290,15 @@ useHead(() => ({
     <NuxtLink to="/" class="mono back-link">기록 목록으로</NuxtLink>
   </main>
 
+  <EmptyState v-else-if="error && error.statusCode !== 404" role="alert" title="기록을 불러올 수 없습니다" description="잠시 후 다시 시도해 주세요.">
+    <template #action>
+      <div class="recovery-actions">
+        <NuxtLink to="/" class="btn outline big" data-testid="post-list-back">기록 목록으로</NuxtLink>
+        <button type="button" class="btn primary big" data-testid="post-load-retry" @click="refresh()">다시 시도</button>
+      </div>
+    </template>
+  </EmptyState>
+
   <!-- 없는 기록 -->
   <EmptyState v-else-if="error || !post" title="기록을 찾을 수 없습니다">
     <template #action><NuxtLink to="/" class="btn ghost big">기록 목록으로</NuxtLink></template>
@@ -470,6 +479,7 @@ useHead(() => ({
 </template>
 
 <style scoped>
+.recovery-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 .viewer-root { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 /* 지도가 주인공인 화면이라 뷰포트에 고정한다.
    min-height 만 주면 레일 13행이 stage 를 밀어올려 지도가 화면 밖으로 넘친다. */

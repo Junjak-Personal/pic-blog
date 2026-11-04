@@ -182,28 +182,35 @@ async function action(kind: 'apply' | 'undo' | 'cancel') {
           <button class="btn" :class="{ primary: mode === 'organize' }" :aria-pressed="mode === 'organize'" :disabled="busy || pending" data-testid="photo-ai-mode-organize" @click="changeMode('organize')">사진 묶기</button>
           <button class="btn" :class="{ primary: mode === 'enrich' }" :aria-pressed="mode === 'enrich'" :disabled="busy || pending" data-testid="photo-ai-mode-enrich" @click="changeMode('enrich')">사진 기록 보강</button>
         </div>
-        <p v-if="mode === 'enrich'">현재 포인트 구성을 유지하면서 대표 사진과 사진에 근거한 짧은 설명을 제안합니다. 사진에서 읽힌 장소명은 근거와 함께 후보로 보여 주며, 기존 제목을 자동으로 바꾸지 않습니다.</p>
+        <p v-if="mode === 'enrich'">포인트 구성과 제목을 유지하면서 대표 사진과 짧은 설명을 제안합니다.</p>
         <p v-else>장소·촬영 시각·추가 맥락으로 사진을 묶고 포인트 제목을 제안합니다.</p>
         <p>먼저 결과를 검토하고 「적용」을 눌러야 저장됩니다.</p>
         <p v-if="!photos.length">분석할 사진이 없습니다. 편집 화면에서 사진을 먼저 추가해 주세요.</p>
         <p data-testid="photo-ai-selected-count">선택한 사진 {{ selectedPhotoCount.toLocaleString() }}장 / 최대 1,000장 · 전체 {{ photos.length.toLocaleString() }}장</p>
         <p v-if="selectedPhotoCount > 1000" role="alert">선택한 사진은 한 번에 최대 1,000장까지 분석할 수 있습니다. 일부 포인트를 선택 해제해 주세요.</p>
         <fieldset :disabled="busy || proposal?.status === 'pending'">
-          <legend>분석 범위</legend>
-          <label for="ai-context">추가 맥락 (선택)</label>
-          <textarea id="ai-context" v-model="context" maxlength="1000" rows="3" data-testid="photo-ai-context" placeholder="예: 오전에는 시장, 오후에는 해변에서 보낸 여행" />
-          <label class="check"><input v-model="sendImages" :disabled="mode === 'enrich'" type="checkbox" data-testid="photo-ai-images"> 사진 썸네일도 함께 보내기{{ mode === 'enrich' ? ' (사진 기록 보강에 필수)' : '' }}</label>
-          <p>하루 최대 20개 작업, 같은 제안은 최대 2회 시도합니다. 사진이 많으면 나누어 분석하며 몇 분이 걸릴 수 있습니다. 취소 전에 전송된 요청은 비용이 발생할 수 있습니다.</p>
-          <p>Claude(Anthropic)에 선택한 그룹의 사진 ID·분 단위 촬영 시각·소수점 4자리 위치 및 입력한 맥락을 보냅니다. 보호된 그룹의 사진과 기록은 보내지 않습니다. 사진 전송을 선택하면 썸네일도 전송합니다. 사진 기록 보강에서는 나누어 생성한 설명·대표 사진 후보·장소명 근거도 최종 제안을 만들기 위해 다시 보냅니다. 원본 사진은 보내지 않습니다. 인물의 신원이나 민감한 내용은 분석 대상으로 삼지 않습니다.</p>
-          <p>민감한 사진이나 위치가 포함되었는지 먼저 확인해 주세요. 위치가 불확실한 사진의 좌표는 추측해 바꾸지 않습니다.</p>
-          <label class="check"><input v-model="consent" type="checkbox" data-testid="photo-ai-consent"> 전송 범위를 확인했고 Claude 분석에 동의합니다.</label>
+          <legend>포인트 선택</legend>
           <h3>{{ mode === 'enrich' ? '보강할 포인트 선택' : '재배치할 포인트 선택' }}</h3>
-          <p v-if="mode === 'enrich'">선택한 포인트의 빈 본문과 대표 사진만 보강합니다. 사진 소속·순서·좌표·촬영 시각과 기존 제목은 유지합니다. 본문·태그·링크·금액이 있거나 위치가 불확실한 사진이 있는 포인트는 보호합니다.</p>
-          <p v-else>기존 그룹은 기본적으로 보호합니다. 아래에서 선택한 그룹만 다시 묶습니다. 제목·본문·태그·링크·금액이 있거나 위치가 불확실한 사진이 있는 포인트는 항상 보호합니다.</p>
+          <p v-if="mode === 'enrich'">빈 본문과 대표 사진만 보강합니다. 작성한 기록이 있거나 위치가 불확실한 포인트는 보호됩니다.</p>
+          <p v-else>선택한 포인트만 다시 묶습니다. 작성한 기록이 있거나 위치가 불확실한 포인트는 보호됩니다.</p>
           <label v-for="(point, index) in post.points" :key="point.id" class="check">
             <input v-model="unlocked" :value="point.id" :disabled="protectedContent(point)" type="checkbox" :data-testid="`photo-ai-unlock-${point.id}`">
             {{ point.title || `포인트 ${index + 1}` }} · {{ point.photos.length }}장 {{ protectedContent(point) ? '· 보호됨' : '' }}
           </label>
+        </fieldset>
+        <fieldset :disabled="busy || pending">
+          <legend>추가 맥락과 전송 동의</legend>
+          <label for="ai-context">추가 맥락 (선택)</label>
+          <textarea id="ai-context" v-model="context" maxlength="1000" rows="3" data-testid="photo-ai-context" placeholder="예: 오전에는 시장, 오후에는 해변에서 보낸 여행" />
+          <label class="check"><input v-model="sendImages" :disabled="mode === 'enrich'" type="checkbox" data-testid="photo-ai-images"> 사진 썸네일도 함께 보내기{{ mode === 'enrich' ? ' (사진 기록 보강에 필수)' : '' }}</label>
+          <details class="transfer-details">
+            <summary data-testid="photo-ai-transfer-toggle">전송 정보와 이용 한도 자세히 보기</summary>
+            <p>하루 최대 20개 작업, 같은 제안은 최대 2회 시도합니다. 사진이 많으면 나누어 분석하며 몇 분이 걸릴 수 있습니다. 취소 전에 전송된 요청은 비용이 발생할 수 있습니다.</p>
+            <p>Claude(Anthropic)에 선택한 그룹의 사진 ID·분 단위 촬영 시각·소수점 4자리 위치 및 입력한 맥락을 보냅니다. 보호된 그룹의 사진과 기록은 보내지 않습니다. 사진 전송을 선택하면 썸네일도 전송합니다. 사진 기록 보강에서는 나누어 생성한 설명·대표 사진 후보·장소명 근거도 최종 제안을 만들기 위해 다시 보냅니다. 원본 사진은 보내지 않습니다. 인물의 신원이나 민감한 내용은 분석 대상으로 삼지 않습니다.</p>
+            <p>민감한 사진이나 위치가 포함되었는지 먼저 확인해 주세요. 위치가 불확실한 사진의 좌표는 추측해 바꾸지 않습니다.</p>
+          </details>
+          <p>선택한 사진의 위치·촬영 시간과 입력한 맥락을 Claude에 보냅니다. 사진 전송을 선택하면 썸네일도 포함됩니다.</p>
+          <label class="check"><input v-model="consent" type="checkbox" data-testid="photo-ai-consent"> 전송 범위를 확인했고 Claude 분석에 동의합니다.</label>
         </fieldset>
         <p v-if="message" role="alert">{{ message }}</p>
         <p v-if="busy && !pending" role="status">{{ operation === 'generating' ? '분석 요청을 보내는 중…' : operation === 'cancel' ? '요청을 취소하는 중…' : '처리 중…' }}</p>
@@ -264,6 +271,10 @@ fieldset, .result, .group { display: grid; gap: var(--topbar-gap); padding: var(
 textarea { width: 100%; background: var(--field); color: var(--ink); border: thin solid var(--border-control); border-radius: var(--radius-sm); padding: var(--topbar-x-sm); }
 .check { display: flex; gap: var(--topbar-gap); align-items: center; font-size: var(--fs-md); }
 .check input { flex: none; }
+.check { min-height: 44px; }
+.transfer-details { min-width: 0; }
+.transfer-details summary { cursor: pointer; border: 1px solid var(--border-control); border-radius: var(--radius-sm); padding: 8px 12px; font-size: var(--fs-md); }
+.transfer-details p { margin-top: var(--topbar-gap); }
 .mode-options { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--topbar-gap); }
 .enrichment { display: grid; gap: var(--topbar-gap); }
 .body-preview { white-space: pre-wrap; }
