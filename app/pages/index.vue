@@ -8,9 +8,13 @@ import SiteFooter from '~/components/SiteFooter.vue'
 /** 포스트 목록 — 아트보드 1a. 공개 경로라 절대 잠기지 않는다. */
 import type { PostSummary } from '#shared/types/db'
 import { formatKm, formatRange } from '#shared/utils/format'
+import { absoluteSiteUrl, PUBLIC_ROBOTS, serializeJsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from '#shared/utils/seo'
 
-const { data: posts, status, refresh } = useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
+const { siteUrl } = useRuntimeConfig().public
+const { data: posts, status, refresh } = await useFetch<PostSummary[]>('/api/posts', { default: () => [], lazy: true })
 const { loggedIn } = useUserSession()
+
+if (import.meta.server && status.value === 'error') setResponseStatus(503)
 
 /**
  * 로고 3연타로 편집 화면에 들어간다.
@@ -58,7 +62,28 @@ const totals = computed(() => ({
   photos: posts.value.reduce((n, p) => n + p.photo_count, 0),
 }))
 
-useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
+const canonical = absoluteSiteUrl('/', siteUrl)
+useSeoMeta({
+  title: SITE_TITLE,
+  robots: () => status.value === 'error' ? 'noindex, nofollow' : PUBLIC_ROBOTS,
+  ogUrl: canonical,
+})
+useHead({
+  link: [{ rel: 'canonical', href: canonical }],
+  script: [{
+    key: 'website-schema',
+    type: 'application/ld+json',
+    textContent: serializeJsonLd({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': `${canonical}#website`,
+      url: canonical,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'ko',
+    }),
+  }],
+})
 </script>
 
 <template>
@@ -77,7 +102,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
         >
           <BrandMark class="mark" />
         </button>
-        <span class="wordmark">pic<span class="dot">·</span>blog</span>
+        <h1 class="wordmark">pic<span class="dot">·</span>blog</h1>
         <span class="mono kicker">travel log</span>
       </div>
       <div class="right">
@@ -153,7 +178,7 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
             </span>
           </div>
           <div class="body">
-            <h3 v-tip class="title">{{ post.title }}</h3>
+            <h2 v-tip class="title">{{ post.title }}</h2>
             <p v-if="post.summary" class="summary">{{ post.summary }}</p>
           </div>
           <div class="foot">
@@ -360,7 +385,14 @@ useHead({ title: 'pic·blog — 사진 좌표 기반 여행 로그' })
 
   .topbar { height: calc(var(--topbar-h-sm) + var(--top-inset)); padding: var(--top-inset) var(--topbar-x-sm) 0; gap: 10px; }
   /* 모바일은 마크만 — 워드마크까지 두면 우측 액션과 다툰다 */
-  .wordmark { display: none; }
+  .wordmark {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .kicker { display: none; }
   /* 지도가 이 화면의 주인공이다. 카드가 커서 지도가 눌려 보인다는 지적을 받아 띠를 키웠다 */
   .map-strip { height: 246px; }

@@ -15,13 +15,18 @@ import { badgesOf, groupByDay } from '#shared/utils/days'
 import { formatKm, formatOf, formatRange } from '#shared/utils/format'
 import { formatMoney, totalsOf } from '#shared/utils/extras'
 import { dayRules } from '#shared/utils/trip-day'
+import { absoluteSiteUrl, postDescription, PUBLIC_ROBOTS, serializeJsonLd, SITE_NAME } from '#shared/utils/seo'
 
 const route = useRoute()
+const { siteUrl } = useRuntimeConfig().public
 const slug = computed(() => String(route.params.slug))
 /** 편집 진입은 로그인한 사람에게만 보인다 — 읽는 사람에게는 없는 문이다 */
 const { loggedIn } = useUserSession()
 
-const { data: post, error, status, refresh } = useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
+const { data: post, error, status, refresh } = await useFetch<PostDetail>(() => `/api/posts/${slug.value}`, { lazy: true })
+
+// 안내 화면도 실제 오류 상태로 응답한다. 없는 기록이 200 이면 검색엔진은 soft 404 로 본다.
+if (import.meta.server && error.value) setResponseStatus(error.value.statusCode ?? 500)
 
 const activeId = ref<number | null>(null)
 const detailOpen = ref(false)
@@ -209,40 +214,53 @@ function stepPoint(dir: -1 | 1) {
   }
 }
 
-/*
- * 공유 카드. 기록마다 제목·요약·커버가 다르므로 사이트 기본값(nuxt.config)을 덮는다.
- *
- * 🔴 og:image 는 절대 URL 이어야 한다 — 크롤러는 페이지의 출처를 모른다.
- *    useRequestURL() 은 서버에서 «실제로 요청된» 주소라, 배포 주소를 상수로 박는 것보다
- *    안전하다 (개발·프리뷰·커스텀 도메인에서 전부 맞는다).
- */
-// 🔴 setup 안에서 «한 번» 읽는다. computed 안에서 부르면 lazy 라 setup 컨텍스트를
-//    벗어나 NUXT_E1001 로 500 이 난다 (실제로 그랬다).
-const origin = useRequestURL().origin
+// 로그인한 작성자에게 비공개 본문이 보여도 검색·공유 정보에는 싣지 않는다.
+const publicPost = computed(() => post.value?.is_public ? post.value : null)
+const canonical = computed(() => publicPost.value
+  ? absoluteSiteUrl(`/p/${encodeURIComponent(publicPost.value.slug)}`, siteUrl)
+  : null)
+const description = computed(() => publicPost.value ? postDescription(publicPost.value) : '공개된 여행 기록을 살펴보세요.')
+const coverPath = computed(() => publicPost.value?.cover_display ?? publicPost.value?.cover_thumb)
 const shareImage = computed(() => {
-  const path = post.value?.cover_display ?? post.value?.cover_thumb
-  return path ? `${origin}${path}` : `${origin}/icons/icon-512.png`
+  // og:image 는 절대 URL 이어야 한다. canonical 과 같은 공개 주소를 쓴다.
+  return absoluteSiteUrl(coverPath.value ?? '/icons/icon-512.png', siteUrl)
 })
+const shareImageAlt = computed(() => coverPath.value ? `${publicPost.value?.title} 커버 사진` : SITE_NAME)
 
+useSeoMeta({
+  title: () => publicPost.value ? `${publicPost.value.title} · ${SITE_NAME}` : SITE_NAME,
+  description: () => description.value,
+  robots: () => publicPost.value ? PUBLIC_ROBOTS : 'noindex, nofollow',
+  ogType: () => publicPost.value ? 'article' : 'website',
+  ogTitle: () => publicPost.value?.title ?? SITE_NAME,
+  ogDescription: () => description.value,
+  ogImage: () => shareImage.value,
+  ogImageAlt: () => shareImageAlt.value,
+  ogUrl: () => canonical.value,
+  twitterTitle: () => publicPost.value?.title ?? SITE_NAME,
+  twitterDescription: () => description.value,
+  twitterImage: () => shareImage.value,
+  twitterImageAlt: () => shareImageAlt.value,
+})
 useHead(() => ({
-  title: post.value ? `${post.value.title} · pic·blog` : 'pic·blog',
-  meta: post.value
-    ? [
-        { property: 'og:type', content: 'article' },
-        { property: 'og:title', content: post.value.title },
-        {
-          property: 'og:description',
-          content:
-            post.value.summary
-            ?? `${post.value.point_count} 포인트 · 사진 ${post.value.photo_count}장`,
-        },
-        { property: 'og:image', content: shareImage.value },
-        { property: 'og:url', content: `${origin}/p/${post.value.slug}` },
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: post.value.title },
-        { name: 'twitter:image', content: shareImage.value },
-      ]
-    : [],
+  link: canonical.value ? [{ rel: 'canonical', href: canonical.value }] : [],
+  script: publicPost.value ? [{
+    key: 'post-schema',
+    type: 'application/ld+json',
+    textContent: serializeJsonLd({
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      '@id': `${canonical.value}#article`,
+      url: canonical.value,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonical.value },
+      headline: publicPost.value.title,
+      description: description.value,
+      ...(coverPath.value ? { image: [shareImage.value] } : {}),
+      dateCreated: publicPost.value.created_at,
+      inLanguage: 'ko',
+      isPartOf: { '@type': 'WebSite', '@id': `${absoluteSiteUrl('/', siteUrl)}#website`, name: SITE_NAME },
+    }),
+  }] : [],
 }))
 </script>
 

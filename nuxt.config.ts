@@ -39,28 +39,19 @@ export default defineNuxtConfig({
          *   제거는 여전히 옳지만 그건 별개 이유다.
          */
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-
-        /*
-         * 링크를 보냈을 때 뜨는 카드. 없으면 메신저·슬랙이 주소만 그대로 보여준다.
-         * 기록 상세는 자기 커버 사진으로 이걸 덮어쓴다 (app/pages/p/[slug].vue).
-         *
-         * 🔴 og:image 는 «절대 URL» 이어야 한다. 크롤러는 페이지의 출처를 모르므로
-         *    /icons/... 같은 상대 경로를 못 받는다. 기본값은 배포 주소로 박고,
-         *    상세 화면은 useRequestURL() 로 실제 출처를 붙인다.
-         */
-        { property: 'og:site_name', content: 'pic·blog' },
-        { property: 'og:type', content: 'website' },
-        { property: 'og:locale', content: 'ko_KR' },
-        { property: 'og:title', content: 'pic·blog — 사진 좌표 기반 여행 로그' },
-        { property: 'og:description', content: '사진의 GPS 로 지도 위에 동선을 그립니다.' },
-        { property: 'og:image', content: 'https://pic-blog.jun-devlog.win/icons/icon-512.png' },
-        { name: 'twitter:card', content: 'summary_large_image' },
       ],
     },
   },
   nitro: {
     // better-sqlite3 is a native addon — keep it external so Nitro does not try to bundle the .node
     externals: { inline: [], external: ['better-sqlite3'] },
+  },
+  routeRules: {
+    '/editor': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/editor/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/oauth/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/api/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/mcp': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
   },
   runtimeConfig: {
     dataDir: './data',
@@ -99,6 +90,8 @@ export default defineNuxtConfig({
       },
     },
     public: {
+      // canonical·공유 이미지·사이트맵은 같은 공개 주소로 맞춘다. 요청의 Host 는 쓰지 않는다.
+      siteUrl: 'https://pic-blog.jun-devlog.win',
       /*
        * 빌드마다 바뀌는 표식. 실행 중인 앱이 자기 값과 서버의 값을 비교해
        * 새 배포를 알아챈다 (app/composables/useAppUpdate.ts).
